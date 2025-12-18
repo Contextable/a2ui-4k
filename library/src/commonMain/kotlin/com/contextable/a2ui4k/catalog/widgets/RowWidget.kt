@@ -74,7 +74,7 @@ private fun RowWidgetContent(
 
 /**
  * Helper that wraps a child with Modifier.weight() if weight is specified.
- * Similar to Flutter GenUI's buildWeightedChild pattern.
+ * Similar to A2UI protocol's buildWeightedChild pattern.
  */
 @Composable
 private fun RowScope.BuildWeightedChild(

@@ -17,7 +17,7 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Card widget that wraps a child component in a Material 3 Card.
  *
- * Matches Flutter GenUI Card:
+ * Matches A2UI protocol Card:
  * - Uses surface color from theme
  * - Applies 8dp internal padding around child
  *
@@ -42,14 +42,14 @@ private fun CardWidgetContent(
     val childRef = DataReferenceParser.parseComponentRef(data["child"])
     val childId = childRef?.componentId
 
-    // Match Flutter GenUI: Card with surface color and internal padding
+    // Match A2UI protocol: Card with surface color and internal padding
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
-        // Internal padding around child (EdgeInsets.all(8.0) in Flutter)
+        // Internal padding around child (8dp as per A2UI styling)
         Box(modifier = Modifier.padding(8.dp)) {
             if (childId != null) {
                 buildChild(childId)

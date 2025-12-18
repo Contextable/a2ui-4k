@@ -141,7 +141,7 @@ private fun RenderTemplateChildren(
     isHorizontal: Boolean,
     alignment: String?
 ) {
-    // Try array first, then fall back to object keys (like Flutter GenUI)
+    // Try array first, then fall back to object keys (like A2UI protocol)
     val arraySize = dataContext.getArraySize(dataBinding)
     val objectKeys = if (arraySize == null) dataContext.getObjectKeys(dataBinding) else null
 

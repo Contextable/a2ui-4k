@@ -32,18 +32,20 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * Button widget for user actions.
  *
- * Matches Flutter GenUI Button schema:
- * - `child`: Component ID reference (e.g., to a Text widget) - preferred
- * - `label`: Direct label string - fallback for backwards compatibility
- * - `primary`: Boolean for primary button styling
- * - `action`: Action to dispatch on click
+ * A2UI Protocol Button properties:
+ * - `child`: Component ID reference (e.g., to a Text widget)
+ * - `action`: Action object with "name" and "context"
+ * - `usageHint`: "primary", "secondary", or "text" (v0.9)
  *
- * JSON Schema:
+ * See A2UI protocol: standard_catalog_definition.json - Button component
+ *
+ * JSON Schema (v0.9):
  * ```json
  * {
+ *   "component": "Button",
  *   "child": "button-text-id",
- *   "primary": true,
- *   "action": {"name": "submit", "context": [...]}
+ *   "action": {"name": "submit", "context": {...}},
+ *   "usageHint": "primary"
  * }
  * ```
  */
@@ -67,7 +69,7 @@ private fun ButtonWidgetContent(
     dataContext: DataContext,
     onEvent: EventDispatcher
 ) {
-    // Child component reference (preferred, matches Flutter GenUI)
+    // Child component reference (A2UI Button.child property)
     val childRef = DataReferenceParser.parseString(data["child"])
     val childId = when (childRef) {
         is LiteralString -> childRef.value
@@ -103,7 +105,7 @@ private fun ButtonWidgetContent(
     val onClick: () -> Unit = {
         val actionName = actionData?.get("name")?.jsonPrimitive?.content ?: "click"
 
-        // Resolve action.context array (Flutter GenUI style)
+        // Resolve action.context (A2UI Button.action.context property)
         val contextArray = actionData?.get("context")?.jsonArray
         val resolvedContext = resolveContext(contextArray, dataContext)
 
@@ -128,9 +130,9 @@ private fun ButtonWidgetContent(
         )
     }
 
-    // Match Flutter GenUI: ElevatedButton with colors based on primary
-    // primary=true: colorScheme.primary background, onPrimary foreground
-    // primary=false: colorScheme.surface background, onSurface foreground
+    // Button styling based on usageHint/primary
+    // primary/usageHint="primary": colorScheme.primary background
+    // secondary/usageHint="secondary": colorScheme.surface background
     val colors = if (isPrimary) {
         ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
@@ -148,7 +150,7 @@ private fun ButtonWidgetContent(
         colors = colors
     ) {
         when {
-            // Prefer child component reference (Flutter GenUI style)
+            // Prefer child component reference (A2UI Button.child)
             childId != null -> buildChild(childId)
             // Fallback to label text
             label != null -> Text(label)
@@ -159,11 +161,11 @@ private fun ButtonWidgetContent(
 }
 
 /**
- * Resolves action context array by evaluating path bindings against the DataContext.
+ * Resolves action context by evaluating path bindings against the DataContext.
  *
- * Matches Flutter GenUI's resolveContext pattern:
- * - Each context entry has a "key" and "value"
- * - Value can be: path (resolved from DataContext), literalString, literalNumber, literalBoolean
+ * A2UI Button.action.context is resolved at event time:
+ * - v0.8: Array of {key, value} pairs where value contains path/literal bindings
+ * - v0.9: Standard JSON object with path bindings
  *
  * @param contextArray The action.context JsonArray from the button definition
  * @param dataContext The current DataContext for resolving path bindings

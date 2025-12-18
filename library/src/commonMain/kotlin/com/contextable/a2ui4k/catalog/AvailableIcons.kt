@@ -11,7 +11,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
  * Predefined set of Material Icons available for A2UI components.
  *
  * This enum maps string icon names (used in A2UI JSON) to Compose Material Icons.
- * The set matches common icons from the flutter/genui AvailableIcons enum.
+ * See A2UI protocol spec: Icon component "name" property enum values.
  */
 enum class AvailableIcons(val icon: ImageVector) {
     // Navigation

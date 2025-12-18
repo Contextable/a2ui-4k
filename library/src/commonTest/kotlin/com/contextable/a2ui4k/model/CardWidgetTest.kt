@@ -11,7 +11,7 @@ import kotlin.test.assertNotNull
  *
  * The Card widget in A2UI:
  * - Takes a `child` property referencing another component
- * - Applies internal padding (8dp) around the child (matching Flutter GenUI)
+ * - Applies internal padding (8dp) around the child (matching A2UI protocol)
  * - Uses surface color from the theme
  */
 class CardWidgetTest {

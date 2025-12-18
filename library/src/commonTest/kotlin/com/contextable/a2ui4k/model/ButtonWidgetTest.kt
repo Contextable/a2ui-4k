@@ -12,7 +12,7 @@ import kotlin.test.assertNull
  *
  * The Button widget in A2UI uses a `child` property that references
  * another component (typically Text) rather than a direct label.
- * This matches the Flutter GenUI Button schema.
+ * This matches the A2UI protocol Button schema.
  */
 class ButtonWidgetTest {
 
