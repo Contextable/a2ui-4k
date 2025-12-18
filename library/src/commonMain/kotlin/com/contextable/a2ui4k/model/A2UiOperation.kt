@@ -73,18 +73,19 @@ data class DeleteSurface(
 ) : A2UiOperation()
 
 /**
- * A component definition in v0.9 schema format.
+ * A component definition parsed from A2UI v0.8 protocol.
  *
- * The component type is stored in [component] and all widget-specific
- * properties are flattened into [properties].
- *
- * Example JSON:
+ * Use [fromJson] to parse from v0.8 JSON format where the component
+ * is a nested object:
  * ```json
  * {
  *   "id": "title",
- *   "component": "Text",
- *   "text": { "literalString": "Hello World" },
- *   "usageHint": { "literalString": "h1" }
+ *   "component": {
+ *     "Text": {
+ *       "text": { "literalString": "Hello World" },
+ *       "usageHint": { "literalString": "h1" }
+ *     }
+ *   }
  * }
  * ```
  */
