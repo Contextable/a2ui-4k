@@ -24,20 +24,28 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Slider widget for numeric range input.
  *
- * JSON Schema (v0.9):
+ * A2UI Protocol Slider properties:
+ * - `label`: Display label (literal or path)
+ * - `minValue`: Minimum value
+ * - `maxValue`: Maximum value
+ * - `value`: Current value (path for data binding)
+ *
+ * See A2UI protocol: standard_catalog_definition.json - Slider component
+ *
+ * JSON Schema (v0.8):
  * ```json
  * {
- *   "component": "Slider",
- *   "properties": {
- *     "label": "Volume" | {"path": "/labels/volume"},
- *     "min": 0,
- *     "max": 100,
- *     "value": {"path": "/settings/volume"} | 50
+ *   "id": "slider_1",
+ *   "component": {
+ *     "Slider": {
+ *       "label": {"literalString": "Volume"},
+ *       "minValue": 0,
+ *       "maxValue": 100,
+ *       "value": {"path": "/settings/volume"}
+ *     }
  *   }
  * }
  * ```
- *
- * Note: v0.8 uses "minValue" and "maxValue" instead of "min" and "max"
  */
 val SliderWidget = CatalogItem(
     name = "Slider"
@@ -60,9 +68,8 @@ private fun SliderWidgetContent(
     val labelRef = DataReferenceParser.parseString(data["label"])
     val valueRef = DataReferenceParser.parseNumber(data["value"])
 
-    // v0.9 uses "min"/"max", v0.8 uses "minValue"/"maxValue"
-    val minRef = DataReferenceParser.parseNumber(data["min"] ?: data["minValue"])
-    val maxRef = DataReferenceParser.parseNumber(data["max"] ?: data["maxValue"])
+    val minValueRef = DataReferenceParser.parseNumber(data["minValue"])
+    val maxValueRef = DataReferenceParser.parseNumber(data["maxValue"])
 
     val surfaceId = DataReferenceParser.parseString(data["surfaceId"])?.let {
         when (it) {
@@ -78,15 +85,15 @@ private fun SliderWidgetContent(
         else -> ""
     }
 
-    val minValue = when (minRef) {
-        is LiteralNumber -> minRef.value.toFloat()
-        is PathNumber -> dataContext.getNumber(minRef.path)?.toFloat() ?: 0f
+    val minValue = when (minValueRef) {
+        is LiteralNumber -> minValueRef.value.toFloat()
+        is PathNumber -> dataContext.getNumber(minValueRef.path)?.toFloat() ?: 0f
         else -> 0f
     }
 
-    val maxValue = when (maxRef) {
-        is LiteralNumber -> maxRef.value.toFloat()
-        is PathNumber -> dataContext.getNumber(maxRef.path)?.toFloat() ?: 100f
+    val maxValue = when (maxValueRef) {
+        is LiteralNumber -> maxValueRef.value.toFloat()
+        is PathNumber -> dataContext.getNumber(maxValueRef.path)?.toFloat() ?: 100f
         else -> 100f
     }
 

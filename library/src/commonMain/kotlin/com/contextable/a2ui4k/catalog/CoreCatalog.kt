@@ -4,7 +4,7 @@ import com.contextable.a2ui4k.catalog.widgets.AudioPlayerWidget
 import com.contextable.a2ui4k.catalog.widgets.ButtonWidget
 import com.contextable.a2ui4k.catalog.widgets.CardWidget
 import com.contextable.a2ui4k.catalog.widgets.CheckBoxWidget
-import com.contextable.a2ui4k.catalog.widgets.ChoicePickerWidget
+import com.contextable.a2ui4k.catalog.widgets.MultipleChoiceWidget
 import com.contextable.a2ui4k.catalog.widgets.ColumnWidget
 import com.contextable.a2ui4k.catalog.widgets.DateTimeInputWidget
 import com.contextable.a2ui4k.catalog.widgets.DividerWidget
@@ -40,7 +40,7 @@ import com.contextable.a2ui4k.model.Catalog
  * - Icon: Material icon from predefined set
  * - CheckBox: Boolean input with label
  * - Slider: Numeric range input
- * - ChoicePicker: Selection component
+ * - MultipleChoice: Selection component
  * - DateTimeInput: Date/time picker
  * - Tabs: Tabbed navigation container
  * - Modal: Dialog overlay
@@ -69,7 +69,7 @@ val CoreCatalog: Catalog = Catalog.of(
     IconWidget,
     CheckBoxWidget,
     SliderWidget,
-    ChoicePickerWidget,
+    MultipleChoiceWidget,
     DateTimeInputWidget,
     TabsWidget,
     ModalWidget,
@@ -93,7 +93,7 @@ object CoreCatalogItems {
     val icon = IconWidget
     val checkBox = CheckBoxWidget
     val slider = SliderWidget
-    val choicePicker = ChoicePickerWidget
+    val multipleChoice = MultipleChoiceWidget
     val dateTimeInput = DateTimeInputWidget
     val tabs = TabsWidget
     val modal = ModalWidget

@@ -34,46 +34,38 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * ChoicePicker widget for selecting one or more options.
+ * MultipleChoice widget for selecting one or more options.
  *
- * JSON Schema (v0.9):
+ * A2UI Protocol MultipleChoice properties:
+ * - `label`: Display label
+ * - `maxAllowedSelections`: Number of selections allowed (1 = single, >1 = multiple)
+ * - `options`: Array of {label, value} objects
+ * - `selections`: Path for data binding to selected values
+ *
+ * See A2UI protocol: standard_catalog_definition.json - MultipleChoice component
+ *
+ * JSON Schema (v0.8):
  * ```json
  * {
- *   "component": "ChoicePicker",
- *   "properties": {
- *     "label": "Select options",
- *     "usageHint": "multipleSelection" | "mutuallyExclusive",
- *     "options": [
- *       {"label": "Option 1", "value": "opt1"},
- *       {"label": "Option 2", "value": "opt2"}
- *     ],
- *     "value": {"path": "/form/selections"}
+ *   "id": "choice_1",
+ *   "component": {
+ *     "MultipleChoice": {
+ *       "label": {"literalString": "Select options"},
+ *       "maxAllowedSelections": 3,
+ *       "options": [
+ *         {"label": "Option 1", "value": "opt1"},
+ *         {"label": "Option 2", "value": "opt2"}
+ *       ],
+ *       "selections": {"path": "/form/selections"}
+ *     }
  *   }
  * }
  * ```
- *
- * Note: In v0.8, this component is called "MultipleChoice" with different properties:
- * - "selections" instead of "value"
- * - "maxAllowedSelections" instead of "usageHint"
- */
-val ChoicePickerWidget = CatalogItem(
-    name = "ChoicePicker"
-) { componentId, data, buildChild, dataContext, onEvent ->
-    ChoicePickerWidgetContent(
-        componentId = componentId,
-        data = data,
-        dataContext = dataContext,
-        onEvent = onEvent
-    )
-}
-
-/**
- * MultipleChoice widget (v0.8 name for ChoicePicker).
  */
 val MultipleChoiceWidget = CatalogItem(
     name = "MultipleChoice"
 ) { componentId, data, buildChild, dataContext, onEvent ->
-    ChoicePickerWidgetContent(
+    MultipleChoiceWidgetContent(
         componentId = componentId,
         data = data,
         dataContext = dataContext,
@@ -82,7 +74,7 @@ val MultipleChoiceWidget = CatalogItem(
 }
 
 @Composable
-private fun ChoicePickerWidgetContent(
+private fun MultipleChoiceWidgetContent(
     componentId: String,
     data: JsonObject,
     dataContext: DataContext,
@@ -103,36 +95,25 @@ private fun ChoicePickerWidgetContent(
         else -> ""
     }
 
-    // v0.9: usageHint, v0.8: maxAllowedSelections
-    val usageHint = data["usageHint"]?.jsonPrimitive?.contentOrNull
-    val maxAllowed = data["maxAllowedSelections"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
-    val isMultiSelect = usageHint == "multipleSelection" || (maxAllowed != null && maxAllowed != 1)
+    val maxAllowedSelections = data["maxAllowedSelections"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
+    val multipleSelection = maxAllowedSelections != 1
 
-    // Parse options
-    val optionsArray = data["options"]?.jsonArray ?: JsonArray(emptyList())
-    val options = optionsArray.mapNotNull { optElement ->
+    val options = (data["options"]?.jsonArray ?: JsonArray(emptyList())).mapNotNull { optElement ->
         val optObj = optElement.jsonObject
         val optLabel = optObj["label"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
         val optValue = optObj["value"]?.jsonPrimitive?.contentOrNull ?: optLabel
         optLabel to optValue
     }
 
-    // v0.9: value, v0.8: selections
-    // Value can be a path to a string array or a JSON array of strings
-    val valueElement = data["value"] ?: data["selections"]
-    val valuePath = valueElement?.let { elem ->
-        when (elem) {
-            is JsonObject -> elem["path"]?.jsonPrimitive?.contentOrNull
-            else -> null
-        }
-    }
-    val initialValue = when {
-        valuePath != null -> dataContext.getStringList(valuePath) ?: emptyList()
-        valueElement is JsonArray -> valueElement.mapNotNull { it.jsonPrimitive.contentOrNull }
+    val selectionsElement = data["selections"]
+    val selectionsPath = (selectionsElement as? JsonObject)?.get("path")?.jsonPrimitive?.contentOrNull
+    val selections = when {
+        selectionsPath != null -> dataContext.getStringList(selectionsPath) ?: emptyList()
+        selectionsElement is JsonArray -> selectionsElement.mapNotNull { it.jsonPrimitive.contentOrNull }
         else -> emptyList()
     }
 
-    var selectedValues by remember(initialValue) { mutableStateOf(initialValue.toSet()) }
+    var selectedValues by remember(selections) { mutableStateOf(selections.toSet()) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         if (label.isNotEmpty()) {
@@ -151,18 +132,18 @@ private fun ChoicePickerWidgetContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        selectedValues = if (isMultiSelect) {
+                        selectedValues = if (multipleSelection) {
                             if (isSelected) selectedValues - optValue else selectedValues + optValue
                         } else {
                             setOf(optValue)
                         }
 
-                        if (valuePath != null) {
-                            dataContext.update(valuePath, selectedValues.toList())
+                        if (selectionsPath != null) {
+                            dataContext.update(selectionsPath, selectedValues.toList())
                             onEvent(
                                 DataChangeEvent(
                                     surfaceId = surfaceId,
-                                    path = valuePath,
+                                    path = selectionsPath,
                                     value = selectedValues.joinToString(",")
                                 )
                             )
@@ -170,7 +151,7 @@ private fun ChoicePickerWidgetContent(
                     }
                     .padding(vertical = 4.dp)
             ) {
-                if (isMultiSelect) {
+                if (multipleSelection) {
                     Checkbox(
                         checked = isSelected,
                         onCheckedChange = null // Handled by row click
