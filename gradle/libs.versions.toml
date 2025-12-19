@@ -3,7 +3,7 @@ kotlin = "2.2.21"
 compose-plugin = "1.9.3"
 agp = "8.7.3"
 kotlinx-serialization = "1.8.1"
-kotlinx-datetime = "0.6.2"
+kotlinx-datetime = "0.7.1"
 kotlinx-coroutines = "1.10.2"
 coil = "3.2.0"
 kermit = "2.0.5"
@@ -25,3 +25,4 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
+android-application = { id = "com.android.application", version.ref = "agp" }

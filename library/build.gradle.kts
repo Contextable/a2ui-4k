@@ -68,9 +68,9 @@ kotlin {
             implementation(compose.materialIconsExtended)
             implementation(compose.ui)
 
-            // Kotlinx libraries
-            implementation(libs.kotlinx.serialization.json)
-            implementation(libs.kotlinx.datetime)
+            // Kotlinx libraries - use api for dependencies needed at runtime by consumers
+            api(libs.kotlinx.serialization.json)
+            api(libs.kotlinx.datetime)
             implementation(libs.kotlinx.coroutines.core)
 
             // Image loading (Coil 3)

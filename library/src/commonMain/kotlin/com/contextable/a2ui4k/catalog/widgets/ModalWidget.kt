@@ -80,7 +80,9 @@ private fun ModalWidgetContent(
 
     val childId = childRef?.componentId
 
-    var showDialog by remember(isOpen) { mutableStateOf(isOpen) }
+    // Use a key that includes both the open state and component ID to properly reset on JSON changes
+    // When isOpen changes (e.g., from data binding update), a new state is created with that value
+    var showDialog by remember(componentId, isOpen) { mutableStateOf(isOpen) }
 
     if (showDialog && childId != null) {
         AlertDialog(

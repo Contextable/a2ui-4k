@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 rootProject.name = "a2ui-4k"
 
 include(":library")
+include(":examples:catalog")
