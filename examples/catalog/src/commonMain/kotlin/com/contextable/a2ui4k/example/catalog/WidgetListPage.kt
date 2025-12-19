@@ -56,7 +56,7 @@ val allWidgets = listOf(
     WidgetInfo("TextField", "Input", "Text input field"),
     WidgetInfo("CheckBox", "Input", "Boolean toggle"),
     WidgetInfo("Slider", "Input", "Numeric range slider"),
-    WidgetInfo("ChoicePicker", "Input", "Selection dropdown"),
+    WidgetInfo("MultipleChoice", "Input", "Selection dropdown"),
     WidgetInfo("DateTimeInput", "Input", "Date/time picker")
 )
 

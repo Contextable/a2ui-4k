@@ -68,8 +68,8 @@ kotlin {
             // Coil for image loading with network support
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor3)
-            // Explicit JVM dependency - needed due to compose desktop run task classpath handling
-            implementation("org.jetbrains.kotlinx:kotlinx-datetime-jvm:0.6.2")
+            // Ktor engine for JVM network requests
+            implementation(libs.ktor.client.java)
         }
     }
 }

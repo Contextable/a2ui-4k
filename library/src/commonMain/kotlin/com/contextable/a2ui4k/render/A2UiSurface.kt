@@ -4,14 +4,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.contextable.a2ui4k.catalog.widgets.LocalScopedDataContext
 import com.contextable.a2ui4k.data.DataModel
-import com.contextable.a2ui4k.data.collectAsState
 import com.contextable.a2ui4k.data.rememberDataModel
 import com.contextable.a2ui4k.model.Catalog
 import com.contextable.a2ui4k.model.DataContext
@@ -45,32 +44,27 @@ fun A2UiSurface(
     catalog: Catalog,
     onEvent: (UiEvent) -> Unit = {}
 ) {
-    // Observe data changes to trigger recomposition when DataModel is updated
-    val currentData by dataModel.collectAsState()
+    // Observe the data model to trigger recomposition on data changes
+    val currentData by dataModel.data.collectAsState()
 
-    // Create context that reads from the current data snapshot
-    // The context itself doesn't need to be recreated on data changes since
-    // it always reads from the DataModel's current value
-    val dataContext = remember(dataModel) { dataModel.createContext() }
+    // Recreate context when data changes so widgets get updated values
+    val dataContext = remember(dataModel, currentData) { dataModel.createContext() }
 
     CompositionLocalProvider(LocalUiDefinition provides definition) {
-        // Use key to force recomposition when data changes
-        key(currentData) {
-            Box(modifier = modifier) {
-                val rootId = definition.root
-                if (rootId != null) {
-                    ComponentBuilder(
-                        componentId = rootId,
-                        definition = definition,
-                        catalog = catalog,
-                        dataContext = dataContext,
-                        surfaceId = definition.surfaceId,
-                        onEvent = onEvent
-                    )
-                } else {
-                    // No root component defined yet
-                    EmptyState()
-                }
+        Box(modifier = modifier) {
+            val rootId = definition.root
+            if (rootId != null) {
+                ComponentBuilder(
+                    componentId = rootId,
+                    definition = definition,
+                    catalog = catalog,
+                    dataContext = dataContext,
+                    surfaceId = definition.surfaceId,
+                    onEvent = onEvent
+                )
+            } else {
+                // No root component defined yet
+                EmptyState()
             }
         }
     }

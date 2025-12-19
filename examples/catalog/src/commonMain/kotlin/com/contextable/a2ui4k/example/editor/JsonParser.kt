@@ -4,7 +4,6 @@ import com.contextable.a2ui4k.model.Component
 import com.contextable.a2ui4k.model.UiDefinition
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -21,7 +20,7 @@ object JsonParser {
     /**
      * Parses a JSON string into a UiDefinition.
      *
-     * Expected format:
+     * Expected format (v0.8 nested component):
      * ```json
      * {
      *   "surfaceId": "demo",
@@ -29,8 +28,11 @@ object JsonParser {
      *   "components": {
      *     "root-component": {
      *       "id": "root-component",
-     *       "component": "Text",
-     *       "text": "Hello"
+     *       "component": {
+     *         "Text": {
+     *           "text": "Hello"
+     *         }
+     *       }
      *     }
      *   }
      * }
@@ -62,17 +64,13 @@ object JsonParser {
 
             val catalogId = jsonObj["catalogId"]?.jsonPrimitive?.content
 
-            // Parse initial data for data binding
-            val initialData = jsonObj["data"]?.jsonObject ?: JsonObject(emptyMap())
-
             ParseResult.Success(
-                definition = UiDefinition(
+                UiDefinition(
                     surfaceId = surfaceId,
                     components = components,
                     root = root,
                     catalogId = catalogId
-                ),
-                initialData = initialData
+                )
             )
         } catch (e: kotlinx.serialization.SerializationException) {
             ParseResult.Error("JSON syntax error: ${e.message?.take(100)}")
@@ -87,23 +85,21 @@ object JsonParser {
         return componentsJson.mapValues { (id, componentJson) ->
             val obj = componentJson.jsonObject
             val componentId = obj["id"]?.jsonPrimitive?.content ?: id
-            val componentType = obj["component"]?.jsonPrimitive?.content
-                ?: throw IllegalArgumentException("Component '$id' missing 'component' field")
             val weight = obj["weight"]?.jsonPrimitive?.intOrNull
 
-            // Extract properties: all fields except id, component, weight
-            val properties = buildJsonObject {
-                obj.forEach { (key, value) ->
-                    if (key !in listOf("id", "component", "weight")) {
-                        put(key, value)
-                    }
-                }
-            }
+            // v0.8: component is { "WidgetType": { ...properties } }
+            val componentObj = obj["component"]?.jsonObject
+                ?: throw IllegalArgumentException("Component '$id' missing 'component' field")
 
-            Component(
+            // Extract widget type and properties from the nested structure
+            val (widgetType, propertiesElement) = componentObj.entries.firstOrNull()
+                ?: throw IllegalArgumentException("Component '$id' has empty 'component' object")
+            val properties = propertiesElement.jsonObject
+
+            Component.create(
                 id = componentId,
-                component = componentType,
-                properties = properties,
+                widgetType = widgetType,
+                data = properties,
                 weight = weight
             )
         }

@@ -7,16 +7,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.contextable.a2ui4k.model.UiDefinition
-import kotlinx.serialization.json.JsonObject
 
 /**
  * Result of parsing JSON into a UiDefinition.
  */
 sealed class ParseResult {
-    data class Success(
-        val definition: UiDefinition,
-        val initialData: JsonObject = JsonObject(emptyMap())
-    ) : ParseResult()
+    data class Success(val definition: UiDefinition) : ParseResult()
     data class Error(val message: String) : ParseResult()
     data object Empty : ParseResult()
 }

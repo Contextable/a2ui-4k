@@ -1,7 +1,10 @@
 package com.contextable.a2ui4k.example.widgets
 
 /**
- * Sample JSON definitions for each widget type.
+ * Sample JSON definitions for each widget type (v0.8 format).
+ *
+ * v0.8 uses nested component format:
+ * "component": { "WidgetType": { ...properties } }
  */
 object WidgetSamples {
 
@@ -18,7 +21,7 @@ object WidgetSamples {
         "Divider" -> DIVIDER_SAMPLE
         "CheckBox" -> CHECKBOX_SAMPLE
         "Slider" -> SLIDER_SAMPLE
-        "ChoicePicker" -> CHOICE_PICKER_SAMPLE
+        "MultipleChoice" -> MULTIPLE_CHOICE_SAMPLE
         "DateTimeInput" -> DATE_TIME_SAMPLE
         "Tabs" -> TABS_SAMPLE
         "Modal" -> MODAL_SAMPLE
@@ -34,31 +37,46 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "Column",
-      "children": {"explicitList": ["h1", "h2", "body", "caption"]}
+      "component": {
+        "Column": {
+          "children": {"explicitList": ["h1", "h2", "body", "caption"]}
+        }
+      }
     },
     "h1": {
       "id": "h1",
-      "component": "Text",
-      "text": "Heading 1",
-      "usageHint": "h1"
+      "component": {
+        "Text": {
+          "text": "Heading 1",
+          "usageHint": "h1"
+        }
+      }
     },
     "h2": {
       "id": "h2",
-      "component": "Text",
-      "text": "Heading 2",
-      "usageHint": "h2"
+      "component": {
+        "Text": {
+          "text": "Heading 2",
+          "usageHint": "h2"
+        }
+      }
     },
     "body": {
       "id": "body",
-      "component": "Text",
-      "text": "This is **body text** with _markdown_ support."
+      "component": {
+        "Text": {
+          "text": "This is **body text** with _markdown_ support."
+        }
+      }
     },
     "caption": {
       "id": "caption",
-      "component": "Text",
-      "text": "Small caption text",
-      "usageHint": "caption"
+      "component": {
+        "Text": {
+          "text": "Small caption text",
+          "usageHint": "caption"
+        }
+      }
     }
   }
 }
@@ -71,21 +89,30 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "Column",
-      "children": {"explicitList": ["label", "input"]}
+      "component": {
+        "Column": {
+          "children": {"explicitList": ["label", "input"]}
+        }
+      }
     },
     "label": {
       "id": "label",
-      "component": "Text",
-      "text": "Enter your name:",
-      "usageHint": "label"
+      "component": {
+        "Text": {
+          "text": "Enter your name:",
+          "usageHint": "label"
+        }
+      }
     },
     "input": {
       "id": "input",
-      "component": "TextField",
-      "label": "Name",
-      "placeholder": "John Doe",
-      "value": {"path": "/form/name"}
+      "component": {
+        "TextField": {
+          "label": "Name",
+          "placeholder": "John Doe",
+          "value": {"path": "/form/name"}
+        }
+      }
     }
   }
 }
@@ -98,36 +125,66 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "Column",
-      "children": {"explicitList": ["primary-btn", "secondary-btn"]}
+      "component": {
+        "Column": {
+          "children": {"explicitList": ["primary-btn", "secondary-btn", "feedback"]}
+        }
+      }
     },
     "primary-btn": {
       "id": "primary-btn",
-      "component": "Button",
-      "child": "primary-text",
-      "primary": true,
-      "action": {
-        "name": "submit"
+      "component": {
+        "Button": {
+          "child": "primary-text",
+          "primary": true,
+          "action": {
+            "name": "submit",
+            "dataUpdates": [
+              {"path": "/ui/lastClicked", "value": "Primary Button clicked!"}
+            ]
+          }
+        }
       }
     },
     "primary-text": {
       "id": "primary-text",
-      "component": "Text",
-      "text": "Primary Button"
+      "component": {
+        "Text": {
+          "text": "Primary Button"
+        }
+      }
     },
     "secondary-btn": {
       "id": "secondary-btn",
-      "component": "Button",
-      "child": "secondary-text",
-      "primary": false,
-      "action": {
-        "name": "cancel"
+      "component": {
+        "Button": {
+          "child": "secondary-text",
+          "primary": false,
+          "action": {
+            "name": "cancel",
+            "dataUpdates": [
+              {"path": "/ui/lastClicked", "value": "Secondary Button clicked!"}
+            ]
+          }
+        }
       }
     },
     "secondary-text": {
       "id": "secondary-text",
-      "component": "Text",
-      "text": "Secondary Button"
+      "component": {
+        "Text": {
+          "text": "Secondary Button"
+        }
+      }
+    },
+    "feedback": {
+      "id": "feedback",
+      "component": {
+        "Text": {
+          "text": {"path": "/ui/lastClicked"},
+          "usageHint": "caption"
+        }
+      }
     }
   }
 }
@@ -140,21 +197,30 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "Column",
-      "children": {"explicitList": ["label", "image"]}
+      "component": {
+        "Column": {
+          "children": {"explicitList": ["label", "image"]}
+        }
+      }
     },
     "label": {
       "id": "label",
-      "component": "Text",
-      "text": "Image from URL:",
-      "usageHint": "label"
+      "component": {
+        "Text": {
+          "text": "Image from URL:",
+          "usageHint": "label"
+        }
+      }
     },
     "image": {
       "id": "image",
-      "component": "Image",
-      "url": "https://picsum.photos/400/200",
-      "contentDescription": "Random placeholder image",
-      "height": 200
+      "component": {
+        "Image": {
+          "url": "https://picsum.photos/400/200",
+          "contentDescription": "Random placeholder image",
+          "height": 200
+        }
+      }
     }
   }
 }
@@ -167,33 +233,41 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "Row",
-      "children": {"explicitList": ["home", "settings", "search", "star", "favorite"]}
+      "component": {
+        "Row": {
+          "children": {"explicitList": ["home", "settings", "search", "star", "favorite"]}
+        }
+      }
     },
     "home": {
       "id": "home",
-      "component": "Icon",
-      "name": "home"
+      "component": {
+        "Icon": {"name": "home"}
+      }
     },
     "settings": {
       "id": "settings",
-      "component": "Icon",
-      "name": "settings"
+      "component": {
+        "Icon": {"name": "settings"}
+      }
     },
     "search": {
       "id": "search",
-      "component": "Icon",
-      "name": "search"
+      "component": {
+        "Icon": {"name": "search"}
+      }
     },
     "star": {
       "id": "star",
-      "component": "Icon",
-      "name": "star"
+      "component": {
+        "Icon": {"name": "star"}
+      }
     },
     "favorite": {
       "id": "favorite",
-      "component": "Icon",
-      "name": "favorite"
+      "component": {
+        "Icon": {"name": "favorite"}
+      }
     }
   }
 }
@@ -206,24 +280,30 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "Column",
-      "distribution": "spaceEvenly",
-      "children": {"explicitList": ["item1", "item2", "item3"]}
+      "component": {
+        "Column": {
+          "distribution": "spaceEvenly",
+          "children": {"explicitList": ["item1", "item2", "item3"]}
+        }
+      }
     },
     "item1": {
       "id": "item1",
-      "component": "Text",
-      "text": "First item"
+      "component": {
+        "Text": {"text": "First item"}
+      }
     },
     "item2": {
       "id": "item2",
-      "component": "Text",
-      "text": "Second item"
+      "component": {
+        "Text": {"text": "Second item"}
+      }
     },
     "item3": {
       "id": "item3",
-      "component": "Text",
-      "text": "Third item"
+      "component": {
+        "Text": {"text": "Third item"}
+      }
     }
   }
 }
@@ -236,24 +316,30 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "Row",
-      "distribution": "spaceBetween",
-      "children": {"explicitList": ["left", "center", "right"]}
+      "component": {
+        "Row": {
+          "distribution": "spaceBetween",
+          "children": {"explicitList": ["left", "center", "right"]}
+        }
+      }
     },
     "left": {
       "id": "left",
-      "component": "Text",
-      "text": "Left"
+      "component": {
+        "Text": {"text": "Left"}
+      }
     },
     "center": {
       "id": "center",
-      "component": "Text",
-      "text": "Center"
+      "component": {
+        "Text": {"text": "Center"}
+      }
     },
     "right": {
       "id": "right",
-      "component": "Text",
-      "text": "Right"
+      "component": {
+        "Text": {"text": "Right"}
+      }
     }
   }
 }
@@ -266,49 +352,60 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "List",
-      "direction": "vertical",
-      "children": {"explicitList": ["item1", "item2", "item3", "item4"]}
+      "component": {
+        "List": {
+          "direction": "vertical",
+          "children": {"explicitList": ["item1", "item2", "item3", "item4"]}
+        }
+      }
     },
     "item1": {
       "id": "item1",
-      "component": "Card",
-      "child": "text1"
+      "component": {
+        "Card": {"child": "text1"}
+      }
     },
     "text1": {
       "id": "text1",
-      "component": "Text",
-      "text": "List Item 1"
+      "component": {
+        "Text": {"text": "List Item 1"}
+      }
     },
     "item2": {
       "id": "item2",
-      "component": "Card",
-      "child": "text2"
+      "component": {
+        "Card": {"child": "text2"}
+      }
     },
     "text2": {
       "id": "text2",
-      "component": "Text",
-      "text": "List Item 2"
+      "component": {
+        "Text": {"text": "List Item 2"}
+      }
     },
     "item3": {
       "id": "item3",
-      "component": "Card",
-      "child": "text3"
+      "component": {
+        "Card": {"child": "text3"}
+      }
     },
     "text3": {
       "id": "text3",
-      "component": "Text",
-      "text": "List Item 3"
+      "component": {
+        "Text": {"text": "List Item 3"}
+      }
     },
     "item4": {
       "id": "item4",
-      "component": "Card",
-      "child": "text4"
+      "component": {
+        "Card": {"child": "text4"}
+      }
     },
     "text4": {
       "id": "text4",
-      "component": "Text",
-      "text": "List Item 4"
+      "component": {
+        "Text": {"text": "List Item 4"}
+      }
     }
   }
 }
@@ -321,39 +418,56 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "Column",
-      "children": {"explicitList": ["card1", "card2"]}
+      "component": {
+        "Column": {
+          "children": {"explicitList": ["card1", "card2"]}
+        }
+      }
     },
     "card1": {
       "id": "card1",
-      "component": "Card",
-      "child": "card1-content"
+      "component": {
+        "Card": {"child": "card1-content"}
+      }
     },
     "card1-content": {
       "id": "card1-content",
-      "component": "Column",
-      "children": {"explicitList": ["card1-title", "card1-body"]}
+      "component": {
+        "Column": {
+          "children": {"explicitList": ["card1-title", "card1-body"]}
+        }
+      }
     },
     "card1-title": {
       "id": "card1-title",
-      "component": "Text",
-      "text": "Card Title",
-      "usageHint": "h3"
+      "component": {
+        "Text": {
+          "text": "Card Title",
+          "usageHint": "h3"
+        }
+      }
     },
     "card1-body": {
       "id": "card1-body",
-      "component": "Text",
-      "text": "This is the card content with some descriptive text."
+      "component": {
+        "Text": {
+          "text": "This is the card content with some descriptive text."
+        }
+      }
     },
     "card2": {
       "id": "card2",
-      "component": "Card",
-      "child": "card2-text"
+      "component": {
+        "Card": {"child": "card2-text"}
+      }
     },
     "card2-text": {
       "id": "card2-text",
-      "component": "Text",
-      "text": "Simple card with text only"
+      "component": {
+        "Text": {
+          "text": "Simple card with text only"
+        }
+      }
     }
   }
 }
@@ -366,22 +480,29 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "Column",
-      "children": {"explicitList": ["above", "divider", "below"]}
+      "component": {
+        "Column": {
+          "children": {"explicitList": ["above", "divider", "below"]}
+        }
+      }
     },
     "above": {
       "id": "above",
-      "component": "Text",
-      "text": "Content above divider"
+      "component": {
+        "Text": {"text": "Content above divider"}
+      }
     },
     "divider": {
       "id": "divider",
-      "component": "Divider"
+      "component": {
+        "Divider": {}
+      }
     },
     "below": {
       "id": "below",
-      "component": "Text",
-      "text": "Content below divider"
+      "component": {
+        "Text": {"text": "Content below divider"}
+      }
     }
   }
 }
@@ -394,26 +515,38 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "Column",
-      "children": {"explicitList": ["check1", "check2", "check3"]}
+      "component": {
+        "Column": {
+          "children": {"explicitList": ["check1", "check2", "check3"]}
+        }
+      }
     },
     "check1": {
       "id": "check1",
-      "component": "CheckBox",
-      "label": "Accept terms and conditions",
-      "value": {"path": "/form/acceptTerms"}
+      "component": {
+        "CheckBox": {
+          "label": "Accept terms and conditions",
+          "value": {"path": "/form/acceptTerms"}
+        }
+      }
     },
     "check2": {
       "id": "check2",
-      "component": "CheckBox",
-      "label": "Subscribe to newsletter",
-      "value": {"path": "/form/newsletter"}
+      "component": {
+        "CheckBox": {
+          "label": "Subscribe to newsletter",
+          "value": {"path": "/form/newsletter"}
+        }
+      }
     },
     "check3": {
       "id": "check3",
-      "component": "CheckBox",
-      "label": "Enable notifications",
-      "value": {"path": "/form/notifications"}
+      "component": {
+        "CheckBox": {
+          "label": "Enable notifications",
+          "value": {"path": "/form/notifications"}
+        }
+      }
     }
   }
 }
@@ -426,59 +559,80 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "Column",
-      "children": {"explicitList": ["label", "slider", "value-text"]}
+      "component": {
+        "Column": {
+          "children": {"explicitList": ["label", "slider", "value-text"]}
+        }
+      }
     },
     "label": {
       "id": "label",
-      "component": "Text",
-      "text": "Volume Control",
-      "usageHint": "label"
+      "component": {
+        "Text": {
+          "text": "Volume Control",
+          "usageHint": "label"
+        }
+      }
     },
     "slider": {
       "id": "slider",
-      "component": "Slider",
-      "label": "Volume",
-      "min": 0,
-      "max": 100,
-      "value": {"path": "/settings/volume"}
+      "component": {
+        "Slider": {
+          "label": "Volume",
+          "min": 0,
+          "max": 100,
+          "value": {"path": "/settings/volume"}
+        }
+      }
     },
     "value-text": {
       "id": "value-text",
-      "component": "Text",
-      "text": {"path": "/settings/volume"}
+      "component": {
+        "Text": {
+          "text": {"path": "/settings/volume"}
+        }
+      }
     }
   }
 }
     """.trimIndent()
 
-    private val CHOICE_PICKER_SAMPLE = """
+    private val MULTIPLE_CHOICE_SAMPLE = """
 {
   "surfaceId": "choice-demo",
   "root": "root",
   "components": {
     "root": {
       "id": "root",
-      "component": "Column",
-      "children": {"explicitList": ["label", "picker"]}
+      "component": {
+        "Column": {
+          "children": {"explicitList": ["label", "picker"]}
+        }
+      }
     },
     "label": {
       "id": "label",
-      "component": "Text",
-      "text": "Select your favorite color:",
-      "usageHint": "label"
+      "component": {
+        "Text": {
+          "text": "Select your favorite color:",
+          "usageHint": "label"
+        }
+      }
     },
     "picker": {
       "id": "picker",
-      "component": "ChoicePicker",
-      "label": "Color",
-      "options": [
-        {"label": "Red", "value": "red"},
-        {"label": "Green", "value": "green"},
-        {"label": "Blue", "value": "blue"},
-        {"label": "Yellow", "value": "yellow"}
-      ],
-      "value": {"path": "/form/color"}
+      "component": {
+        "MultipleChoice": {
+          "label": "Color",
+          "options": [
+            {"label": "Red", "value": "red"},
+            {"label": "Green", "value": "green"},
+            {"label": "Blue", "value": "blue"},
+            {"label": "Yellow", "value": "yellow"}
+          ],
+          "value": {"path": "/form/color"}
+        }
+      }
     }
   }
 }
@@ -491,22 +645,31 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "Column",
-      "children": {"explicitList": ["label", "datetime"]}
+      "component": {
+        "Column": {
+          "children": {"explicitList": ["label", "datetime"]}
+        }
+      }
     },
     "label": {
       "id": "label",
-      "component": "Text",
-      "text": "Select date and time:",
-      "usageHint": "label"
+      "component": {
+        "Text": {
+          "text": "Select date and time:",
+          "usageHint": "label"
+        }
+      }
     },
     "datetime": {
       "id": "datetime",
-      "component": "DateTimeInput",
-      "label": "Appointment",
-      "enableDate": true,
-      "enableTime": true,
-      "value": {"path": "/form/appointment"}
+      "component": {
+        "DateTimeInput": {
+          "label": "Appointment",
+          "enableDate": true,
+          "enableTime": true,
+          "value": {"path": "/form/appointment"}
+        }
+      }
     }
   }
 }
@@ -519,27 +682,33 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "Tabs",
-      "tabItems": [
-        {"title": "Home", "child": "tab1-content"},
-        {"title": "Profile", "child": "tab2-content"},
-        {"title": "Settings", "child": "tab3-content"}
-      ]
+      "component": {
+        "Tabs": {
+          "tabItems": [
+            {"title": "Home", "child": "tab1-content"},
+            {"title": "Profile", "child": "tab2-content"},
+            {"title": "Settings", "child": "tab3-content"}
+          ]
+        }
+      }
     },
     "tab1-content": {
       "id": "tab1-content",
-      "component": "Text",
-      "text": "Welcome to the Home tab!"
+      "component": {
+        "Text": {"text": "Welcome to the Home tab!"}
+      }
     },
     "tab2-content": {
       "id": "tab2-content",
-      "component": "Text",
-      "text": "This is your Profile tab."
+      "component": {
+        "Text": {"text": "This is your Profile tab."}
+      }
     },
     "tab3-content": {
       "id": "tab3-content",
-      "component": "Text",
-      "text": "Adjust your Settings here."
+      "component": {
+        "Text": {"text": "Adjust your Settings here."}
+      }
     }
   }
 }
@@ -549,56 +718,80 @@ object WidgetSamples {
 {
   "surfaceId": "modal-demo",
   "root": "root",
-  "data": {
-    "ui": {
-      "modalOpen": false
-    }
-  },
   "components": {
     "root": {
       "id": "root",
-      "component": "Column",
-      "children": {"explicitList": ["open-btn", "modal"]}
+      "component": {
+        "Column": {
+          "children": {"explicitList": ["info", "open-btn", "modal"]}
+        }
+      }
+    },
+    "info": {
+      "id": "info",
+      "component": {
+        "Text": {
+          "text": "Click the button below to open the modal dialog."
+        }
+      }
     },
     "open-btn": {
       "id": "open-btn",
-      "component": "Button",
-      "child": "open-btn-text",
-      "primary": true,
-      "action": {
-        "name": "openModal",
-        "dataUpdates": [
-          {"path": "/ui/modalOpen", "value": true}
-        ]
+      "component": {
+        "Button": {
+          "child": "open-btn-text",
+          "primary": true,
+          "action": {
+            "name": "openModal",
+            "dataUpdates": [
+              {"path": "/ui/modalOpen", "value": true}
+            ]
+          }
+        }
       }
     },
     "open-btn-text": {
       "id": "open-btn-text",
-      "component": "Text",
-      "text": "Open Modal"
+      "component": {
+        "Text": {
+          "text": "Open Modal"
+        }
+      }
     },
     "modal": {
       "id": "modal",
-      "component": "Modal",
-      "title": "Confirmation Dialog",
-      "open": {"path": "/ui/modalOpen"},
-      "child": "modal-content"
+      "component": {
+        "Modal": {
+          "title": "Confirmation Dialog",
+          "open": {"path": "/ui/modalOpen"},
+          "child": "modal-content"
+        }
+      }
     },
     "modal-content": {
       "id": "modal-content",
-      "component": "Column",
-      "children": {"explicitList": ["modal-text", "modal-details"]}
+      "component": {
+        "Column": {
+          "children": {"explicitList": ["modal-text", "modal-details"]}
+        }
+      }
     },
     "modal-text": {
       "id": "modal-text",
-      "component": "Text",
-      "text": "Are you sure you want to proceed?",
-      "usageHint": "h3"
+      "component": {
+        "Text": {
+          "text": "Are you sure you want to proceed?",
+          "usageHint": "h3"
+        }
+      }
     },
     "modal-details": {
       "id": "modal-details",
-      "component": "Text",
-      "text": "This action cannot be undone."
+      "component": {
+        "Text": {
+          "text": "This action cannot be undone."
+        }
+      }
     }
   }
 }
@@ -611,20 +804,29 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "Column",
-      "children": {"explicitList": ["label", "video"]}
+      "component": {
+        "Column": {
+          "children": {"explicitList": ["label", "video"]}
+        }
+      }
     },
     "label": {
       "id": "label",
-      "component": "Text",
-      "text": "Video Player (placeholder)",
-      "usageHint": "h2"
+      "component": {
+        "Text": {
+          "text": "Video Player (placeholder)",
+          "usageHint": "h2"
+        }
+      }
     },
     "video": {
       "id": "video",
-      "component": "Video",
-      "url": "https://example.com/video.mp4",
-      "description": "Sample video content"
+      "component": {
+        "Video": {
+          "url": "https://example.com/video.mp4",
+          "description": "Sample video content"
+        }
+      }
     }
   }
 }
@@ -637,20 +839,29 @@ object WidgetSamples {
   "components": {
     "root": {
       "id": "root",
-      "component": "Column",
-      "children": {"explicitList": ["label", "audio"]}
+      "component": {
+        "Column": {
+          "children": {"explicitList": ["label", "audio"]}
+        }
+      }
     },
     "label": {
       "id": "label",
-      "component": "Text",
-      "text": "Audio Player (placeholder)",
-      "usageHint": "h2"
+      "component": {
+        "Text": {
+          "text": "Audio Player (placeholder)",
+          "usageHint": "h2"
+        }
+      }
     },
     "audio": {
       "id": "audio",
-      "component": "AudioPlayer",
-      "url": "https://example.com/audio.mp3",
-      "description": "Sample audio content"
+      "component": {
+        "AudioPlayer": {
+          "url": "https://example.com/audio.mp3",
+          "description": "Sample audio content"
+        }
+      }
     }
   }
 }
@@ -663,8 +874,11 @@ object WidgetSamples {
   "components": {
     "text": {
       "id": "text",
-      "component": "Text",
-      "text": "Hello, A2UI!"
+      "component": {
+        "Text": {
+          "text": "Hello, A2UI!"
+        }
+      }
     }
   }
 }

@@ -6,6 +6,7 @@ kotlinx-serialization = "1.8.1"
 kotlinx-datetime = "0.7.1"
 kotlinx-coroutines = "1.10.2"
 coil = "3.2.0"
+ktor = "3.1.2"
 kermit = "2.0.5"
 androidx-activity = "1.9.3"
 
@@ -16,6 +17,7 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor3 = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
+ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
 

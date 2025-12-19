@@ -17,8 +17,6 @@ import com.contextable.a2ui4k.model.PathString
 import com.contextable.a2ui4k.model.UserActionEvent
 import com.contextable.a2ui4k.render.LocalUiDefinition
 import kotlin.time.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -106,7 +104,7 @@ private fun ButtonWidgetContent(
     val onClick: () -> Unit = {
         val actionName = actionData?.get("name")?.jsonPrimitive?.content ?: "click"
 
-        // Process dataUpdates for internal data binding (A2UI v0.9)
+        // Process dataUpdates for internal data binding
         val dataUpdates = actionData?.get("dataUpdates")?.jsonArray
         dataUpdates?.forEach { update ->
             val updateObj = update as? JsonObject ?: return@forEach
