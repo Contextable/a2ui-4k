@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,10 +21,9 @@ import androidx.compose.ui.unit.dp
 import com.contextable.a2ui4k.model.CatalogItem
 import com.contextable.a2ui4k.model.DataChangeEvent
 import com.contextable.a2ui4k.model.DataContext
-import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.EventDispatcher
-import com.contextable.a2ui4k.model.LiteralString
-import com.contextable.a2ui4k.model.PathString
+import com.contextable.a2ui4k.render.LocalUiDefinition
+import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -36,29 +34,20 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * MultipleChoice widget for selecting one or more options.
  *
- * A2UI Protocol MultipleChoice properties:
- * - `label`: Display label
- * - `maxAllowedSelections`: Number of selections allowed (1 = single, >1 = multiple)
- * - `options`: Array of {label, value} objects
- * - `selections`: Path for data binding to selected values
+ * A2UI Protocol Properties (v0.8):
+ * - selections (required): Path for data binding to selected values
+ * - options (required): Array of {label, value} objects
+ * - maxAllowedSelections (optional): Number of selections allowed (1 = single, >1 = multiple)
  *
- * See A2UI protocol: standard_catalog_definition.json - MultipleChoice component
- *
- * JSON Schema (v0.8):
+ * JSON Schema:
  * ```json
  * {
- *   "id": "choice_1",
- *   "component": {
- *     "MultipleChoice": {
- *       "label": {"literalString": "Select options"},
- *       "maxAllowedSelections": 3,
- *       "options": [
- *         {"label": "Option 1", "value": "opt1"},
- *         {"label": "Option 2", "value": "opt2"}
- *       ],
- *       "selections": {"path": "/form/selections"}
- *     }
- *   }
+ *   "selections": {"path": "/form/selections"},
+ *   "options": [
+ *     {"label": "Option 1", "value": "opt1"},
+ *     {"label": "Option 2", "value": "opt2"}
+ *   ],
+ *   "maxAllowedSelections": {"literalNumber": 3}
  * }
  * ```
  */
@@ -73,6 +62,8 @@ val MultipleChoiceWidget = CatalogItem(
     )
 }
 
+private val EXPECTED_PROPERTIES = setOf("selections", "options", "maxAllowedSelections")
+
 @Composable
 private fun MultipleChoiceWidgetContent(
     componentId: String,
@@ -80,20 +71,11 @@ private fun MultipleChoiceWidgetContent(
     dataContext: DataContext,
     onEvent: EventDispatcher
 ) {
-    val labelRef = DataReferenceParser.parseString(data["label"])
-    val surfaceId = DataReferenceParser.parseString(data["surfaceId"])?.let {
-        when (it) {
-            is LiteralString -> it.value
-            is PathString -> dataContext.getString(it.path)
-            else -> null
-        }
-    } ?: ""
+    PropertyValidation.warnUnexpectedProperties("MultipleChoice", data, EXPECTED_PROPERTIES)
 
-    val label = when (labelRef) {
-        is LiteralString -> labelRef.value
-        is PathString -> dataContext.getString(labelRef.path) ?: ""
-        else -> ""
-    }
+    // Get surfaceId from UiDefinition
+    val uiDefinition = LocalUiDefinition.current
+    val surfaceId = uiDefinition?.surfaceId ?: "default"
 
     val maxAllowedSelections = data["maxAllowedSelections"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
     val multipleSelection = maxAllowedSelections != 1
@@ -116,14 +98,6 @@ private fun MultipleChoiceWidgetContent(
     var selectedValues by remember(selections) { mutableStateOf(selections.toSet()) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        if (label.isNotEmpty()) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        }
-
         options.forEach { (optLabel, optValue) ->
             val isSelected = optValue in selectedValues
 

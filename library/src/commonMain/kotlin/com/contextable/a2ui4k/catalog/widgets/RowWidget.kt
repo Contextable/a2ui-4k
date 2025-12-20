@@ -15,17 +15,23 @@ import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.LiteralString
 import com.contextable.a2ui4k.model.PathString
 import com.contextable.a2ui4k.render.LocalUiDefinition
+import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonObject
 
 /**
  * Row widget that arranges children horizontally.
  *
+ * A2UI Protocol Properties (v0.8):
+ * - children (required): List of child component IDs
+ * - distribution (optional): start, center, end, spaceBetween, spaceAround, spaceEvenly
+ * - alignment (optional): start, center, end, stretch
+ *
  * JSON Schema:
  * ```json
  * {
  *   "children": {"explicitList": ["child1", "child2"]},
- *   "distribution": "start" | "center" | "end" | "spaceBetween" | "spaceAround" | "spaceEvenly" (optional),
- *   "alignment": "top" | "center" | "bottom" (optional)
+ *   "distribution": {"literalString": "spaceBetween"},
+ *   "alignment": {"literalString": "center"}
  * }
  * ```
  */
@@ -35,12 +41,16 @@ val RowWidget = CatalogItem(
     RowWidgetContent(data = data, buildChild = buildChild, dataContext = dataContext)
 }
 
+private val EXPECTED_PROPERTIES = setOf("children", "distribution", "alignment")
+
 @Composable
 private fun RowWidgetContent(
     data: JsonObject,
     buildChild: ChildBuilder,
     dataContext: DataContext
 ) {
+    PropertyValidation.warnUnexpectedProperties("Row", data, EXPECTED_PROPERTIES)
+
     val childrenRef = DataReferenceParser.parseComponentArray(data["children"])
     val children = childrenRef?.componentIds ?: emptyList()
 
@@ -60,8 +70,16 @@ private fun RowWidgetContent(
 
     val definition = LocalUiDefinition.current
 
+    // Apply fillMaxWidth only for distributions that need space to distribute.
+    // This allows simple Rows to be centered by parent alignment, while
+    // spaceAround/spaceBetween/etc. get full width to distribute children.
+    val needsFullWidth = distribution?.lowercase() in listOf(
+        "spacebetween", "spacearound", "spaceevenly"
+    )
+    val modifier = if (needsFullWidth) Modifier.fillMaxWidth() else Modifier
+
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         horizontalArrangement = parseHorizontalArrangement(distribution),
         verticalAlignment = parseVerticalAlignment(alignment)
     ) {
@@ -91,11 +109,17 @@ private fun RowScope.BuildWeightedChild(
     }
 }
 
+/**
+ * Parse horizontal arrangement from A2UI distribution values.
+ *
+ * Valid distribution values per A2UI v0.8 spec:
+ * start, center, end, spaceBetween, spaceAround, spaceEvenly
+ */
 private fun parseHorizontalArrangement(distribution: String?): Arrangement.Horizontal {
     return when (distribution?.lowercase()) {
-        "start", "left" -> Arrangement.Start
+        "start" -> Arrangement.Start
         "center" -> Arrangement.Center
-        "end", "right" -> Arrangement.End
+        "end" -> Arrangement.End
         "spacebetween" -> Arrangement.SpaceBetween
         "spacearound" -> Arrangement.SpaceAround
         "spaceevenly" -> Arrangement.SpaceEvenly
@@ -103,11 +127,20 @@ private fun parseHorizontalArrangement(distribution: String?): Arrangement.Horiz
     }
 }
 
+/**
+ * Parse vertical alignment from A2UI alignment values.
+ *
+ * Valid alignment values per A2UI v0.8 spec:
+ * start, center, end, stretch
+ */
 private fun parseVerticalAlignment(alignment: String?): Alignment.Vertical {
     return when (alignment?.lowercase()) {
         "top", "start" -> Alignment.Top
         "center" -> Alignment.CenterVertically
         "bottom", "end" -> Alignment.Bottom
+        // "stretch" - Compose doesn't have a direct equivalent for vertical alignment
+        // Using CenterVertically as fallback. True stretch would need to be handled at the child level.
+        "stretch" -> Alignment.CenterVertically
         else -> Alignment.Top
     }
 }

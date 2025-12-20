@@ -14,6 +14,7 @@ import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.LiteralString
 import com.contextable.a2ui4k.model.PathString
+import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -32,11 +33,15 @@ val DividerWidget = CatalogItem(
     DividerWidgetContent(data = data, dataContext = dataContext)
 }
 
+private val EXPECTED_PROPERTIES = setOf("axis")
+
 @Composable
 private fun DividerWidgetContent(
     data: JsonObject,
     dataContext: DataContext
 ) {
+    PropertyValidation.warnUnexpectedProperties("Divider", data, EXPECTED_PROPERTIES)
+
     val axisRef = DataReferenceParser.parseString(data["axis"])
     val axis = when (axisRef) {
         is LiteralString -> axisRef.value

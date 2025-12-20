@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.contextable.a2ui4k.model.CatalogItem
 import com.contextable.a2ui4k.model.ChildBuilder
 import com.contextable.a2ui4k.model.DataReferenceParser
+import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -34,11 +35,15 @@ val CardWidget = CatalogItem(
     CardWidgetContent(data = data, buildChild = buildChild)
 }
 
+private val EXPECTED_PROPERTIES = setOf("child")
+
 @Composable
 private fun CardWidgetContent(
     data: JsonObject,
     buildChild: ChildBuilder
 ) {
+    PropertyValidation.warnUnexpectedProperties("Card", data, EXPECTED_PROPERTIES)
+
     val childRef = DataReferenceParser.parseComponentRef(data["child"])
     val childId = childRef?.componentId
 

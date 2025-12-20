@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.contextable.a2ui4k.catalog.CoreCatalog
+import com.contextable.a2ui4k.data.rememberDataModel
 import com.contextable.a2ui4k.render.A2UiSurface
 
 /**
@@ -33,16 +34,19 @@ fun RenderPanel(
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(8.dp),
-        modifier = modifier
+        modifier = modifier.fillMaxSize()
     ) {
         when (parseResult) {
             is ParseResult.Success -> {
+                // Create DataModel with initial data for path bindings
+                val dataModel = rememberDataModel(parseResult.initialData)
+
                 A2UiSurface(
                     definition = parseResult.definition,
+                    dataModel = dataModel,
                     catalog = CoreCatalog,
                     modifier = Modifier.fillMaxSize().padding(16.dp),
                     onEvent = { event ->
-                        // Events are logged but not handled in the catalog app
                         println("A2UI Event: $event")
                     }
                 )

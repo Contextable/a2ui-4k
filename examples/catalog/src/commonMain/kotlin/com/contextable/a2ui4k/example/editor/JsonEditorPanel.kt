@@ -17,20 +17,36 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Panel for editing JSON input with error display.
+ * Panel for editing JSON input with label and error display.
  */
 @Composable
 fun JsonEditorPanel(
-    json: String,
-    onJsonChange: (String) -> Unit,
-    error: String?,
-    modifier: Modifier = Modifier
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    error: String? = null
 ) {
     Column(modifier = modifier) {
+        // Label header
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            )
+        }
+
         // Error banner
         if (error != null) {
             Surface(
@@ -55,8 +71,8 @@ fun JsonEditorPanel(
                 .verticalScroll(rememberScrollState())
         ) {
             BasicTextField(
-                value = json,
-                onValueChange = onJsonChange,
+                value = value,
+                onValueChange = onValueChange,
                 textStyle = TextStyle(
                     fontFamily = FontFamily.Monospace,
                     fontSize = 12.sp,

@@ -16,6 +16,7 @@ import com.contextable.a2ui4k.model.PathBoolean
 import com.contextable.a2ui4k.model.PathString
 import com.contextable.a2ui4k.model.UserActionEvent
 import com.contextable.a2ui4k.render.LocalUiDefinition
+import com.contextable.a2ui4k.util.PropertyValidation
 import kotlin.time.Clock
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -60,6 +61,8 @@ val ButtonWidget = CatalogItem(
     )
 }
 
+private val EXPECTED_PROPERTIES = setOf("child", "action", "label", "primary", "usageHint")
+
 @Composable
 private fun ButtonWidgetContent(
     componentId: String,
@@ -68,6 +71,8 @@ private fun ButtonWidgetContent(
     dataContext: DataContext,
     onEvent: EventDispatcher
 ) {
+    PropertyValidation.warnUnexpectedProperties("Button", data, EXPECTED_PROPERTIES)
+
     // Child component reference (A2UI Button.child property)
     val childRef = DataReferenceParser.parseString(data["child"])
     val childId = when (childRef) {
@@ -92,7 +97,16 @@ private fun ButtonWidgetContent(
         else -> false
     }
 
-    val actionData = data["action"]?.jsonObject
+    // Action can be a string (action name) or object {name, context, dataUpdates}
+    val actionElement = data["action"]
+    val actionData = when {
+        actionElement is JsonObject -> actionElement
+        else -> null
+    }
+    val actionNameDirect = when {
+        actionElement is JsonPrimitive -> actionElement.contentOrNull
+        else -> null
+    }
 
     // Get surfaceId from UiDefinition (not from component data)
     val uiDefinition = LocalUiDefinition.current
@@ -102,7 +116,9 @@ private fun ButtonWidgetContent(
     val templateItemKey = LocalTemplateItemKey.current
 
     val onClick: () -> Unit = {
-        val actionName = actionData?.get("name")?.jsonPrimitive?.content ?: "click"
+        val actionName = actionNameDirect
+            ?: actionData?.get("name")?.jsonPrimitive?.content
+            ?: "click"
 
         // Process dataUpdates for internal data binding
         val dataUpdates = actionData?.get("dataUpdates")?.jsonArray

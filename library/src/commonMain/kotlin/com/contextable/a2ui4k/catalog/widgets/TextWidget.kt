@@ -10,17 +10,22 @@ import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.LiteralString
 import com.contextable.a2ui4k.model.PathString
+import com.contextable.a2ui4k.util.PropertyValidation
 import com.contextable.a2ui4k.util.parseBasicMarkdown
 import kotlinx.serialization.json.JsonObject
 
 /**
  * Text widget that displays a string with optional markdown formatting.
  *
+ * A2UI Protocol Properties (v0.8):
+ * - text (required): Text content to display
+ * - usageHint (optional): h1, h2, h3, h4, h5, caption, body
+ *
  * JSON Schema:
  * ```json
  * {
  *   "text": {"literalString": "Hello"} | {"path": "/user/name"},
- *   "usageHint": "h1" | "h2" | "h3" | "body" | "caption" (optional)
+ *   "usageHint": {"literalString": "h1"} | {"literalString": "body"}
  * }
  * ```
  */
@@ -30,11 +35,15 @@ val TextWidget = CatalogItem(
     TextWidgetContent(data = data, dataContext = dataContext)
 }
 
+private val EXPECTED_PROPERTIES = setOf("text", "usageHint")
+
 @Composable
 private fun TextWidgetContent(
     data: JsonObject,
     dataContext: DataContext
 ) {
+    PropertyValidation.warnUnexpectedProperties("Text", data, EXPECTED_PROPERTIES)
+
     val textRef = DataReferenceParser.parseString(data["text"])
     val usageHint = data["usageHint"]?.let {
         DataReferenceParser.parseString(it)
@@ -61,17 +70,22 @@ private fun TextWidgetContent(
     )
 }
 
+/**
+ * Maps A2UI usageHint values to Compose TextStyle.
+ *
+ * Valid usageHint values per A2UI v0.8 spec:
+ * h1, h2, h3, h4, h5, caption, body
+ */
 @Composable
 private fun getTextStyle(usageHint: String?): TextStyle {
     return when (usageHint?.lowercase()) {
         "h1" -> MaterialTheme.typography.headlineLarge
         "h2" -> MaterialTheme.typography.headlineMedium
         "h3" -> MaterialTheme.typography.headlineSmall
-        "title" -> MaterialTheme.typography.titleLarge
-        "subtitle" -> MaterialTheme.typography.titleMedium
+        "h4" -> MaterialTheme.typography.titleLarge
+        "h5" -> MaterialTheme.typography.titleMedium
         "body" -> MaterialTheme.typography.bodyLarge
         "caption" -> MaterialTheme.typography.bodySmall
-        "label" -> MaterialTheme.typography.labelMedium
         else -> LocalTextStyle.current
     }
 }

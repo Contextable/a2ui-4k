@@ -1,9 +1,7 @@
 package com.contextable.a2ui4k.catalog.widgets
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -16,34 +14,25 @@ import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.EventDispatcher
 import com.contextable.a2ui4k.model.LiteralNumber
-import com.contextable.a2ui4k.model.LiteralString
 import com.contextable.a2ui4k.model.PathNumber
-import com.contextable.a2ui4k.model.PathString
+import com.contextable.a2ui4k.render.LocalUiDefinition
+import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonObject
 
 /**
  * Slider widget for numeric range input.
  *
- * A2UI Protocol Slider properties:
- * - `label`: Display label (literal or path)
- * - `minValue`: Minimum value
- * - `maxValue`: Maximum value
- * - `value`: Current value (path for data binding)
+ * A2UI Protocol Properties (v0.8):
+ * - value (required): Current value, supports path binding for two-way data binding
+ * - minValue (optional): Minimum value (default 0)
+ * - maxValue (optional): Maximum value (default 100)
  *
- * See A2UI protocol: standard_catalog_definition.json - Slider component
- *
- * JSON Schema (v0.8):
+ * JSON Schema:
  * ```json
  * {
- *   "id": "slider_1",
- *   "component": {
- *     "Slider": {
- *       "label": {"literalString": "Volume"},
- *       "minValue": 0,
- *       "maxValue": 100,
- *       "value": {"path": "/settings/volume"}
- *     }
- *   }
+ *   "value": {"path": "/settings/volume"},
+ *   "minValue": {"literalNumber": 0},
+ *   "maxValue": {"literalNumber": 100}
  * }
  * ```
  */
@@ -58,6 +47,8 @@ val SliderWidget = CatalogItem(
     )
 }
 
+private val EXPECTED_PROPERTIES = setOf("value", "minValue", "maxValue")
+
 @Composable
 private fun SliderWidgetContent(
     componentId: String,
@@ -65,25 +56,15 @@ private fun SliderWidgetContent(
     dataContext: DataContext,
     onEvent: EventDispatcher
 ) {
-    val labelRef = DataReferenceParser.parseString(data["label"])
-    val valueRef = DataReferenceParser.parseNumber(data["value"])
+    PropertyValidation.warnUnexpectedProperties("Slider", data, EXPECTED_PROPERTIES)
 
+    val valueRef = DataReferenceParser.parseNumber(data["value"])
     val minValueRef = DataReferenceParser.parseNumber(data["minValue"])
     val maxValueRef = DataReferenceParser.parseNumber(data["maxValue"])
 
-    val surfaceId = DataReferenceParser.parseString(data["surfaceId"])?.let {
-        when (it) {
-            is LiteralString -> it.value
-            is PathString -> dataContext.getString(it.path)
-            else -> null
-        }
-    } ?: ""
-
-    val label = when (labelRef) {
-        is LiteralString -> labelRef.value
-        is PathString -> dataContext.getString(labelRef.path) ?: ""
-        else -> ""
-    }
+    // Get surfaceId from UiDefinition
+    val uiDefinition = LocalUiDefinition.current
+    val surfaceId = uiDefinition?.surfaceId ?: "default"
 
     val minValue = when (minValueRef) {
         is LiteralNumber -> minValueRef.value.toFloat()
@@ -105,29 +86,24 @@ private fun SliderWidgetContent(
 
     var sliderValue by remember(initialValue) { mutableFloatStateOf(initialValue) }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        if (label.isNotEmpty()) {
-            Text(text = "$label: ${sliderValue.toInt()}")
-        }
-        Slider(
-            value = sliderValue,
-            onValueChange = { newValue ->
-                sliderValue = newValue
-            },
-            onValueChangeFinished = {
-                if (valueRef is PathNumber) {
-                    dataContext.update(valueRef.path, sliderValue.toDouble())
-                    onEvent(
-                        DataChangeEvent(
-                            surfaceId = surfaceId,
-                            path = valueRef.path,
-                            value = sliderValue.toString()
-                        )
+    Slider(
+        value = sliderValue,
+        onValueChange = { newValue ->
+            sliderValue = newValue
+        },
+        onValueChangeFinished = {
+            if (valueRef is PathNumber) {
+                dataContext.update(valueRef.path, sliderValue.toDouble())
+                onEvent(
+                    DataChangeEvent(
+                        surfaceId = surfaceId,
+                        path = valueRef.path,
+                        value = sliderValue.toString()
                     )
-                }
-            },
-            valueRange = minValue..maxValue,
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
+                )
+            }
+        },
+        valueRange = minValue..maxValue,
+        modifier = Modifier.fillMaxWidth()
+    )
 }

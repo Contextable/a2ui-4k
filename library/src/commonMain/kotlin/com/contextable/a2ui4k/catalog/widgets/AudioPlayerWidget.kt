@@ -22,6 +22,7 @@ import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.LiteralString
 import com.contextable.a2ui4k.model.PathString
+import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -55,12 +56,16 @@ val AudioPlayerWidget = CatalogItem(
     )
 }
 
+private val EXPECTED_PROPERTIES = setOf("url", "description")
+
 @Composable
 private fun AudioPlayerWidgetContent(
     componentId: String,
     data: JsonObject,
     dataContext: DataContext
 ) {
+    PropertyValidation.warnUnexpectedProperties("AudioPlayer", data, EXPECTED_PROPERTIES)
+
     val urlRef = DataReferenceParser.parseString(data["url"])
     val descriptionRef = DataReferenceParser.parseString(data["description"])
 

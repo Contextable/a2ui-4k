@@ -33,8 +33,13 @@ import com.contextable.a2ui4k.example.widgets.WidgetSamples
 /**
  * Editor page for a specific widget with adaptive layout.
  *
- * - Compact (< 840dp): Preview on top, JSON editor at bottom
- * - Expanded (>= 840dp): Side-by-side (JSON left, preview right)
+ * Features two separate editors:
+ * - Components: Array of component definitions
+ * - Data: JSON object for data binding
+ *
+ * Layout:
+ * - Compact (< 840dp): Preview on top, editors stacked at bottom
+ * - Expanded (>= 840dp): Editors on left, preview on right
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,7 +47,11 @@ fun WidgetEditorPage(
     widgetName: String,
     onBack: () -> Unit
 ) {
-    val state = rememberEditorState(initialJson = WidgetSamples.getJson(widgetName))
+    val sample = WidgetSamples.getSample(widgetName)
+    val state = rememberEditorState(
+        initialComponents = sample.components,
+        initialData = sample.data
+    )
 
     Scaffold(
         topBar = {
@@ -78,7 +87,7 @@ fun WidgetEditorPage(
 }
 
 /**
- * Compact layout: Preview on top, JSON editor at bottom (2-3 lines minimum).
+ * Compact layout: Preview on top, editors stacked at bottom.
  */
 @Composable
 private fun CompactEditorLayout(state: EditorState) {
@@ -95,37 +104,70 @@ private fun CompactEditorLayout(state: EditorState) {
 
         HorizontalDivider()
 
-        // JSON editor (2-3 lines minimum height, can expand)
+        // Components editor
         JsonEditorPanel(
-            json = state.jsonInput,
-            onJsonChange = state::updateJson,
+            label = "Components",
+            value = state.componentsJson,
+            onValueChange = state::updateComponents,
             error = state.errorMessage,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 120.dp, max = 240.dp)
+                .heightIn(min = 100.dp, max = 180.dp)
+        )
+
+        HorizontalDivider()
+
+        // Data editor
+        JsonEditorPanel(
+            label = "Data",
+            value = state.dataJson,
+            onValueChange = state::updateData,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 60.dp, max = 100.dp)
         )
     }
 }
 
 /**
- * Expanded layout: JSON editor on left (40%), preview on right (60%).
+ * Expanded layout: Editors stacked on left (40%), preview on right (60%).
  */
 @Composable
 private fun ExpandedEditorLayout(state: EditorState) {
     Row(modifier = Modifier.fillMaxSize()) {
-        // JSON editor (40%)
-        JsonEditorPanel(
-            json = state.jsonInput,
-            onJsonChange = state::updateJson,
-            error = state.errorMessage,
+        // Left side: Two stacked editors
+        Column(
             modifier = Modifier
                 .weight(0.4f)
                 .fillMaxHeight()
-        )
+        ) {
+            // Components editor (larger, top)
+            JsonEditorPanel(
+                label = "Components",
+                value = state.componentsJson,
+                onValueChange = state::updateComponents,
+                error = state.errorMessage,
+                modifier = Modifier
+                    .weight(0.65f)
+                    .fillMaxWidth()
+            )
+
+            HorizontalDivider()
+
+            // Data editor (smaller, bottom)
+            JsonEditorPanel(
+                label = "Data",
+                value = state.dataJson,
+                onValueChange = state::updateData,
+                modifier = Modifier
+                    .weight(0.35f)
+                    .fillMaxWidth()
+            )
+        }
 
         VerticalDivider()
 
-        // Preview panel (60%)
+        // Right side: Preview panel
         Box(
             modifier = Modifier
                 .weight(0.6f)

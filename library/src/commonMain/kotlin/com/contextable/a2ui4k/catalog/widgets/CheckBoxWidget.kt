@@ -22,19 +22,22 @@ import com.contextable.a2ui4k.model.LiteralBoolean
 import com.contextable.a2ui4k.model.LiteralString
 import com.contextable.a2ui4k.model.PathBoolean
 import com.contextable.a2ui4k.model.PathString
+import com.contextable.a2ui4k.render.LocalUiDefinition
+import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonObject
 
 /**
  * CheckBox widget for boolean input.
  *
- * JSON Schema (v0.9):
+ * A2UI Protocol Properties (v0.8):
+ * - label (required): Display label for the checkbox
+ * - value (optional): Boolean value, supports path binding for two-way data binding
+ *
+ * JSON Schema:
  * ```json
  * {
- *   "component": "CheckBox",
- *   "properties": {
- *     "label": "Accept terms" | {"path": "/labels/terms"},
- *     "value": {"path": "/form/accepted"} | true
- *   }
+ *   "label": {"literalString": "Accept terms"},
+ *   "value": {"path": "/form/accepted"}
  * }
  * ```
  */
@@ -49,6 +52,8 @@ val CheckBoxWidget = CatalogItem(
     )
 }
 
+private val EXPECTED_PROPERTIES = setOf("label", "value")
+
 @Composable
 private fun CheckBoxWidgetContent(
     componentId: String,
@@ -56,15 +61,14 @@ private fun CheckBoxWidgetContent(
     dataContext: DataContext,
     onEvent: EventDispatcher
 ) {
+    PropertyValidation.warnUnexpectedProperties("CheckBox", data, EXPECTED_PROPERTIES)
+
     val labelRef = DataReferenceParser.parseString(data["label"])
     val valueRef = DataReferenceParser.parseBoolean(data["value"])
-    val surfaceId = DataReferenceParser.parseString(data["surfaceId"])?.let {
-        when (it) {
-            is LiteralString -> it.value
-            is PathString -> dataContext.getString(it.path)
-            else -> null
-        }
-    } ?: ""
+
+    // Get surfaceId from UiDefinition
+    val uiDefinition = LocalUiDefinition.current
+    val surfaceId = uiDefinition?.surfaceId ?: "default"
 
     val label = when (labelRef) {
         is LiteralString -> labelRef.value

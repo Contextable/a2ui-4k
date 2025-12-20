@@ -1,5 +1,7 @@
 package com.contextable.a2ui4k.catalog.widgets
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,29 +20,24 @@ import com.contextable.a2ui4k.model.CatalogItem
 import com.contextable.a2ui4k.model.ChildBuilder
 import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
-import com.contextable.a2ui4k.model.LiteralBoolean
-import com.contextable.a2ui4k.model.LiteralString
-import com.contextable.a2ui4k.model.PathBoolean
-import com.contextable.a2ui4k.model.PathString
+import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonObject
 
 /**
  * Modal widget for displaying dialog overlays.
  *
- * A2UI Protocol Modal properties:
- * - `child`: Component ID of the content to display
- * - `title`: Modal title text
- * - `open`: Boolean or path controlling visibility
+ * A2UI Protocol Properties (v0.8):
+ * - entryPointChild (required): Component ID of the trigger element (e.g., a Button)
+ * - contentChild (required): Component ID of the content to display in the modal
  *
- * See A2UI protocol: standard_catalog_definition.json - Modal component
+ * The modal opens when the entryPointChild is clicked.
  *
- * JSON Schema (v0.9):
+ * JSON Schema:
  * ```json
  * {
  *   "component": "Modal",
- *   "child": "modal-content",
- *   "title": "Confirmation",
- *   "open": {"path": "/ui/modalOpen"} | true
+ *   "entryPointChild": "open-modal-button",
+ *   "contentChild": "modal-content"
  * }
  * ```
  */
@@ -55,6 +52,8 @@ val ModalWidget = CatalogItem(
     )
 }
 
+private val EXPECTED_PROPERTIES = setOf("entryPointChild", "contentChild")
+
 @Composable
 private fun ModalWidgetContent(
     componentId: String,
@@ -62,54 +61,40 @@ private fun ModalWidgetContent(
     buildChild: ChildBuilder,
     dataContext: DataContext
 ) {
-    val titleRef = DataReferenceParser.parseString(data["title"])
-    val openRef = DataReferenceParser.parseBoolean(data["open"])
-    val childRef = DataReferenceParser.parseComponentRef(data["child"])
+    PropertyValidation.warnUnexpectedProperties("Modal", data, EXPECTED_PROPERTIES)
 
-    val title = when (titleRef) {
-        is LiteralString -> titleRef.value
-        is PathString -> dataContext.getString(titleRef.path) ?: ""
-        else -> ""
+    val entryPointRef = DataReferenceParser.parseComponentRef(data["entryPointChild"])
+    val contentRef = DataReferenceParser.parseComponentRef(data["contentChild"])
+
+    val entryPointChildId = entryPointRef?.componentId
+    val contentChildId = contentRef?.componentId
+
+    var showDialog by remember { mutableStateOf(false) }
+
+    // Render the entry point (trigger element)
+    if (entryPointChildId != null) {
+        Box(
+            modifier = Modifier.clickable { showDialog = true }
+        ) {
+            buildChild(entryPointChildId)
+        }
     }
 
-    val isOpen = when (openRef) {
-        is PathBoolean -> dataContext.getBoolean(openRef.path) ?: false
-        is LiteralBoolean -> openRef.value
-        else -> false
-    }
-
-    val childId = childRef?.componentId
-
-    var showDialog by remember(isOpen) { mutableStateOf(isOpen) }
-
-    if (showDialog && childId != null) {
+    // Show the modal when triggered
+    if (showDialog && contentChildId != null) {
         AlertDialog(
-            onDismissRequest = {
-                showDialog = false
-                // Update path if bound
-                if (openRef is PathBoolean) {
-                    dataContext.update(openRef.path, false)
-                }
-            },
-            title = if (title.isNotEmpty()) {
-                { Text(text = title, style = MaterialTheme.typography.headlineSmall) }
-            } else null,
+            onDismissRequest = { showDialog = false },
             text = {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(8.dp)
                 ) {
-                    buildChild(childId)
+                    buildChild(contentChildId)
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    showDialog = false
-                    if (openRef is PathBoolean) {
-                        dataContext.update(openRef.path, false)
-                    }
-                }) {
+                TextButton(onClick = { showDialog = false }) {
                     Text("Close")
                 }
             }

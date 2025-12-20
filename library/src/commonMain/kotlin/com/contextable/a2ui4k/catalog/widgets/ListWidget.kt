@@ -15,6 +15,7 @@ import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.LiteralString
 import com.contextable.a2ui4k.model.PathString
+import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -55,12 +56,16 @@ val ListWidget = CatalogItem(
     ListWidgetContent(data = data, buildChild = buildChild, dataContext = dataContext)
 }
 
+private val EXPECTED_PROPERTIES = setOf("children", "direction", "alignment")
+
 @Composable
 private fun ListWidgetContent(
     data: JsonObject,
     buildChild: ChildBuilder,
     dataContext: DataContext
 ) {
+    PropertyValidation.warnUnexpectedProperties("List", data, EXPECTED_PROPERTIES)
+
     val childrenRef = DataReferenceParser.parseChildren(data["children"])
 
     val directionRef = DataReferenceParser.parseString(data["direction"])

@@ -10,6 +10,7 @@ import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.LiteralString
 import com.contextable.a2ui4k.model.PathString
+import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -27,7 +28,9 @@ import kotlinx.serialization.json.JsonObject
  * chat, send, notifications, favorite, star, info, warning, error, help,
  * play_arrow, pause, stop, skip_next, skip_previous, volume_up, volume_off,
  * folder, file_copy, attach_file, download, upload, person, people,
- * account_circle, location_on, map, calendar_today, schedule, broken_image
+ * account_circle, location_on, map, flight, flight_takeoff, flight_land,
+ * directions_car, directions_bus, train, hotel, luggage,
+ * calendar_today, schedule, broken_image
  */
 val IconWidget = CatalogItem(
     name = "Icon"
@@ -35,11 +38,15 @@ val IconWidget = CatalogItem(
     IconWidgetContent(data = data, dataContext = dataContext)
 }
 
+private val EXPECTED_PROPERTIES = setOf("name")
+
 @Composable
 private fun IconWidgetContent(
     data: JsonObject,
     dataContext: DataContext
 ) {
+    PropertyValidation.warnUnexpectedProperties("Icon", data, EXPECTED_PROPERTIES)
+
     val nameRef = DataReferenceParser.parseString(data["name"])
     val iconName = when (nameRef) {
         is LiteralString -> nameRef.value

@@ -255,10 +255,11 @@ internal class DataModelContext(
 
 /**
  * Creates and remembers a DataModel instance.
+ * The DataModel is recreated when initialData changes.
  */
 @Composable
 fun rememberDataModel(initialData: JsonObject = JsonObject(emptyMap())): DataModel {
-    return remember { DataModel(initialData) }
+    return remember(initialData) { DataModel(initialData) }
 }
 
 /**

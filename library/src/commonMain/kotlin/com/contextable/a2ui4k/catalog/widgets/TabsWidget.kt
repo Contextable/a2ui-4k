@@ -17,6 +17,7 @@ import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.EventDispatcher
 import com.contextable.a2ui4k.model.LiteralString
 import com.contextable.a2ui4k.model.PathString
+import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -50,6 +51,8 @@ val TabsWidget = CatalogItem(
     )
 }
 
+private val EXPECTED_PROPERTIES = setOf("tabItems")
+
 @Composable
 private fun TabsWidgetContent(
     componentId: String,
@@ -57,6 +60,8 @@ private fun TabsWidgetContent(
     buildChild: @Composable (String) -> Unit,
     dataContext: DataContext
 ) {
+    PropertyValidation.warnUnexpectedProperties("Tabs", data, EXPECTED_PROPERTIES)
+
     val tabItemsArray = data["tabItems"]?.jsonArray ?: return
 
     val tabs = tabItemsArray.mapNotNull { tabElement ->

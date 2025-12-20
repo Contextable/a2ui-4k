@@ -29,6 +29,8 @@ import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.EventDispatcher
 import com.contextable.a2ui4k.model.LiteralString
 import com.contextable.a2ui4k.model.PathString
+import com.contextable.a2ui4k.render.LocalUiDefinition
+import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -36,17 +38,17 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * DateTimeInput widget for date and/or time input.
  *
- * JSON Schema (v0.9):
+ * A2UI Protocol Properties (v0.8):
+ * - value (required): Date/time value, supports path binding for two-way data binding
+ * - enableDate (optional): Enable date picker (default true)
+ * - enableTime (optional): Enable time picker (default false)
+ *
+ * JSON Schema:
  * ```json
  * {
- *   "component": "DateTimeInput",
- *   "properties": {
- *     "label": "Select date",
- *     "value": {"path": "/form/date"} | "2025-01-15T10:30:00Z",
- *     "enableDate": true,
- *     "enableTime": true,
- *     "outputFormat": "yyyy-MM-dd'T'HH:mm:ss'Z'"
- *   }
+ *   "value": {"path": "/form/date"},
+ *   "enableDate": {"literalBoolean": true},
+ *   "enableTime": {"literalBoolean": true}
  * }
  * ```
  */
@@ -61,6 +63,8 @@ val DateTimeInputWidget = CatalogItem(
     )
 }
 
+private val EXPECTED_PROPERTIES = setOf("value", "enableDate", "enableTime")
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DateTimeInputWidgetContent(
@@ -69,24 +73,16 @@ private fun DateTimeInputWidgetContent(
     dataContext: DataContext,
     onEvent: EventDispatcher
 ) {
-    val labelRef = DataReferenceParser.parseString(data["label"])
+    PropertyValidation.warnUnexpectedProperties("DateTimeInput", data, EXPECTED_PROPERTIES)
+
     val valueRef = DataReferenceParser.parseString(data["value"])
-    val surfaceId = DataReferenceParser.parseString(data["surfaceId"])?.let {
-        when (it) {
-            is LiteralString -> it.value
-            is PathString -> dataContext.getString(it.path)
-            else -> null
-        }
-    } ?: ""
+
+    // Get surfaceId from UiDefinition
+    val uiDefinition = LocalUiDefinition.current
+    val surfaceId = uiDefinition?.surfaceId ?: "default"
 
     val enableDate = data["enableDate"]?.jsonPrimitive?.booleanOrNull ?: true
     val enableTime = data["enableTime"]?.jsonPrimitive?.booleanOrNull ?: false
-
-    val label = when (labelRef) {
-        is LiteralString -> labelRef.value
-        is PathString -> dataContext.getString(labelRef.path) ?: ""
-        else -> ""
-    }
 
     val initialValue = when (valueRef) {
         is PathString -> dataContext.getString(valueRef.path) ?: ""
@@ -109,7 +105,6 @@ private fun DateTimeInputWidgetContent(
                 val month = parts[1].toInt()
                 val day = parts[2].toInt()
                 // Convert to epoch millis using days since epoch calculation
-                // Days from year 1970 to given year + days in months + day of month
                 val daysFromEpoch = calculateDaysFromEpoch(year, month, day)
                 daysFromEpoch * 24L * 60L * 60L * 1000L
             } else null
@@ -162,9 +157,6 @@ private fun DateTimeInputWidgetContent(
             onValueChange = { newValue ->
                 updateValue(newValue)
             },
-            label = if (label.isNotEmpty()) {
-                { Text(label) }
-            } else null,
             placeholder = { Text(placeholder) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,

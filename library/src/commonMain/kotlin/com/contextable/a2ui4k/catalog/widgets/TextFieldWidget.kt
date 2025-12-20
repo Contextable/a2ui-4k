@@ -1,6 +1,8 @@
 package com.contextable.a2ui4k.catalog.widgets
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -9,6 +11,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
 import com.contextable.a2ui4k.model.CatalogItem
 import com.contextable.a2ui4k.model.DataChangeEvent
 import com.contextable.a2ui4k.model.DataContext
@@ -16,18 +22,26 @@ import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.EventDispatcher
 import com.contextable.a2ui4k.model.LiteralString
 import com.contextable.a2ui4k.model.PathString
+import com.contextable.a2ui4k.render.LocalUiDefinition
+import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonObject
 
 /**
  * TextField widget for user text input.
  *
+ * A2UI Protocol Properties (v0.8):
+ * - label (required): Display label for the text field
+ * - text (optional): Current text value, supports path binding for two-way data binding
+ * - textFieldType (optional): date, longText, number, shortText, obscured
+ * - validationRegexp (optional): Regex pattern for input validation
+ *
  * JSON Schema:
  * ```json
  * {
  *   "label": {"literalString": "Name"} | {"path": "/labels/name"},
- *   "placeholder": {"literalString": "Enter name..."} (optional),
- *   "value": {"path": "/form/name"} (optional, for two-way binding),
- *   "surfaceId": "surface-id" (required for events)
+ *   "text": {"path": "/form/name"} | {"literalString": "initial value"},
+ *   "textFieldType": {"literalString": "shortText"},
+ *   "validationRegexp": {"literalString": "^[a-zA-Z]+$"}
  * }
  * ```
  */
@@ -42,6 +56,8 @@ val TextFieldWidget = CatalogItem(
     )
 }
 
+private val EXPECTED_PROPERTIES = setOf("label", "text", "textFieldType", "validationRegexp")
+
 @Composable
 private fun TextFieldWidgetContent(
     componentId: String,
@@ -49,18 +65,12 @@ private fun TextFieldWidgetContent(
     dataContext: DataContext,
     onEvent: EventDispatcher
 ) {
+    PropertyValidation.warnUnexpectedProperties("TextField", data, EXPECTED_PROPERTIES)
+
     val labelRef = DataReferenceParser.parseString(data["label"])
-    val placeholderRef = DataReferenceParser.parseString(data["placeholder"])
-    val valueRef = DataReferenceParser.parseString(data["value"])
-    val surfaceId = data["surfaceId"]?.let {
-        DataReferenceParser.parseString(it)
-    }?.let {
-        when (it) {
-            is LiteralString -> it.value
-            is PathString -> dataContext.getString(it.path)
-            else -> null
-        }
-    } ?: ""
+    val textRef = DataReferenceParser.parseString(data["text"])
+    val textFieldTypeRef = DataReferenceParser.parseString(data["textFieldType"])
+    val validationRegexpRef = DataReferenceParser.parseString(data["validationRegexp"])
 
     val label = when (labelRef) {
         is LiteralString -> labelRef.value
@@ -68,32 +78,90 @@ private fun TextFieldWidgetContent(
         else -> ""
     }
 
-    val placeholder = when (placeholderRef) {
-        is LiteralString -> placeholderRef.value
-        is PathString -> dataContext.getString(placeholderRef.path)
+    val textFieldType = when (textFieldTypeRef) {
+        is LiteralString -> textFieldTypeRef.value
+        is PathString -> dataContext.getString(textFieldTypeRef.path)
+        else -> null
+    }
+
+    val validationRegexp = when (validationRegexpRef) {
+        is LiteralString -> validationRegexpRef.value
+        is PathString -> dataContext.getString(validationRegexpRef.path)
         else -> null
     }
 
     // Get initial value from data context if bound
-    val initialValue = when (valueRef) {
-        is PathString -> dataContext.getString(valueRef.path) ?: ""
-        is LiteralString -> valueRef.value
+    val initialValue = when (textRef) {
+        is PathString -> dataContext.getString(textRef.path) ?: ""
+        is LiteralString -> textRef.value
         else -> ""
     }
 
+    // Get surfaceId from UiDefinition
+    val uiDefinition = LocalUiDefinition.current
+    val surfaceId = uiDefinition?.surfaceId ?: "default"
+
     var textValue by remember(initialValue) { mutableStateOf(initialValue) }
+    var isError by remember { mutableStateOf(false) }
+
+    // Determine keyboard type, visual transformation, and layout based on textFieldType
+    val keyboardType: KeyboardType
+    val visualTransformation: VisualTransformation
+    val singleLine: Boolean
+    val modifier: Modifier
+
+    when (textFieldType?.lowercase()) {
+        "number" -> {
+            keyboardType = KeyboardType.Number
+            visualTransformation = VisualTransformation.None
+            singleLine = true
+            modifier = Modifier.fillMaxWidth()
+        }
+        "date" -> {
+            keyboardType = KeyboardType.Text
+            visualTransformation = VisualTransformation.None
+            singleLine = true
+            modifier = Modifier.fillMaxWidth()
+        }
+        "obscured" -> {
+            keyboardType = KeyboardType.Password
+            visualTransformation = PasswordVisualTransformation()
+            singleLine = true
+            modifier = Modifier.fillMaxWidth()
+        }
+        "longtext" -> {
+            keyboardType = KeyboardType.Text
+            visualTransformation = VisualTransformation.None
+            singleLine = false
+            modifier = Modifier.fillMaxWidth().height(120.dp)
+        }
+        else -> { // shorttext and default
+            keyboardType = KeyboardType.Text
+            visualTransformation = VisualTransformation.None
+            singleLine = true
+            modifier = Modifier.fillMaxWidth()
+        }
+    }
 
     OutlinedTextField(
         value = textValue,
         onValueChange = { newValue ->
             textValue = newValue
+
+            // Validate against regex if provided
+            isError = if (validationRegexp != null && newValue.isNotEmpty()) {
+                !Regex(validationRegexp).matches(newValue)
+            } else {
+                false
+            }
+
             // Update data context and fire event if bound
-            if (valueRef is PathString) {
-                dataContext.update(valueRef.path, newValue)
+            if (textRef is PathString) {
+                dataContext.update(textRef.path, newValue)
                 onEvent(
                     DataChangeEvent(
                         surfaceId = surfaceId,
-                        path = valueRef.path,
+                        path = textRef.path,
                         value = newValue
                     )
                 )
@@ -102,10 +170,10 @@ private fun TextFieldWidgetContent(
         label = if (label.isNotEmpty()) {
             { Text(label) }
         } else null,
-        placeholder = placeholder?.let {
-            { Text(it) }
-        },
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true
+        modifier = modifier,
+        singleLine = singleLine,
+        isError = isError,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        visualTransformation = visualTransformation
     )
 }
