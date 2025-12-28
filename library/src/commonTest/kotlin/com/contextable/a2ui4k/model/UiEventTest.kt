@@ -24,6 +24,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * Tests for UiEvent types - UserActionEvent and DataChangeEvent.
@@ -83,10 +84,10 @@ class UiEventTest {
         val jsonStr = json.encodeToString(event)
 
         // Verify key fields are present
-        assert(jsonStr.contains("\"name\":\"click\""))
-        assert(jsonStr.contains("\"surfaceId\":\"default\""))
-        assert(jsonStr.contains("\"sourceComponentId\":\"btn1\""))
-        assert(jsonStr.contains("\"timestamp\":\"2025-12-28T10:00:00.000Z\""))
+        assertTrue(jsonStr.contains("\"name\":\"click\""))
+        assertTrue(jsonStr.contains("\"surfaceId\":\"default\""))
+        assertTrue(jsonStr.contains("\"sourceComponentId\":\"btn1\""))
+        assertTrue(jsonStr.contains("\"timestamp\":\"2025-12-28T10:00:00.000Z\""))
     }
 
     @Test
@@ -147,9 +148,9 @@ class UiEventTest {
 
         val jsonStr = json.encodeToString(event)
 
-        assert(jsonStr.contains("\"surfaceId\":\"settings\""))
-        assert(jsonStr.contains("\"path\":\"/preferences/theme\""))
-        assert(jsonStr.contains("\"value\":\"dark\""))
+        assertTrue(jsonStr.contains("\"surfaceId\":\"settings\""))
+        assertTrue(jsonStr.contains("\"path\":\"/preferences/theme\""))
+        assertTrue(jsonStr.contains("\"value\":\"dark\""))
     }
 
     @Test
