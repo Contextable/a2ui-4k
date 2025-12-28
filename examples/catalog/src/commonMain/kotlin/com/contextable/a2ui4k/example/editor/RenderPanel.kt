@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 Contextable LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.contextable.a2ui4k.example.editor
 
 import androidx.compose.foundation.layout.Box
@@ -21,7 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.contextable.a2ui4k.catalog.CoreCatalog
 import com.contextable.a2ui4k.data.rememberDataModel
-import com.contextable.a2ui4k.render.A2UiSurface
+import com.contextable.a2ui4k.render.A2UISurface
 
 /**
  * Panel for displaying the rendered A2UI surface or error/empty states.
@@ -41,7 +57,7 @@ fun RenderPanel(
                 // Create DataModel with initial data for path bindings
                 val dataModel = rememberDataModel(parseResult.initialData)
 
-                A2UiSurface(
+                A2UISurface(
                     definition = parseResult.definition,
                     dataModel = dataModel,
                     catalog = CoreCatalog,

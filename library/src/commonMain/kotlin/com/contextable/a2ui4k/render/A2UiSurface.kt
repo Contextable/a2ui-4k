@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 Contextable LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.contextable.a2ui4k.render
 
 import androidx.compose.foundation.layout.Box
@@ -26,7 +42,7 @@ val LocalUiDefinition = compositionLocalOf<UiDefinition?> { null }
 /**
  * Main composable for rendering an A2UI surface.
  *
- * A2UiSurface takes a UiDefinition (the component tree) and renders it
+ * A2UISurface takes a UiDefinition (the component tree) and renders it
  * using widgets from the provided catalog. User interactions are reported
  * via the onEvent callback.
  *
@@ -37,7 +53,7 @@ val LocalUiDefinition = compositionLocalOf<UiDefinition?> { null }
  * @param onEvent Callback for user interaction events
  */
 @Composable
-fun A2UiSurface(
+fun A2UISurface(
     definition: UiDefinition,
     modifier: Modifier = Modifier,
     dataModel: DataModel = rememberDataModel(),

@@ -1,8 +1,24 @@
+/*
+ * Copyright 2025 Contextable LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.contextable.a2ui4k.state
 
 import com.contextable.a2ui4k.data.DataModel
-import com.contextable.a2ui4k.model.A2UiActivityContent
-import com.contextable.a2ui4k.model.A2UiOperation
+import com.contextable.a2ui4k.model.A2UIActivityContent
+import com.contextable.a2ui4k.model.A2UIOperation
 import com.contextable.a2ui4k.model.BeginRendering
 import com.contextable.a2ui4k.model.Component
 import com.contextable.a2ui4k.model.ComponentDef
@@ -22,7 +38,7 @@ import kotlinx.serialization.json.jsonObject
  * Manages the state of A2UI surfaces.
  *
  * Receives A2UI operations from ACTIVITY_SNAPSHOT/DELTA events and builds
- * [UiDefinition] instances that can be rendered by [A2UiSurface].
+ * [UiDefinition] instances that can be rendered by [A2UISurface].
  *
  * Usage:
  * ```kotlin

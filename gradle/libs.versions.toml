@@ -9,6 +9,7 @@ coil = "3.2.0"
 ktor = "3.1.2"
 kermit = "2.0.5"
 androidx-activity = "1.9.3"
+kover = "0.9.1"
 
 [libraries]
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
@@ -28,3 +29,4 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 android-application = { id = "com.android.application", version.ref = "agp" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
