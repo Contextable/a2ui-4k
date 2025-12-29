@@ -21,6 +21,9 @@
  * A2UI (Agent-to-UI) surfaces. It implements the component model from
  * the A2UI protocol, enabling AI agents to generate dynamic UIs.
  *
+ * a2ui-4k currently implements the A2UI v0.8 specification. The A2UI protocol
+ * is under active development at [google/A2UI](https://github.com/google/A2UI).
+ *
  * ## Quick Start
  *
  * ```kotlin
@@ -38,11 +41,12 @@
  *
  * ## Key Components
  *
- * - [A2UISurface]: Main composable for rendering a UI definition
- * - [CoreCatalog]: Built-in widgets (Text, Column, Row, List, Card, Divider, Icon)
+ * - [A2UISurface][com.contextable.a2ui4k.render.A2UISurface]: Main composable for rendering a UI definition
+ * - [CoreCatalog][com.contextable.a2ui4k.catalog.CoreCatalog]: Built-in widgets (Text, Column, Row, List, Card, etc.)
  * - [Catalog]: Widget registry that can be extended with custom widgets
  * - [DataModel]: Reactive data store for path-based bindings
  * - [UiDefinition]: Component tree definition received from AI agent
+ * - [SurfaceStateManager][com.contextable.a2ui4k.state.SurfaceStateManager]: Processes A2UI operations into UI definitions
  *
  * ## Custom Widgets
  *
@@ -56,6 +60,10 @@
  * val myCatalog = Catalog.of("custom", MyWidget)
  * val combined = CoreCatalog + myCatalog
  * ```
+ *
+ * @see com.contextable.a2ui4k.render.A2UISurface
+ * @see com.contextable.a2ui4k.catalog.CoreCatalog
+ * @see com.contextable.a2ui4k.state.SurfaceStateManager
  */
 package com.contextable.a2ui4k
 

@@ -41,7 +41,14 @@ import kotlinx.serialization.json.jsonPrimitive
  *
  * The DataModel holds all dynamic data for a surface and provides
  * reactive subscriptions for Compose to observe changes.
- * Data is accessed using JSON Pointer paths (e.g., "/user/name").
+ * Data is accessed using JSON Pointer paths (RFC 6901) such as "/user/name".
+ *
+ * In the A2UI v0.8 protocol, data is populated via `dataModelUpdate` operations
+ * and bound to components using path references (e.g., `{"path": "/user/name"}`).
+ *
+ * @see DataContext
+ * @see com.contextable.a2ui4k.model.DataReference
+ * @see com.contextable.a2ui4k.state.SurfaceStateManager
  */
 class DataModel(
     initialData: JsonObject = JsonObject(emptyMap())

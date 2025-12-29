@@ -35,10 +35,16 @@ typealias EventDispatcher = (UiEvent) -> Unit
  * A CatalogItem maps a widget name (e.g., "Text", "Button") to a
  * Composable function that renders it. The compose function receives
  * the widget's configuration data, functions to build children and
- * dispatch events, and a data context for resolving path bindings.
+ * dispatch events, and a [DataContext] for resolving path bindings.
+ *
+ * The A2UI v0.8 specification defines 18 standard widgets in the
+ * standard_catalog_definition.json. These are implemented in [CoreCatalog].
  *
  * @property name The widget type identifier (e.g., "Text", "Column", "Button")
  * @property compose The Composable function that renders this widget
+ *
+ * @see Catalog
+ * @see com.contextable.a2ui4k.catalog.CoreCatalog
  */
 class CatalogItem(
     val name: String,
@@ -52,13 +58,17 @@ class CatalogItem(
 )
 
 /**
- * A collection of CatalogItems that define available widgets.
+ * A collection of [CatalogItem]s that define available widgets.
  *
- * Catalogs can be combined to create richer widget vocabularies.
- * Each catalog has an optional ID that can be referenced by surfaces.
+ * Catalogs can be combined using the `+` operator to create richer
+ * widget vocabularies. Each catalog has an optional ID that can be
+ * referenced by surfaces via [UiDefinition.catalogId].
  *
  * @property id Optional identifier for this catalog
  * @property items Map of widget name to CatalogItem definition
+ *
+ * @see CatalogItem
+ * @see com.contextable.a2ui4k.catalog.CoreCatalog
  */
 class Catalog(
     val id: String? = null,
@@ -97,7 +107,14 @@ class Catalog(
  * Provides access to data model values for resolving path bindings.
  *
  * This interface abstracts the data binding system, allowing widgets
- * to read values from and write values to the data model.
+ * to read values from and write values to the data model. Paths follow
+ * JSON Pointer syntax (RFC 6901).
+ *
+ * In template contexts (e.g., List with template children), a scoped
+ * DataContext is provided where paths are relative to the current item.
+ *
+ * @see com.contextable.a2ui4k.data.DataModel
+ * @see DataReference
  */
 interface DataContext {
     /**

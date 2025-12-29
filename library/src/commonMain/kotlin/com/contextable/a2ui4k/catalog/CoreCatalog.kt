@@ -39,37 +39,52 @@ import com.contextable.a2ui4k.model.Catalog
 /**
  * The core catalog of built-in A2UI widgets.
  *
- * This catalog provides the standard set of widgets defined in
- * the A2UI protocol standard_catalog_definition.json. Applications
- * can use this catalog directly or combine it with custom catalogs.
+ * This catalog provides the standard set of widgets defined in the
+ * A2UI v0.8 protocol's standard_catalog_definition.json. Applications
+ * can use this catalog directly or combine it with custom catalogs
+ * using the `+` operator.
  *
- * Standard Catalog Widgets:
+ * ## Standard Catalog Widgets (18 total)
+ *
+ * **Basic Content:**
  * - Text: Display text with optional markdown and styling
- * - TextField: Text input field with label and data binding
- * - Button: Clickable button with action support
  * - Image: Display images from URLs
+ * - Icon: Material icon from predefined set
+ * - Divider: Horizontal or vertical divider line
+ * - Video: Video player (placeholder implementation)
+ * - AudioPlayer: Audio player (placeholder implementation)
+ *
+ * **Layout & Containers:**
  * - Column: Vertical layout container
  * - Row: Horizontal layout container
  * - List: Scrollable list (vertical or horizontal)
  * - Card: Material card container
- * - Divider: Horizontal or vertical divider line
- * - Icon: Material icon from predefined set
+ * - Tabs: Tabbed navigation container
+ * - Modal: Dialog overlay
+ *
+ * **Interactive & Input:**
+ * - Button: Clickable button with action support
+ * - TextField: Text input field with label and data binding
  * - CheckBox: Boolean input with label
  * - Slider: Numeric range input
  * - MultipleChoice: Selection component
  * - DateTimeInput: Date/time picker
- * - Tabs: Tabbed navigation container
- * - Modal: Dialog overlay
- * - Video: Video player (placeholder)
- * - AudioPlayer: Audio player (placeholder)
  *
- * Usage:
+ * ## Usage
+ *
  * ```kotlin
  * A2UISurface(
  *     definition = uiDefinition,
  *     catalog = CoreCatalog
  * )
+ *
+ * // Or combine with custom catalog:
+ * val combined = CoreCatalog + myCustomCatalog
  * ```
+ *
+ * @see com.contextable.a2ui4k.model.CatalogItem
+ * @see com.contextable.a2ui4k.model.Catalog
+ * @see com.contextable.a2ui4k.render.A2UISurface
  */
 val CoreCatalog: Catalog = Catalog.of(
     id = "standard",

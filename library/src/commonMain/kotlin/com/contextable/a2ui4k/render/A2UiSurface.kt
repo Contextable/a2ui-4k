@@ -42,15 +42,23 @@ val LocalUiDefinition = compositionLocalOf<UiDefinition?> { null }
 /**
  * Main composable for rendering an A2UI surface.
  *
- * A2UISurface takes a UiDefinition (the component tree) and renders it
- * using widgets from the provided catalog. User interactions are reported
- * via the onEvent callback.
+ * A2UISurface takes a [UiDefinition] (the component tree) and renders it
+ * using widgets from the provided [Catalog]. User interactions are reported
+ * via the onEvent callback as [UiEvent] instances.
+ *
+ * This composable implements the rendering side of the A2UI v0.8 protocol.
+ * It processes component definitions and resolves data bindings reactively.
  *
  * @param definition The UI definition containing the component tree to render
  * @param modifier Modifier for the surface container
  * @param dataModel The data model for resolving path bindings (defaults to a new instance)
- * @param catalog The widget catalog to use for rendering (defaults to CoreCatalog)
- * @param onEvent Callback for user interaction events
+ * @param catalog The widget catalog to use for rendering
+ * @param onEvent Callback for user interaction events ([UserActionEvent], [DataChangeEvent])
+ *
+ * @see UiDefinition
+ * @see DataModel
+ * @see Catalog
+ * @see UiEvent
  */
 @Composable
 fun A2UISurface(

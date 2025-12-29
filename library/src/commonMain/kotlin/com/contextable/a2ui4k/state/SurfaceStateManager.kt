@@ -38,9 +38,19 @@ import kotlinx.serialization.json.jsonObject
  * Manages the state of A2UI surfaces.
  *
  * Receives A2UI operations from ACTIVITY_SNAPSHOT/DELTA events and builds
- * [UiDefinition] instances that can be rendered by [A2UISurface].
+ * [UiDefinition] instances that can be rendered by A2UISurface.
  *
- * Usage:
+ * In the A2UI v0.8 protocol, the manager handles four operation types:
+ * - `beginRendering`: Initializes a surface with root and optional styles
+ * - `surfaceUpdate`: Adds or updates component definitions
+ * - `dataModelUpdate`: Updates data at specified paths
+ * - `deleteSurface`: Removes a surface
+ *
+ * **Note:** This class processes parsed JSON operations. JSONL stream parsing
+ * is left to the application's transport layer.
+ *
+ * ## Usage
+ *
  * ```kotlin
  * val manager = SurfaceStateManager()
  *
@@ -50,7 +60,12 @@ import kotlinx.serialization.json.jsonObject
  *
  * // Get current surfaces for rendering
  * val surfaces = manager.getSurfaces()
+ * val dataModel = manager.getDataModel(surfaceId)
  * ```
+ *
+ * @see UiDefinition
+ * @see com.contextable.a2ui4k.data.DataModel
+ * @see com.contextable.a2ui4k.render.A2UISurface
  */
 class SurfaceStateManager {
 

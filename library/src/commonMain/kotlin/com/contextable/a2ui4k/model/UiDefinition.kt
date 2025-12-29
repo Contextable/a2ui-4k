@@ -25,10 +25,17 @@ import kotlinx.serialization.Serializable
  * along with metadata about which component is the root and which
  * catalog should be used for rendering.
  *
+ * In the A2UI v0.8 protocol, UiDefinitions are built from `beginRendering`
+ * and `surfaceUpdate` operations processed by [SurfaceStateManager].
+ *
  * @property surfaceId Unique identifier for this surface
- * @property components Map of component ID to Component definitions
+ * @property components Map of component ID to [Component] definitions
  * @property root The ID of the root component to start rendering from
  * @property catalogId Optional identifier of the catalog to use for this surface
+ *
+ * @see Component
+ * @see com.contextable.a2ui4k.state.SurfaceStateManager
+ * @see com.contextable.a2ui4k.render.A2UISurface
  */
 @Serializable
 data class UiDefinition(

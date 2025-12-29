@@ -22,7 +22,8 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Represents a UI component in the A2UI protocol v0.8 format.
  *
- * v0.8 format uses a nested component object:
+ * In v0.8, components use a nested structure where the widget type is a key
+ * containing the properties object:
  * ```json
  * {
  *   "id": "button_1",
@@ -32,9 +33,16 @@ import kotlinx.serialization.json.JsonObject
  * }
  * ```
  *
+ * Components are typically created via [ComponentDef.fromJson] when processing
+ * `surfaceUpdate` operations.
+ *
  * @property id Unique identifier for this component within its surface
  * @property componentProperties Map with widget type as key, properties as value
- * @property weight Optional flex weight for layout containers
+ * @property weight Optional flex weight for layout containers (Row/Column)
+ *
+ * @see ComponentDef
+ * @see UiDefinition
+ * @see CatalogItem
  */
 @Serializable
 data class Component(

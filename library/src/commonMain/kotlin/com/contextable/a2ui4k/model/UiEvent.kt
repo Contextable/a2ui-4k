@@ -25,6 +25,13 @@ import kotlinx.serialization.json.JsonObject
  * Events are generated when users interact with UI components
  * (button clicks, form submissions, etc.) and can be sent back
  * to the AI agent for processing.
+ *
+ * In the A2UI v0.8 protocol, these correspond to client-to-server messages:
+ * - [UserActionEvent] maps to the `userAction` message type
+ * - [DataChangeEvent] maps to the `dataChange` message type
+ *
+ * @see UserActionEvent
+ * @see DataChangeEvent
  */
 sealed class UiEvent {
     /**

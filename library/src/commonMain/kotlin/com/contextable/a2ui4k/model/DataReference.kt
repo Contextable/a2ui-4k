@@ -30,11 +30,16 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * Represents a reference to data in the A2UI protocol.
  *
- * Data references can be either:
+ * In A2UI v0.8, property values can be either literal or bound to the data model:
  * - Literal values: `{"literalString": "Hello"}` or `{"literalNumber": 42}`
- * - Path-based bindings: `{"path": "/user/name"}` (binds to DataModel)
+ * - Path-based bindings: `{"path": "/user/name"}` (resolves via [DataContext])
  *
- * This sealed class hierarchy provides type-safe access to referenced data.
+ * This sealed class hierarchy provides type-safe access to referenced data
+ * and is used by widget implementations to resolve property values.
+ *
+ * @see DataReferenceParser
+ * @see DataContext
+ * @see com.contextable.a2ui4k.data.DataModel
  */
 sealed class DataReference<T> {
     /**
