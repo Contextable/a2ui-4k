@@ -188,46 +188,80 @@ tasks.withType<Test> {
 }
 
 // JReleaser configuration for Maven Central publishing
-jreleaser {
-    // Search parent directories for git root (library is a subdirectory)
-    gitRootSearch.set(true)
+afterEvaluate {
+    jreleaser {
+        gitRootSearch.set(true)
 
-    project {
-        name.set("a2ui-4k")
-        description.set("A2UI rendering engine for Compose Multiplatform")
-        copyright.set("Contextable LLC")
-    }
+        project {
+            name.set("a2ui-4k")
+            version.set(rootProject.version.toString())
+            description.set("A2UI rendering engine for Compose Multiplatform")
+            links {
+                homepage.set("https://github.com/contextable/a2ui-4k")
+            }
+            authors.set(listOf("Mark Fogle"))
+            license.set("Apache-2.0")
+            inceptionYear.set("2025")
+            copyright.set("Contextable LLC")
 
-    signing {
-        active.set(org.jreleaser.model.Active.ALWAYS)
-        armored.set(true)
-    }
+            @Suppress("DEPRECATION")
+            java {
+                groupId.set("com.contextable")
+                multiProject.set(false)
+            }
+        }
 
-    deploy {
-        maven {
-            mavenCentral {
-                create("sonatype") {
-                    active.set(org.jreleaser.model.Active.ALWAYS)
-                    url.set("https://central.sonatype.com/api/v1/publisher")
-                    stagingRepository(stagingDir.get().asFile.absolutePath)
-                    verifyPom.set(false)
-                    applyMavenCentralRules.set(false)
-                    // iOS artifact overrides for .klib files
-                    artifactOverride {
-                        groupId.set("com.contextable")
-                        artifactId.set("a2ui-4k-iosx64")
-                    }
-                    artifactOverride {
-                        groupId.set("com.contextable")
-                        artifactId.set("a2ui-4k-iosarm64")
-                    }
-                    artifactOverride {
-                        groupId.set("com.contextable")
-                        artifactId.set("a2ui-4k-iossimulatorarm64")
+        signing {
+            active.set(org.jreleaser.model.Active.ALWAYS)
+            armored.set(true)
+        }
+
+        deploy {
+            maven {
+                pomchecker {
+                    version.set("1.14.0")
+                    failOnWarning.set(false)
+                    failOnError.set(false)
+                }
+
+                mavenCentral {
+                    create("sonatype") {
+                        active.set(org.jreleaser.model.Active.ALWAYS)
+                        url.set("https://central.sonatype.com/api/v1/publisher")
+                        stagingRepository(stagingDir.get().asFile.absolutePath)
+                        namespace.set("com.contextable")
+                        sign.set(true)
+                        checksums.set(true)
+                        applyMavenCentralRules.set(false)
+                        verifyPom.set(false)
+                        sourceJar.set(false)
+                        javadocJar.set(false)
+
+                        // iOS artifact overrides - disable jar validation for .klib files
+                        artifactOverride {
+                            groupId.set("com.contextable")
+                            artifactId.set("a2ui-4k-iosx64")
+                            jar.set(false)
+                            sourceJar.set(false)
+                            javadocJar.set(false)
+                        }
+                        artifactOverride {
+                            groupId.set("com.contextable")
+                            artifactId.set("a2ui-4k-iosarm64")
+                            jar.set(false)
+                            sourceJar.set(false)
+                            javadocJar.set(false)
+                        }
+                        artifactOverride {
+                            groupId.set("com.contextable")
+                            artifactId.set("a2ui-4k-iossimulatorarm64")
+                            jar.set(false)
+                            sourceJar.set(false)
+                            javadocJar.set(false)
+                        }
                     }
                 }
             }
         }
     }
-
 }
