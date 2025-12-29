@@ -232,7 +232,7 @@ jreleaser {
 
     release {
         github {
-            skipRelease.set(true)
+            enabled.set(false)
         }
     }
 }
