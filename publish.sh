@@ -3,7 +3,7 @@
 # a2ui-4k Maven Central Publishing Script
 #
 # This script publishes the a2ui-4k library to Maven Central via Sonatype Portal.
-# It uses JReleaser for signing and uploading artifacts.
+# It uses JReleaser CLI for signing and uploading artifacts.
 #
 # Required Environment Variables:
 #   JRELEASER_MAVENCENTRAL_SONATYPE_USERNAME - Sonatype Portal user token (not password)
@@ -104,14 +104,22 @@ echo -e "${YELLOW}Step 3: Building and staging artifacts...${NC}"
 echo -e "${GREEN}✓ Artifacts staged${NC}"
 echo ""
 
-# Step 4: Deploy to Maven Central
+# Step 4: Deploy to Maven Central using JReleaser CLI
+echo -e "${YELLOW}Step 4: Installing JReleaser CLI...${NC}"
+JRELEASER_VERSION="1.20.0"
+if [ ! -f "jreleaser-cli.jar" ]; then
+    curl -sL "https://github.com/jreleaser/jreleaser/releases/download/v${JRELEASER_VERSION}/jreleaser-tool-provider-${JRELEASER_VERSION}.jar" -o jreleaser-cli.jar
+fi
+echo -e "${GREEN}✓ JReleaser CLI ready${NC}"
+echo ""
+
 if [ "$DRY_RUN" = true ]; then
-    echo -e "${YELLOW}Step 4: Running JReleaser in dry-run mode...${NC}"
-    ./gradlew :a2ui-4k:jreleaserDeploy --dry-run --no-daemon
+    echo -e "${YELLOW}Step 5: Running JReleaser in dry-run mode...${NC}"
+    java -jar jreleaser-cli.jar deploy --dry-run
     echo -e "${GREEN}✓ Dry-run complete${NC}"
 else
-    echo -e "${YELLOW}Step 4: Deploying to Maven Central...${NC}"
-    ./gradlew :a2ui-4k:jreleaserDeploy --no-daemon
+    echo -e "${YELLOW}Step 5: Deploying to Maven Central...${NC}"
+    java -jar jreleaser-cli.jar deploy
     echo -e "${GREEN}✓ Deployment initiated${NC}"
 fi
 echo ""

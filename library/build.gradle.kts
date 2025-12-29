@@ -5,20 +5,12 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.android.library)
     alias(libs.plugins.kover)
-    alias(libs.plugins.jreleaser)
     id("maven-publish")
     id("signing")
 }
 
 group = "com.contextable"
 version = rootProject.version
-
-// Force consistent commons-compress version to avoid classpath conflicts
-configurations.all {
-    resolutionStrategy {
-        force("org.apache.commons:commons-compress:1.26.1")
-    }
-}
 
 kotlin {
     // Configure K2 compiler options
@@ -192,83 +184,4 @@ signing {
 
 tasks.withType<Test> {
     useJUnitPlatform()
-}
-
-// JReleaser configuration for Maven Central publishing
-afterEvaluate {
-    jreleaser {
-        gitRootSearch.set(true)
-
-        project {
-            name.set("a2ui-4k")
-            version.set(rootProject.version.toString())
-            description.set("A2UI rendering engine for Compose Multiplatform")
-            links {
-                homepage.set("https://github.com/contextable/a2ui-4k")
-            }
-            authors.set(listOf("Mark Fogle"))
-            license.set("Apache-2.0")
-            inceptionYear.set("2025")
-            copyright.set("Contextable LLC")
-
-            @Suppress("DEPRECATION")
-            java {
-                groupId.set("com.contextable")
-                multiProject.set(false)
-            }
-        }
-
-        signing {
-            active.set(org.jreleaser.model.Active.ALWAYS)
-            armored.set(true)
-        }
-
-        deploy {
-            maven {
-                pomchecker {
-                    version.set("1.14.0")
-                    failOnWarning.set(false)
-                    failOnError.set(false)
-                }
-
-                mavenCentral {
-                    create("sonatype") {
-                        active.set(org.jreleaser.model.Active.ALWAYS)
-                        url.set("https://central.sonatype.com/api/v1/publisher")
-                        stagingRepository(stagingDir.get().asFile.absolutePath)
-                        namespace.set("com.contextable")
-                        sign.set(true)
-                        checksums.set(true)
-                        applyMavenCentralRules.set(false)
-                        verifyPom.set(false)
-                        sourceJar.set(false)
-                        javadocJar.set(false)
-
-                        // iOS artifact overrides - disable jar validation for .klib files
-                        artifactOverride {
-                            groupId.set("com.contextable")
-                            artifactId.set("a2ui-4k-iosx64")
-                            jar.set(false)
-                            sourceJar.set(false)
-                            javadocJar.set(false)
-                        }
-                        artifactOverride {
-                            groupId.set("com.contextable")
-                            artifactId.set("a2ui-4k-iosarm64")
-                            jar.set(false)
-                            sourceJar.set(false)
-                            javadocJar.set(false)
-                        }
-                        artifactOverride {
-                            groupId.set("com.contextable")
-                            artifactId.set("a2ui-4k-iossimulatorarm64")
-                            jar.set(false)
-                            sourceJar.set(false)
-                            javadocJar.set(false)
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
