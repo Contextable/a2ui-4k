@@ -13,6 +13,13 @@ plugins {
 group = "com.contextable"
 version = rootProject.version
 
+// Force consistent commons-compress version to avoid classpath conflicts
+configurations.all {
+    resolutionStrategy {
+        force("org.apache.commons:commons-compress:1.26.1")
+    }
+}
+
 kotlin {
     // Configure K2 compiler options
     targets.configureEach {
