@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.android.library)
     alias(libs.plugins.kover)
+    alias(libs.plugins.jreleaser)
     id("maven-publish")
     id("signing")
 }
@@ -124,6 +125,9 @@ android {
     }
 }
 
+// Staging directory for JReleaser
+val stagingDir = layout.buildDirectory.dir("staging")
+
 // Publishing configuration
 publishing {
     publications {
@@ -139,8 +143,8 @@ publishing {
 
                 licenses {
                     license {
-                        name.set("MIT License")
-                        url.set("https://opensource.org/licenses/MIT")
+                        name.set("Apache License 2.0")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0")
                     }
                 }
 
@@ -160,6 +164,12 @@ publishing {
             }
         }
     }
+    repositories {
+        maven {
+            name = "staging"
+            url = uri(stagingDir)
+        }
+    }
 }
 
 // Signing configuration
@@ -175,4 +185,51 @@ signing {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+// JReleaser configuration for Maven Central publishing
+jreleaser {
+    project {
+        name.set("a2ui-4k")
+        description.set("A2UI rendering engine for Compose Multiplatform")
+        copyright.set("Contextable LLC")
+    }
+
+    signing {
+        active.set(org.jreleaser.model.Active.ALWAYS)
+        armored.set(true)
+    }
+
+    deploy {
+        maven {
+            mavenCentral {
+                create("sonatype") {
+                    active.set(org.jreleaser.model.Active.ALWAYS)
+                    url.set("https://central.sonatype.com/api/v1/publisher")
+                    stagingRepository(stagingDir.get().asFile.absolutePath)
+                    verifyPom.set(false)
+                    applyMavenCentralRules.set(false)
+                    // iOS artifact overrides for .klib files
+                    artifactOverride {
+                        groupId.set("com.contextable")
+                        artifactId.set("a2ui-4k-iosx64")
+                    }
+                    artifactOverride {
+                        groupId.set("com.contextable")
+                        artifactId.set("a2ui-4k-iosarm64")
+                    }
+                    artifactOverride {
+                        groupId.set("com.contextable")
+                        artifactId.set("a2ui-4k-iossimulatorarm64")
+                    }
+                }
+            }
+        }
+    }
+
+    release {
+        github {
+            skipRelease.set(true)
+        }
+    }
 }
