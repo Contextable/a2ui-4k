@@ -27,7 +27,8 @@ deploy:
       sonatype:
         active: ALWAYS
         url: https://central.sonatype.com/api/v1/publisher
-        stagingRepository: library/build/staging
+        stagingRepositories:
+          - library/build/staging
         namespace: com.contextable
         sign: true
         checksums: true
