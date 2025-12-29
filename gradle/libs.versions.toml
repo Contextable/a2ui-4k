@@ -1,7 +1,7 @@
 [versions]
 kotlin = "2.2.21"
 compose-plugin = "1.9.3"
-agp = "8.7.3"
+agp = "8.10.1"
 kotlinx-serialization = "1.8.1"
 kotlinx-datetime = "0.7.1"
 kotlinx-coroutines = "1.10.2"
@@ -10,7 +10,7 @@ ktor = "3.1.2"
 kermit = "2.0.5"
 androidx-activity = "1.9.3"
 kover = "0.9.1"
-jreleaser = "1.21.0"
+jreleaser = "1.20.0"
 
 [libraries]
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
