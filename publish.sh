@@ -107,11 +107,11 @@ echo ""
 # Step 4: Deploy to Maven Central
 if [ "$DRY_RUN" = true ]; then
     echo -e "${YELLOW}Step 4: Running JReleaser in dry-run mode...${NC}"
-    ./gradlew :a2ui-4k:jreleaserFullRelease --dry-run --no-daemon
+    ./gradlew :a2ui-4k:jreleaserDeploy --dry-run --no-daemon
     echo -e "${GREEN}✓ Dry-run complete${NC}"
 else
     echo -e "${YELLOW}Step 4: Deploying to Maven Central...${NC}"
-    ./gradlew :a2ui-4k:jreleaserFullRelease --no-daemon
+    ./gradlew :a2ui-4k:jreleaserDeploy --no-daemon
     echo -e "${GREEN}✓ Deployment initiated${NC}"
 fi
 echo ""
