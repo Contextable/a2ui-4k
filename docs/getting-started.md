@@ -15,19 +15,19 @@ Add the dependency to your `build.gradle.kts`:
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("com.contextable:a2ui-4k-library:<version>")
+            implementation("com.contextable:a2ui-4k:<version>")
         }
     }
 }
 
 // For Android-only projects
 dependencies {
-    implementation("com.contextable:a2ui-4k-library-android:<version>")
+    implementation("com.contextable:a2ui-4k-android:<version>")
 }
 
 // For JVM/Desktop projects
 dependencies {
-    implementation("com.contextable:a2ui-4k-library-jvm:<version>")
+    implementation("com.contextable:a2ui-4k-jvm:<version>")
 }
 ```
 
