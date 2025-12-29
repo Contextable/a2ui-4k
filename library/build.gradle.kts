@@ -189,6 +189,9 @@ tasks.withType<Test> {
 
 // JReleaser configuration for Maven Central publishing
 jreleaser {
+    // Search parent directories for git root (library is a subdirectory)
+    gitRootSearch.set(true)
+
     project {
         name.set("a2ui-4k")
         description.set("A2UI rendering engine for Compose Multiplatform")
