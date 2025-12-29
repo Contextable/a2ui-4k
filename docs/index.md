@@ -51,6 +51,7 @@ a2ui-4k implements the [A2UI v0.8 Standard Component Catalog](https://github.com
 - [Component](api-reference/component.md) - Component model
 - [DataModel](api-reference/data-model.md) - Reactive data store
 - [CatalogItem](api-reference/catalog-item.md) - Widget interface
+- [A2UI Extension](api-reference/agent-extension.md) - Extension constants and capabilities
 
 ## Protocol
 
