@@ -127,10 +127,19 @@ android {
 // Staging directory for JReleaser
 val stagingDir = layout.buildDirectory.dir("staging")
 
+// Create empty javadoc JAR for Maven Central compliance
+val javadocJar by tasks.registering(Jar::class) {
+    archiveClassifier.set("javadoc")
+}
+
 // Publishing configuration
 publishing {
     publications {
         withType<MavenPublication> {
+            // Attach javadoc JAR to JVM publication
+            if (name == "jvm") {
+                artifact(javadocJar)
+            }
             groupId = "com.contextable"
             // artifactId is set automatically by KMP with platform suffixes (e.g., a2ui-4k-jvm)
             // The base name comes from the project name in settings.gradle.kts

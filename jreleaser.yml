@@ -34,8 +34,6 @@ deploy:
         checksums: true
         applyMavenCentralRules: false
         verifyPom: false
-        sourceJar: false
-        javadocJar: false
         artifactOverrides:
           - groupId: com.contextable
             artifactId: a2ui-4k-iosx64
