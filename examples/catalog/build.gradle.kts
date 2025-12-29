@@ -46,7 +46,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":library"))
+            implementation(project(":a2ui-4k"))
 
             // Compose Multiplatform
             implementation(compose.runtime)

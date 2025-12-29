@@ -9,6 +9,9 @@ plugins {
     id("signing")
 }
 
+group = "com.contextable"
+version = rootProject.version
+
 kotlin {
     // Configure K2 compiler options
     targets.configureEach {
@@ -125,6 +128,9 @@ android {
 publishing {
     publications {
         withType<MavenPublication> {
+            groupId = "com.contextable"
+            // artifactId is set automatically by KMP with platform suffixes (e.g., a2ui-4k-jvm)
+            // The base name comes from the project name in settings.gradle.kts
             version = project.version.toString()
             pom {
                 name.set("a2ui-4k")

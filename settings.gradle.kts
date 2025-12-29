@@ -15,5 +15,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "a2ui-4k"
 
-include(":library")
+include(":a2ui-4k")
+project(":a2ui-4k").projectDir = file("library")
 include(":examples:catalog")
