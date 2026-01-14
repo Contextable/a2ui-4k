@@ -62,7 +62,13 @@ kotlin {
 
     // JavaScript target
     js {
-        browser()
+        browser {
+            testTask {
+                useKarma {
+                    useChromeHeadless()
+                }
+            }
+        }
         useEsModules()
     }
 
