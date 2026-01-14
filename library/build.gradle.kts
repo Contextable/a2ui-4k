@@ -60,6 +60,12 @@ kotlin {
     iosArm64()
     iosSimulatorArm64()
 
+    // JavaScript target
+    js {
+        browser()
+        useEsModules()
+    }
+
     // Apply default hierarchy template
     applyDefaultHierarchyTemplate()
 
@@ -96,6 +102,10 @@ kotlin {
 
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
+        }
+
+        jsMain.dependencies {
+            implementation(libs.ktor.client.js)
         }
     }
 }
