@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Custom Karma configuration for containerized CI environments
   - Ktor JS client dependency for network operations
 
+### Changed
+- Lower Android minSdk from 26 to 24 for broader device compatibility
+- Lower Kotlin version from 2.2.21 to 2.1.20 for wider build tool compatibility
+
 ## [0.8.0] - 2025-12-28
 
 Initial implementation of the A2UI v0.8 rendering engine.
