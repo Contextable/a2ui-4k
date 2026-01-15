@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `A2UIExtension` constants: `URI_V08`, `STANDARD_CATALOG_URI`, `MIME_TYPE`
   - Helper functions: `a2uiStandardClientCapabilities()`, `a2uiClientCapabilities()`
 - Documentation for extension support
+- JavaScript/browser target support
+  - Karma test runner with Chrome Headless for JS tests
+  - Custom Karma configuration for containerized CI environments
+  - Ktor JS client dependency for network operations
 
 ## [0.8.0] - 2025-12-28
 
