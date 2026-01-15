@@ -1,6 +1,6 @@
 project:
   name: a2ui-4k
-  version: 0.8.0
+  version: 0.8.1
   description: A2UI rendering engine for Compose Multiplatform
   links:
     homepage: https://github.com/contextable/a2ui-4k
@@ -47,6 +47,11 @@ deploy:
             javadocJar: false
           - groupId: com.contextable
             artifactId: a2ui-4k-iossimulatorarm64
+            jar: false
+            sourceJar: false
+            javadocJar: false
+          - groupId: com.contextable
+            artifactId: a2ui-4k-js
             jar: false
             sourceJar: false
             javadocJar: false
