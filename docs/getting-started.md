@@ -51,27 +51,34 @@ A `UiDefinition` represents the complete UI state, typically received from an A2
 ```kotlin
 import com.contextable.a2ui4k.model.Component
 import com.contextable.a2ui4k.model.UiDefinition
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 
 val uiDefinition = UiDefinition(
+    surfaceId = "default",
     root = "main-column",
     components = mapOf(
-        "main-column" to Component(
+        "main-column" to Component.create(
             id = "main-column",
-            componentType = "Column",
-            properties = mapOf(
-                "children" to mapOf(
-                    "explicitList" to listOf(
-                        mapOf("componentId" to "greeting")
-                    )
-                )
-            )
+            widgetType = "Column",
+            data = buildJsonObject {
+                putJsonObject("children") {
+                    putJsonArray("explicitList") {
+                        add(buildJsonObject { put("componentId", "greeting") })
+                    }
+                }
+            }
         ),
-        "greeting" to Component(
+        "greeting" to Component.create(
             id = "greeting",
-            componentType = "Text",
-            properties = mapOf(
-                "text" to mapOf("literalString" to "Hello from A2UI!")
-            )
+            widgetType = "Text",
+            data = buildJsonObject {
+                putJsonObject("text") {
+                    put("literalString", "Hello from A2UI!")
+                }
+            }
         )
     )
 )
@@ -131,16 +138,19 @@ For dynamic data binding, use `DataModel` to manage reactive state:
 
 ```kotlin
 import com.contextable.a2ui4k.data.rememberDataModel
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 @Composable
 fun DynamicScreen() {
     val dataModel = rememberDataModel(
-        initialData = mapOf(
-            "user" to mapOf(
-                "name" to "Alice",
-                "email" to "alice@example.com"
-            )
-        )
+        initialData = buildJsonObject {
+            putJsonObject("user") {
+                put("name", "Alice")
+                put("email", "alice@example.com")
+            }
+        }
     )
 
     A2UISurface(
@@ -165,12 +175,14 @@ import com.contextable.a2ui4k.state.SurfaceStateManager
 
 val stateManager = SurfaceStateManager()
 
-// Process operations from agent
-stateManager.processOperation(beginRenderingOp)
-stateManager.processOperation(surfaceUpdateOp)
+// Process ACTIVITY_SNAPSHOT from agent (contains operations array)
+stateManager.processSnapshot(messageId, activityContent)
 
-// Get current UI definition
-val currentDefinition = stateManager.getDefinition("surface-id")
+// Process ACTIVITY_DELTA for incremental updates
+stateManager.processDelta(messageId, jsonPatch)
+
+// Get current UI definition for a surface
+val currentDefinition = stateManager.getSurface("surface-id")
 ```
 
 ## Next Steps
