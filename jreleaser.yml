@@ -1,6 +1,6 @@
 project:
   name: a2ui-4k
-  version: 0.8.1
+  version: 0.8.2
   description: A2UI rendering engine for Compose Multiplatform
   links:
     homepage: https://github.com/contextable/a2ui-4k
