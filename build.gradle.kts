@@ -8,4 +8,4 @@ plugins {
 }
 
 group = "com.contextable"
-version = "0.8.1"
+version = "0.8.2"

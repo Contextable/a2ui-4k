@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-02-10
+
+### Added
+- iOS artifacts (`iosArm64`, `iosX64`, `iosSimulatorArm64`) now published to Maven Central
+
+### Changed
+- Publish workflow switched from Ubuntu to macOS runner to enable iOS artifact builds
+
 ## [0.8.1] - 2026-01-15
 
 ### Added
@@ -41,6 +49,7 @@ Initial implementation of the A2UI v0.8 rendering engine.
 - Event system: UserActionEvent, DataChangeEvent
 - Kotlin Multiplatform support: Android, iOS, JVM/Desktop
 
-[Unreleased]: https://github.com/Contextable/a2ui-4k/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/Contextable/a2ui-4k/compare/v0.8.2...HEAD
+[0.8.2]: https://github.com/Contextable/a2ui-4k/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/Contextable/a2ui-4k/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/Contextable/a2ui-4k/releases/tag/v0.8.0
