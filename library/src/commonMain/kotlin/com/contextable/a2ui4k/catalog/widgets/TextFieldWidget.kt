@@ -45,19 +45,19 @@ import kotlinx.serialization.json.JsonObject
 /**
  * TextField widget for user text input.
  *
- * A2UI Protocol Properties (v0.8):
+ * A2UI Protocol Properties (v0.9):
  * - label (required): Display label for the text field
- * - text (optional): Current text value, supports path binding for two-way data binding
- * - textFieldType (optional): date, longText, number, shortText, obscured
+ * - value (optional): Current text value, supports path binding for two-way data binding
+ * - variant (optional): longText, number, shortText, obscured
  * - validationRegexp (optional): Regex pattern for input validation
  *
- * JSON Schema:
+ * JSON Schema (v0.9):
  * ```json
  * {
- *   "label": {"literalString": "Name"} | {"path": "/labels/name"},
- *   "text": {"path": "/form/name"} | {"literalString": "initial value"},
- *   "textFieldType": {"literalString": "shortText"},
- *   "validationRegexp": {"literalString": "^[a-zA-Z]+$"}
+ *   "label": "Name" | {"path": "/labels/name"},
+ *   "value": {"path": "/form/name"} | "initial value",
+ *   "variant": "shortText",
+ *   "validationRegexp": "^[a-zA-Z]+$"
  * }
  * ```
  */
@@ -72,7 +72,7 @@ val TextFieldWidget = CatalogItem(
     )
 }
 
-private val EXPECTED_PROPERTIES = setOf("label", "text", "textFieldType", "validationRegexp")
+private val EXPECTED_PROPERTIES = setOf("label", "value", "variant", "validationRegexp")
 
 @Composable
 private fun TextFieldWidgetContent(
@@ -84,8 +84,8 @@ private fun TextFieldWidgetContent(
     PropertyValidation.warnUnexpectedProperties("TextField", data, EXPECTED_PROPERTIES)
 
     val labelRef = DataReferenceParser.parseString(data["label"])
-    val textRef = DataReferenceParser.parseString(data["text"])
-    val textFieldTypeRef = DataReferenceParser.parseString(data["textFieldType"])
+    val valueRef = DataReferenceParser.parseString(data["value"])
+    val variantRef = DataReferenceParser.parseString(data["variant"])
     val validationRegexpRef = DataReferenceParser.parseString(data["validationRegexp"])
 
     val label = when (labelRef) {
@@ -94,9 +94,9 @@ private fun TextFieldWidgetContent(
         else -> ""
     }
 
-    val textFieldType = when (textFieldTypeRef) {
-        is LiteralString -> textFieldTypeRef.value
-        is PathString -> dataContext.getString(textFieldTypeRef.path)
+    val variant = when (variantRef) {
+        is LiteralString -> variantRef.value
+        is PathString -> dataContext.getString(variantRef.path)
         else -> null
     }
 
@@ -107,9 +107,9 @@ private fun TextFieldWidgetContent(
     }
 
     // Get initial value from data context if bound
-    val initialValue = when (textRef) {
-        is PathString -> dataContext.getString(textRef.path) ?: ""
-        is LiteralString -> textRef.value
+    val initialValue = when (valueRef) {
+        is PathString -> dataContext.getString(valueRef.path) ?: ""
+        is LiteralString -> valueRef.value
         else -> ""
     }
 
@@ -120,21 +120,15 @@ private fun TextFieldWidgetContent(
     var textValue by remember(initialValue) { mutableStateOf(initialValue) }
     var isError by remember { mutableStateOf(false) }
 
-    // Determine keyboard type, visual transformation, and layout based on textFieldType
+    // Determine keyboard type, visual transformation, and layout based on variant
     val keyboardType: KeyboardType
     val visualTransformation: VisualTransformation
     val singleLine: Boolean
     val modifier: Modifier
 
-    when (textFieldType?.lowercase()) {
+    when (variant?.lowercase()) {
         "number" -> {
             keyboardType = KeyboardType.Number
-            visualTransformation = VisualTransformation.None
-            singleLine = true
-            modifier = Modifier.fillMaxWidth()
-        }
-        "date" -> {
-            keyboardType = KeyboardType.Text
             visualTransformation = VisualTransformation.None
             singleLine = true
             modifier = Modifier.fillMaxWidth()
@@ -172,12 +166,12 @@ private fun TextFieldWidgetContent(
             }
 
             // Update data context and fire event if bound
-            if (textRef is PathString) {
-                dataContext.update(textRef.path, newValue)
+            if (valueRef is PathString) {
+                dataContext.update(valueRef.path, newValue)
                 onEvent(
                     DataChangeEvent(
                         surfaceId = surfaceId,
-                        path = textRef.path,
+                        path = valueRef.path,
                         value = newValue
                     )
                 )

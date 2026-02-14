@@ -17,21 +17,22 @@
 package com.contextable.a2ui4k.model
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 /**
- * Represents the complete state of a UI surface in the A2UI protocol.
+ * Represents the complete state of a UI surface in the A2UI v0.9 protocol.
  *
  * A UiDefinition contains all the components that make up a surface,
- * along with metadata about which component is the root and which
- * catalog should be used for rendering.
+ * along with metadata about which catalog should be used for rendering.
  *
- * In the A2UI v0.8 protocol, UiDefinitions are built from `beginRendering`
- * and `surfaceUpdate` operations processed by [SurfaceStateManager].
+ * In v0.9, the root component is identified by convention: the component
+ * with id "root" serves as the entry point for rendering.
  *
  * @property surfaceId Unique identifier for this surface
  * @property components Map of component ID to [Component] definitions
- * @property root The ID of the root component to start rendering from
- * @property catalogId Optional identifier of the catalog to use for this surface
+ * @property catalogId Identifier of the catalog to use for this surface
+ * @property theme Optional theme parameters for the surface
+ * @property sendDataModel When true, client includes full data model in metadata
  *
  * @see Component
  * @see com.contextable.a2ui4k.state.SurfaceStateManager
@@ -41,26 +42,24 @@ import kotlinx.serialization.Serializable
 data class UiDefinition(
     val surfaceId: String,
     val components: Map<String, Component> = emptyMap(),
-    val root: String? = null,
-    val catalogId: String? = null
+    val catalogId: String? = null,
+    val theme: JsonObject? = null,
+    val sendDataModel: Boolean = false
 ) {
     /**
-     * Returns the root component if it exists.
+     * Returns the root component (component with id "root").
+     *
+     * In v0.9, the root is identified by convention rather than
+     * an explicit property.
      */
     val rootComponent: Component?
-        get() = root?.let { components[it] }
+        get() = components["root"]
 
     /**
      * Creates a copy with updated components.
      */
     fun withComponents(newComponents: Map<String, Component>): UiDefinition =
         copy(components = components + newComponents)
-
-    /**
-     * Creates a copy with the root set.
-     */
-    fun withRoot(rootId: String, catalog: String? = null): UiDefinition =
-        copy(root = rootId, catalogId = catalog ?: catalogId)
 
     companion object {
         /**

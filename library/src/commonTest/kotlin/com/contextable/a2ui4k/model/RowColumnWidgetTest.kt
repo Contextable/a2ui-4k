@@ -25,11 +25,12 @@ import kotlin.test.assertNotNull
 /**
  * Tests for Row and Column widget property parsing.
  *
- * A2UI Spec supported values:
- * - Row distribution: "start", "center", "end", "spaceBetween", "spaceAround", "spaceEvenly", "stretch"
- * - Row alignment: "start", "center", "end", "stretch"
- * - Column distribution: "start", "center", "end", "spaceBetween", "spaceAround", "spaceEvenly", "stretch"
- * - Column alignment: "start", "center", "end", "stretch"
+ * A2UI Spec v0.9 supported values:
+ * - Row justify: "start", "center", "end", "spaceBetween", "spaceAround", "spaceEvenly", "stretch"
+ * - Row align: "start", "center", "end", "stretch"
+ * - Column justify: "start", "center", "end", "spaceBetween", "spaceAround", "spaceEvenly", "stretch"
+ * - Column align: "start", "center", "end", "stretch"
+ * - children: plain array of component IDs (v0.9 format)
  */
 class RowColumnWidgetTest {
 
@@ -37,113 +38,113 @@ class RowColumnWidgetTest {
 
     // Tests for children parsing
     @Test
-    fun `parseComponentArray extracts explicit list of children`() {
+    fun `parseChildren extracts plain array of children`() {
         val jsonStr = """
             {
-                "children": {"explicitList": ["child1", "child2", "child3"]}
+                "children": ["child1", "child2", "child3"]
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val childrenRef = DataReferenceParser.parseComponentArray(data["children"])
+        val childrenRef = DataReferenceParser.parseChildren(data["children"])
 
         assertNotNull(childrenRef)
-        assertEquals(listOf("child1", "child2", "child3"), childrenRef.componentIds)
+        assertEquals(listOf("child1", "child2", "child3"), (childrenRef as ChildrenReference.ExplicitList).componentIds)
     }
 
-    // Tests for distribution parsing
+    // Tests for justify parsing (renamed from distribution)
     @Test
-    fun `parseString extracts distribution value`() {
-        val distributions = listOf(
+    fun `parseString extracts justify value`() {
+        val justifyValues = listOf(
             "start", "center", "end",
             "spaceBetween", "spaceAround", "spaceEvenly",
             "stretch"
         )
 
-        distributions.forEach { dist ->
-            val jsonStr = """{"distribution": "$dist"}"""
+        justifyValues.forEach { justify ->
+            val jsonStr = """{"justify": "$justify"}"""
             val data = json.decodeFromString<JsonObject>(jsonStr)
-            val ref = DataReferenceParser.parseString(data["distribution"])
+            val ref = DataReferenceParser.parseString(data["justify"])
 
-            assertNotNull(ref, "Distribution '$dist' should parse")
-            assertEquals(dist, (ref as LiteralString).value)
+            assertNotNull(ref, "justify '$justify' should parse")
+            assertEquals(justify, (ref as LiteralString).value)
         }
     }
 
-    // Tests for alignment parsing
+    // Tests for align parsing (renamed from alignment)
     @Test
-    fun `parseString extracts alignment value`() {
-        val alignments = listOf("start", "center", "end", "stretch")
+    fun `parseString extracts align value`() {
+        val alignValues = listOf("start", "center", "end", "stretch")
 
-        alignments.forEach { align ->
-            val jsonStr = """{"alignment": "$align"}"""
+        alignValues.forEach { align ->
+            val jsonStr = """{"align": "$align"}"""
             val data = json.decodeFromString<JsonObject>(jsonStr)
-            val ref = DataReferenceParser.parseString(data["alignment"])
+            val ref = DataReferenceParser.parseString(data["align"])
 
-            assertNotNull(ref, "Alignment '$align' should parse")
+            assertNotNull(ref, "align '$align' should parse")
             assertEquals(align, (ref as LiteralString).value)
         }
     }
 
     // Tests for Row with all properties
     @Test
-    fun `Row with distribution and alignment`() {
+    fun `Row with justify and align`() {
         val jsonStr = """
             {
-                "children": {"explicitList": ["left", "center", "right"]},
-                "distribution": "spaceBetween",
-                "alignment": "center"
+                "children": ["left", "center", "right"],
+                "justify": "spaceBetween",
+                "align": "center"
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
 
-        val childrenRef = DataReferenceParser.parseComponentArray(data["children"])
+        val childrenRef = DataReferenceParser.parseChildren(data["children"])
         assertNotNull(childrenRef)
-        assertEquals(3, childrenRef.componentIds.size)
+        assertEquals(3, (childrenRef as ChildrenReference.ExplicitList).componentIds.size)
 
-        val distRef = DataReferenceParser.parseString(data["distribution"])
-        assertEquals("spaceBetween", (distRef as LiteralString).value)
+        val justifyRef = DataReferenceParser.parseString(data["justify"])
+        assertEquals("spaceBetween", (justifyRef as LiteralString).value)
 
-        val alignRef = DataReferenceParser.parseString(data["alignment"])
+        val alignRef = DataReferenceParser.parseString(data["align"])
         assertEquals("center", (alignRef as LiteralString).value)
     }
 
     // Tests for Column with all properties
     @Test
-    fun `Column with distribution and alignment`() {
+    fun `Column with justify and align`() {
         val jsonStr = """
             {
-                "children": {"explicitList": ["header", "content", "footer"]},
-                "distribution": "spaceEvenly",
-                "alignment": "center"
+                "children": ["header", "content", "footer"],
+                "justify": "spaceEvenly",
+                "align": "center"
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
 
-        val childrenRef = DataReferenceParser.parseComponentArray(data["children"])
+        val childrenRef = DataReferenceParser.parseChildren(data["children"])
         assertNotNull(childrenRef)
-        assertEquals(3, childrenRef.componentIds.size)
+        assertEquals(3, (childrenRef as ChildrenReference.ExplicitList).componentIds.size)
 
-        val distRef = DataReferenceParser.parseString(data["distribution"])
-        assertEquals("spaceEvenly", (distRef as LiteralString).value)
+        val justifyRef = DataReferenceParser.parseString(data["justify"])
+        assertEquals("spaceEvenly", (justifyRef as LiteralString).value)
 
-        val alignRef = DataReferenceParser.parseString(data["alignment"])
+        val alignRef = DataReferenceParser.parseString(data["align"])
         assertEquals("center", (alignRef as LiteralString).value)
     }
 
     // Test path-based values for dynamic binding
     @Test
-    fun `distribution from path binding`() {
+    fun `justify from path binding`() {
         val jsonStr = """
             {
-                "distribution": {"path": "/ui/rowDistribution"}
+                "justify": {"path": "/ui/rowDistribution"}
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val ref = DataReferenceParser.parseString(data["distribution"])
+        val ref = DataReferenceParser.parseString(data["justify"])
 
         assertNotNull(ref)
         assertEquals("/ui/rowDistribution", (ref as PathString).path)

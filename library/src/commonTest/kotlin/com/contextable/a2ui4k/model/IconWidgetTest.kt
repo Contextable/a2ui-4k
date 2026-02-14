@@ -26,18 +26,18 @@ import kotlin.test.assertNull
 /**
  * Tests for Icon widget JSON parsing.
  *
- * A2UI Spec properties (v0.8):
- * - name (required): Icon name as literalString or path
+ * A2UI Spec properties (v0.9):
+ * - name (required): Icon name as plain string or path binding
  */
 class IconWidgetTest {
 
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
-    fun `parseString extracts name literalString`() {
+    fun `parseString extracts name literal`() {
         val jsonStr = """
             {
-                "name": {"literalString": "home"}
+                "name": "home"
             }
         """.trimIndent()
 
@@ -71,7 +71,7 @@ class IconWidgetTest {
         )
 
         iconNames.forEach { iconName ->
-            val jsonStr = """{"name": {"literalString": "$iconName"}}"""
+            val jsonStr = """{"name": "$iconName"}"""
             val data = json.decodeFromString<JsonObject>(jsonStr)
             val nameRef = DataReferenceParser.parseString(data["name"])
 
@@ -84,7 +84,7 @@ class IconWidgetTest {
     fun `icon with camelCase name`() {
         val jsonStr = """
             {
-                "name": {"literalString": "playArrow"}
+                "name": "playArrow"
             }
         """.trimIndent()
 

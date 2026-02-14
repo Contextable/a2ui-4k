@@ -47,12 +47,10 @@ import kotlinx.serialization.json.jsonPrimitive
  * ```json
  * {
  *   "component": "Tabs",
- *   "properties": {
- *     "tabItems": [
- *       {"title": "Tab 1", "child": "content_1"},
- *       {"title": "Tab 2", "child": "content_2"}
- *     ]
- *   }
+ *   "tabs": [
+ *     {"title": "Tab 1", "child": "content_1"},
+ *     {"title": "Tab 2", "child": "content_2"}
+ *   ]
  * }
  * ```
  */
@@ -67,7 +65,7 @@ val TabsWidget = CatalogItem(
     )
 }
 
-private val EXPECTED_PROPERTIES = setOf("tabItems")
+private val EXPECTED_PROPERTIES = setOf("tabs")
 
 @Composable
 private fun TabsWidgetContent(
@@ -78,9 +76,9 @@ private fun TabsWidgetContent(
 ) {
     PropertyValidation.warnUnexpectedProperties("Tabs", data, EXPECTED_PROPERTIES)
 
-    val tabItemsArray = data["tabItems"]?.jsonArray ?: return
+    val tabsArray = data["tabs"]?.jsonArray ?: return
 
-    val tabs = tabItemsArray.mapNotNull { tabElement ->
+    val tabs = tabsArray.mapNotNull { tabElement ->
         val tabObj = tabElement.jsonObject
 
         // Parse title (can be literal or path)

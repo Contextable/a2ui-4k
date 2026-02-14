@@ -44,17 +44,17 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Image widget that displays an image from a URL.
  *
- * A2UI Protocol Properties:
- * - url (required): Image source as literalString or path
+ * A2UI Protocol Properties (v0.9):
+ * - url (required): Image source as string or path
  * - fit (optional): How image resizes - contain, cover, fill, none, scale-down
- * - usageHint (optional): Suggests intended size - icon, avatar, smallFeature, mediumFeature, largeFeature, header
+ * - variant (optional): Suggests intended size - icon, avatar, smallFeature, mediumFeature, largeFeature, header
  *
  * JSON Schema:
  * ```json
  * {
- *   "url": {"literalString": "https://example.com/image.jpg"} | {"path": "/item/imageUrl"},
+ *   "url": "https://example.com/image.jpg" | {"path": "/item/imageUrl"},
  *   "fit": "cover" | "contain" | "fill" | "none" | "scale-down" (optional),
- *   "usageHint": "icon" | "avatar" | "smallFeature" | "mediumFeature" | "largeFeature" | "header" (optional)
+ *   "variant": "icon" | "avatar" | "smallFeature" | "mediumFeature" | "largeFeature" | "header" (optional)
  * }
  * ```
  */
@@ -64,7 +64,7 @@ val ImageWidget = CatalogItem(
     ImageWidgetContent(data = data, dataContext = dataContext)
 }
 
-private val EXPECTED_PROPERTIES = setOf("url", "fit", "usageHint")
+private val EXPECTED_PROPERTIES = setOf("url", "fit", "variant")
 
 @Composable
 private fun ImageWidgetContent(
@@ -75,7 +75,7 @@ private fun ImageWidgetContent(
 
     val urlRef = DataReferenceParser.parseString(data["url"])
     val fitRef = DataReferenceParser.parseString(data["fit"])
-    val usageHintRef = DataReferenceParser.parseString(data["usageHint"])
+    val variantRef = DataReferenceParser.parseString(data["variant"])
 
     val url = when (urlRef) {
         is LiteralString -> urlRef.value
@@ -89,9 +89,9 @@ private fun ImageWidgetContent(
         else -> null
     }
 
-    val usageHint = when (usageHintRef) {
-        is LiteralString -> usageHintRef.value
-        is PathString -> dataContext.getString(usageHintRef.path)
+    val variant = when (variantRef) {
+        is LiteralString -> variantRef.value
+        is PathString -> dataContext.getString(variantRef.path)
         else -> null
     }
 
@@ -105,8 +105,8 @@ private fun ImageWidgetContent(
         else -> ContentScale.Crop // Default to cover behavior
     }
 
-    // Map usageHint to appropriate dimensions and shape
-    val (height, fillWidth, shape) = getImageDimensions(usageHint)
+    // Map variant to appropriate dimensions and shape
+    val (height, fillWidth, shape) = getImageDimensions(variant)
 
     if (url != null) {
         val sizeModifier = when {
@@ -145,12 +145,12 @@ private fun ImageWidgetContent(
 private val ImageCornerRadius = RoundedCornerShape(12.dp)
 
 /**
- * Maps A2UI usageHint to appropriate image dimensions and shape.
+ * Maps A2UI variant to appropriate image dimensions and shape.
  *
  * @return Triple of (height in dp or null, fillWidth boolean, shape or null)
  */
-private fun getImageDimensions(usageHint: String?): Triple<Dp?, Boolean, Shape?> {
-    return when (usageHint?.lowercase()) {
+private fun getImageDimensions(variant: String?): Triple<Dp?, Boolean, Shape?> {
+    return when (variant?.lowercase()) {
         "icon" -> Triple(24.dp, false, null) // Icons: no rounded corners
         "avatar" -> Triple(48.dp, false, CircleShape) // Avatars: circular
         "smallfeature" -> Triple(80.dp, true, ImageCornerRadius)

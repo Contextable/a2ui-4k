@@ -45,15 +45,15 @@ import kotlinx.serialization.json.JsonObject
 /**
  * CheckBox widget for boolean input.
  *
- * A2UI Protocol Properties (v0.8):
+ * A2UI Protocol Properties (v0.9):
  * - label (required): Display label for the checkbox
  * - value (optional): Boolean value, supports path binding for two-way data binding
  *
- * JSON Schema:
+ * JSON Schema (v0.9):
  * ```json
  * {
- *   "label": {"literalString": "Accept terms"},
- *   "value": {"path": "/form/accepted"}
+ *   "label": "Accept terms" | {"path": "/labels/terms"},
+ *   "value": {"path": "/form/accepted"} | true
  * }
  * ```
  */

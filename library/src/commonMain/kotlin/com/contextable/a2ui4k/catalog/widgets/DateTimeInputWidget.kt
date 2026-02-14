@@ -54,17 +54,17 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * DateTimeInput widget for date and/or time input.
  *
- * A2UI Protocol Properties (v0.8):
+ * A2UI Protocol Properties (v0.9):
  * - value (required): Date/time value, supports path binding for two-way data binding
  * - enableDate (optional): Enable date picker (default true)
  * - enableTime (optional): Enable time picker (default false)
  *
- * JSON Schema:
+ * JSON Schema (v0.9):
  * ```json
  * {
  *   "value": {"path": "/form/date"},
- *   "enableDate": {"literalBoolean": true},
- *   "enableTime": {"literalBoolean": true}
+ *   "enableDate": true,
+ *   "enableTime": true
  * }
  * ```
  */

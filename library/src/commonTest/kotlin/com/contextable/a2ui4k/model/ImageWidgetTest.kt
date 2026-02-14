@@ -26,20 +26,20 @@ import kotlin.test.assertNull
 /**
  * Tests for Image widget JSON parsing.
  *
- * A2UI Spec properties:
- * - url (required): Image URL as literalString or path
+ * A2UI Spec properties (v0.9):
+ * - url (required): Image URL as plain string or path binding
  * - fit (optional): contain, cover, fill, none, scale-down
- * - usageHint (optional): icon, avatar, smallFeature, mediumFeature, largeFeature, header
+ * - variant (optional): icon, avatar, smallFeature, mediumFeature, largeFeature, header
  */
 class ImageWidgetTest {
 
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
-    fun `parseString extracts url literalString`() {
+    fun `parseString extracts url literal`() {
         val jsonStr = """
             {
-                "url": {"literalString": "https://example.com/image.jpg"}
+                "url": "https://example.com/image.jpg"
             }
         """.trimIndent()
 
@@ -80,16 +80,16 @@ class ImageWidgetTest {
     }
 
     @Test
-    fun `all usageHint values are valid`() {
-        val hints = listOf("icon", "avatar", "smallFeature", "mediumFeature", "largeFeature", "header")
+    fun `all variant values are valid`() {
+        val variants = listOf("icon", "avatar", "smallFeature", "mediumFeature", "largeFeature", "header")
 
-        hints.forEach { hint ->
-            val jsonStr = """{"usageHint": "$hint"}"""
+        variants.forEach { variant ->
+            val jsonStr = """{"variant": "$variant"}"""
             val data = json.decodeFromString<JsonObject>(jsonStr)
-            val ref = DataReferenceParser.parseString(data["usageHint"])
+            val ref = DataReferenceParser.parseString(data["variant"])
 
-            assertNotNull(ref, "usageHint '$hint' should parse")
-            assertEquals(hint, (ref as LiteralString).value)
+            assertNotNull(ref, "variant '$variant' should parse")
+            assertEquals(variant, (ref as LiteralString).value)
         }
     }
 
@@ -99,7 +99,7 @@ class ImageWidgetTest {
             {
                 "url": {"path": "/user/avatar"},
                 "fit": "cover",
-                "usageHint": "avatar"
+                "variant": "avatar"
             }
         """.trimIndent()
 
@@ -111,21 +111,21 @@ class ImageWidgetTest {
         val fitRef = DataReferenceParser.parseString(data["fit"])
         assertEquals("cover", (fitRef as LiteralString).value)
 
-        val hintRef = DataReferenceParser.parseString(data["usageHint"])
-        assertEquals("avatar", (hintRef as LiteralString).value)
+        val variantRef = DataReferenceParser.parseString(data["variant"])
+        assertEquals("avatar", (variantRef as LiteralString).value)
     }
 
     @Test
     fun `missing optional properties return null`() {
         val jsonStr = """
             {
-                "url": {"literalString": "https://example.com/img.png"}
+                "url": "https://example.com/img.png"
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
 
         assertNull(DataReferenceParser.parseString(data["fit"]))
-        assertNull(DataReferenceParser.parseString(data["usageHint"]))
+        assertNull(DataReferenceParser.parseString(data["variant"]))
     }
 }

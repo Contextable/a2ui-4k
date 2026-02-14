@@ -19,7 +19,7 @@ package com.contextable.a2ui4k.util
 import kotlinx.serialization.json.JsonObject
 
 /**
- * Utility for validating A2UI component properties against the v0.8 specification.
+ * Utility for validating A2UI component properties against the v0.9 specification.
  *
  * Logs info-level warnings for any unexpected properties encountered during parsing.
  * This helps identify JSON that doesn't conform to the official A2UI protocol.

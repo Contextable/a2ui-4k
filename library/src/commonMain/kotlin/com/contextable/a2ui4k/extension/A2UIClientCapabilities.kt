@@ -30,7 +30,7 @@ import kotlinx.serialization.Serializable
  * {
  *   "a2uiClientCapabilities": {
  *     "supportedCatalogIds": [
- *       "https://github.com/google/A2UI/blob/main/specification/0.8/json/standard_catalog_definition.json"
+ *       "https://github.com/google/A2UI/blob/main/specification/v0_9/json/standard_catalog.json"
  *     ]
  *   }
  * }
@@ -59,7 +59,7 @@ data class A2UIClientCapabilities(
 )
 
 /**
- * Creates [A2UIClientCapabilities] for the standard A2UI v0.8 catalog.
+ * Creates [A2UIClientCapabilities] for the standard A2UI v0.9 catalog.
  *
  * This is the most common configuration for clients that implement the
  * 18 standard widgets defined in the A2UI specification.

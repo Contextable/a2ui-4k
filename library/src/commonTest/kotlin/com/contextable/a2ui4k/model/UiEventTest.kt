@@ -27,19 +27,19 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Tests for UiEvent types - UserActionEvent and DataChangeEvent.
+ * Tests for UiEvent types - ActionEvent and DataChangeEvent.
  *
- * These tests verify A2UI ClientEvent format compliance.
+ * These tests verify A2UI v0.9 ClientEvent format compliance.
  */
 class UiEventTest {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    // ========== UserActionEvent tests ==========
+    // ========== ActionEvent tests ==========
 
     @Test
-    fun `UserActionEvent has correct properties`() {
-        val event = UserActionEvent(
+    fun `ActionEvent has correct properties`() {
+        val event = ActionEvent(
             name = "submit",
             surfaceId = "main",
             sourceComponentId = "submit-button",
@@ -54,13 +54,13 @@ class UiEventTest {
     }
 
     @Test
-    fun `UserActionEvent with context`() {
+    fun `ActionEvent with context`() {
         val context = JsonObject(mapOf(
             "itemId" to JsonPrimitive("item-123"),
             "quantity" to JsonPrimitive(2)
         ))
 
-        val event = UserActionEvent(
+        val event = ActionEvent(
             name = "add-to-cart",
             surfaceId = "product-page",
             sourceComponentId = "add-button:item-123",
@@ -73,8 +73,8 @@ class UiEventTest {
     }
 
     @Test
-    fun `UserActionEvent serializes to JSON`() {
-        val event = UserActionEvent(
+    fun `ActionEvent serializes to JSON`() {
+        val event = ActionEvent(
             name = "click",
             surfaceId = "default",
             sourceComponentId = "btn1",
@@ -91,7 +91,7 @@ class UiEventTest {
     }
 
     @Test
-    fun `UserActionEvent deserializes from JSON`() {
+    fun `ActionEvent deserializes from JSON`() {
         val jsonStr = """
             {
                 "name": "action_name",
@@ -102,7 +102,7 @@ class UiEventTest {
             }
         """.trimIndent()
 
-        val event = json.decodeFromString<UserActionEvent>(jsonStr)
+        val event = json.decodeFromString<ActionEvent>(jsonStr)
 
         assertEquals("action_name", event.name)
         assertEquals("default", event.surfaceId)
@@ -112,8 +112,8 @@ class UiEventTest {
     }
 
     @Test
-    fun `UserActionEvent with template item suffix`() {
-        val event = UserActionEvent(
+    fun `ActionEvent with template item suffix`() {
+        val event = ActionEvent(
             name = "select",
             surfaceId = "list",
             sourceComponentId = "item-template:3",

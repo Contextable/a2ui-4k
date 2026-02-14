@@ -26,9 +26,9 @@ import kotlin.test.assertNull
 /**
  * Tests for ComponentDef parsing from JSON.
  *
- * These tests ensure that component definitions are correctly parsed,
- * including top-level properties like 'weight' that exist alongside
- * the nested component properties.
+ * These tests ensure that component definitions are correctly parsed
+ * in v0.9 flat format where 'component' is a string discriminator
+ * and properties are at the top level.
  */
 class ComponentDefTest {
 
@@ -39,9 +39,8 @@ class ComponentDefTest {
         val jsonStr = """
             {
                 "id": "my-button",
-                "component": {
-                    "Button": { "child": "button-text" }
-                }
+                "component": "Button",
+                "child": "button-text"
             }
         """.trimIndent()
 
@@ -58,9 +57,8 @@ class ComponentDefTest {
             {
                 "id": "template-image",
                 "weight": 1,
-                "component": {
-                    "Image": { "url": { "path": "imageUrl" } }
-                }
+                "component": "Image",
+                "url": {"path": "imageUrl"}
             }
         """.trimIndent()
 
@@ -78,9 +76,8 @@ class ComponentDefTest {
             {
                 "id": "card-details",
                 "weight": 2,
-                "component": {
-                    "Column": { "children": { "explicitList": ["title", "subtitle"] } }
-                }
+                "component": "Column",
+                "children": ["title", "subtitle"]
             }
         """.trimIndent()
 
@@ -97,9 +94,8 @@ class ComponentDefTest {
         val jsonStr = """
             {
                 "id": "simple-text",
-                "component": {
-                    "Text": { "text": { "literalString": "Hello" } }
-                }
+                "component": "Text",
+                "text": "Hello"
             }
         """.trimIndent()
 
@@ -116,12 +112,9 @@ class ComponentDefTest {
         val jsonStr = """
             {
                 "id": "my-text",
-                "component": {
-                    "Text": {
-                        "text": { "literalString": "Hello World" },
-                        "usageHint": { "literalString": "h1" }
-                    }
-                }
+                "component": "Text",
+                "text": "Hello World",
+                "variant": "h1"
             }
         """.trimIndent()
 
@@ -131,7 +124,7 @@ class ComponentDefTest {
         assertEquals("my-text", def.id)
         assertEquals("Text", def.component)
         assertNotNull(def.properties["text"])
-        assertNotNull(def.properties["usageHint"])
+        assertNotNull(def.properties["variant"])
     }
 
     @Test
@@ -140,9 +133,8 @@ class ComponentDefTest {
             {
                 "id": "weighted-image",
                 "weight": 3,
-                "component": {
-                    "Image": { "url": { "literalString": "https://example.com/img.jpg" } }
-                }
+                "component": "Image",
+                "url": "https://example.com/img.jpg"
             }
         """.trimIndent()
 
@@ -160,9 +152,8 @@ class ComponentDefTest {
         val jsonStr = """
             {
                 "id": "no-weight",
-                "component": {
-                    "Text": { "text": { "literalString": "No weight" } }
-                }
+                "component": "Text",
+                "text": "No weight"
             }
         """.trimIndent()
 

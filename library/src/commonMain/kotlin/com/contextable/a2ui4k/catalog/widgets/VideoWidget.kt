@@ -40,13 +40,13 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Video widget for displaying video content.
  *
- * A2UI Protocol Properties (v0.8):
+ * A2UI Protocol Properties (v0.9):
  * - url (required): URL of the video source
  *
  * JSON Schema:
  * ```json
  * {
- *   "url": {"literalString": "https://example.com/video.mp4"}
+ *   "url": "https://example.com/video.mp4"
  * }
  * ```
  *

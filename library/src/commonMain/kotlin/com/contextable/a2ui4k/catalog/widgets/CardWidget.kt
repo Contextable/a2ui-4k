@@ -34,6 +34,7 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Card widget that wraps a child component in a Material 3 Card.
  *
+ * A2UI Protocol Properties (v0.9):
  * Matches A2UI protocol Card:
  * - Uses surface color from theme
  * - Applies 8dp internal padding around child

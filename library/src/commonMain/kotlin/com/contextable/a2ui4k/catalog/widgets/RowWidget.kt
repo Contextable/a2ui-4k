@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.contextable.a2ui4k.model.CatalogItem
 import com.contextable.a2ui4k.model.ChildBuilder
+import com.contextable.a2ui4k.model.ChildrenReference
 import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.LiteralString
@@ -37,17 +38,17 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Row widget that arranges children horizontally.
  *
- * A2UI Protocol Properties (v0.8):
+ * A2UI Protocol Properties (v0.9):
  * - children (required): List of child component IDs
- * - distribution (optional): start, center, end, spaceBetween, spaceAround, spaceEvenly
- * - alignment (optional): start, center, end, stretch
+ * - justify (optional): start, center, end, spaceBetween, spaceAround, spaceEvenly
+ * - align (optional): start, center, end, stretch
  *
  * JSON Schema:
  * ```json
  * {
- *   "children": {"explicitList": ["child1", "child2"]},
- *   "distribution": {"literalString": "spaceBetween"},
- *   "alignment": {"literalString": "center"}
+ *   "children": ["child1", "child2"],
+ *   "justify": "spaceBetween",
+ *   "align": "center"
  * }
  * ```
  */
@@ -57,7 +58,7 @@ val RowWidget = CatalogItem(
     RowWidgetContent(data = data, buildChild = buildChild, dataContext = dataContext)
 }
 
-private val EXPECTED_PROPERTIES = setOf("children", "distribution", "alignment")
+private val EXPECTED_PROPERTIES = setOf("children", "justify", "align")
 
 @Composable
 private fun RowWidgetContent(
@@ -67,37 +68,37 @@ private fun RowWidgetContent(
 ) {
     PropertyValidation.warnUnexpectedProperties("Row", data, EXPECTED_PROPERTIES)
 
-    val childrenRef = DataReferenceParser.parseComponentArray(data["children"])
-    val children = childrenRef?.componentIds ?: emptyList()
+    val childrenRef = DataReferenceParser.parseChildren(data["children"])
+    val children = (childrenRef as? ChildrenReference.ExplicitList)?.componentIds ?: emptyList()
 
-    val distributionRef = DataReferenceParser.parseString(data["distribution"])
-    val distribution = when (distributionRef) {
-        is LiteralString -> distributionRef.value
-        is PathString -> dataContext.getString(distributionRef.path)
+    val justifyRef = DataReferenceParser.parseString(data["justify"])
+    val justify = when (justifyRef) {
+        is LiteralString -> justifyRef.value
+        is PathString -> dataContext.getString(justifyRef.path)
         else -> null
     }
 
-    val alignmentRef = DataReferenceParser.parseString(data["alignment"])
-    val alignment = when (alignmentRef) {
-        is LiteralString -> alignmentRef.value
-        is PathString -> dataContext.getString(alignmentRef.path)
+    val alignRef = DataReferenceParser.parseString(data["align"])
+    val align = when (alignRef) {
+        is LiteralString -> alignRef.value
+        is PathString -> dataContext.getString(alignRef.path)
         else -> null
     }
 
     val definition = LocalUiDefinition.current
 
-    // Apply fillMaxWidth only for distributions that need space to distribute.
+    // Apply fillMaxWidth only for justify values that need space to distribute.
     // This allows simple Rows to be centered by parent alignment, while
     // spaceAround/spaceBetween/etc. get full width to distribute children.
-    val needsFullWidth = distribution?.lowercase() in listOf(
+    val needsFullWidth = justify?.lowercase() in listOf(
         "spacebetween", "spacearound", "spaceevenly"
     )
     val modifier = if (needsFullWidth) Modifier.fillMaxWidth() else Modifier
 
     Row(
         modifier = modifier,
-        horizontalArrangement = parseHorizontalArrangement(distribution),
-        verticalAlignment = parseVerticalAlignment(alignment)
+        horizontalArrangement = parseHorizontalArrangement(justify),
+        verticalAlignment = parseVerticalAlignment(align)
     ) {
         children.forEach { childId ->
             val weight = definition?.components?.get(childId)?.weight
@@ -126,13 +127,13 @@ private fun RowScope.BuildWeightedChild(
 }
 
 /**
- * Parse horizontal arrangement from A2UI distribution values.
+ * Parse horizontal arrangement from A2UI justify values.
  *
- * Valid distribution values per A2UI v0.8 spec:
+ * Valid justify values per A2UI v0.9 spec:
  * start, center, end, spaceBetween, spaceAround, spaceEvenly
  */
-private fun parseHorizontalArrangement(distribution: String?): Arrangement.Horizontal {
-    return when (distribution?.lowercase()) {
+private fun parseHorizontalArrangement(justify: String?): Arrangement.Horizontal {
+    return when (justify?.lowercase()) {
         "start" -> Arrangement.Start
         "center" -> Arrangement.Center
         "end" -> Arrangement.End
@@ -144,9 +145,9 @@ private fun parseHorizontalArrangement(distribution: String?): Arrangement.Horiz
 }
 
 /**
- * Parse vertical alignment from A2UI alignment values.
+ * Parse vertical alignment from A2UI align values.
  *
- * Valid alignment values per A2UI v0.8 spec:
+ * Valid align values per A2UI v0.9 spec:
  * start, center, end, stretch
  */
 private fun parseVerticalAlignment(alignment: String?): Alignment.Vertical {
