@@ -8,4 +8,4 @@ plugins {
 }
 
 group = "com.contextable"
-version = "0.8.2"
+version = findProperty("publishVersion")?.toString() ?: "0.8.2"
