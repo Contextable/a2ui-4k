@@ -226,7 +226,7 @@ object FunctionEvaluator {
         val formatted = if (maximumFractionDigits == 0 && value == value.toLong().toDouble()) {
             value.toLong().toString()
         } else {
-            val str = value.toBigDecimal().toPlainString()
+            val str = doubleToPlainString(value)
             val parts = str.split(".")
             val intPart = if (useGrouping) addThousandsSeparator(parts[0]) else parts[0]
             if (parts.size > 1) {
@@ -327,6 +327,40 @@ object FunctionEvaluator {
             }
             else -> null
         }
+    }
+
+    /**
+     * Converts a Double to a plain decimal string without scientific notation.
+     * This is a multiplatform replacement for JVM's BigDecimal.toPlainString().
+     */
+    private fun doubleToPlainString(value: Double): String {
+        val str = value.toString()
+        if ('E' !in str && 'e' !in str) return str
+
+        val eIndex = str.indexOfFirst { it == 'E' || it == 'e' }
+        val mantissa = str.substring(0, eIndex)
+        val exponent = str.substring(eIndex + 1).toInt()
+
+        val negative = mantissa.startsWith("-")
+        val absMantissa = if (negative) mantissa.substring(1) else mantissa
+        val dotIndex = absMantissa.indexOf('.')
+        val digits = absMantissa.replace(".", "")
+        val currentDecimalPos = if (dotIndex >= 0) dotIndex else digits.length
+        val newDecimalPos = currentDecimalPos + exponent
+
+        val result = when {
+            newDecimalPos <= 0 -> {
+                "0." + "0".repeat(-newDecimalPos) + digits
+            }
+            newDecimalPos >= digits.length -> {
+                digits + "0".repeat(newDecimalPos - digits.length)
+            }
+            else -> {
+                digits.substring(0, newDecimalPos) + "." + digits.substring(newDecimalPos)
+            }
+        }
+
+        return if (negative) "-$result" else result
     }
 
     private fun addThousandsSeparator(intPart: String): String {
