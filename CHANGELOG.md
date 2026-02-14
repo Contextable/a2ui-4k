@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Chores
 - Fix `formatNumber` to apply thousands separators on the integer fast-path and `formatCurrency` to round cents instead of truncating, fixing Kotlin/Native test failures
+- Expand test coverage for v0.9.0 features:
+  - Add `ChoicePickerWidgetTest` (14 tests): option parsing, variants (`multipleSelection`/`mutuallyExclusive`), value binding (path and inline array), `displayStyle`, `filterable`, and `ComponentDef` integration
+  - Add `SurfaceStateManagerTest` (20 tests): all four v0.9 operations (`createSurface`, `updateComponents`, `updateDataModel`, `deleteSurface`), snapshot and delta processing, implicit surface creation, data deletion, surface lifecycle, and `UiDefinition` integration
+  - Expand `FunctionEvaluatorTest` (30+ new tests): complete coverage for all 13 standard functions — `regex`, `length`, `numeric`, `and`/`or`/`not`, `formatString`, `formatDate`, `pluralize`, additional `formatCurrency` currencies (EUR, GBP, JPY, CHF), `openUrl`, unknown function handling, and path resolution in args
+  - Add `A2UIExtensionParamsTest` (9 tests): serialization round-tripping, default values, and `A2UIExtension` constant verification
+  - Add `UiDefinitionExtendedTest` (14 tests): `UiDefinition` (`rootComponent`, `withComponents`, `empty`, metadata), `Catalog` (`empty`, `of`, `+` merge, precedence rules), and `Component` (`create`, `fromComponentDef`, defaults)
 
 ## [0.9.0] - 2026-02-14
 
