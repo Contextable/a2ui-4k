@@ -100,11 +100,11 @@ class A2UIClientCapabilitiesTest {
     @Test
     fun `A2UIExtension constants are correct`() {
         assertEquals(
-            "https://a2ui.org/a2a-extension/a2ui/v0.8",
-            A2UIExtension.URI_V08
+            "https://a2ui.org/a2a-extension/a2ui/v0.9",
+            A2UIExtension.URI_V09
         )
         assertEquals(
-            "https://github.com/google/A2UI/blob/main/specification/0.8/json/standard_catalog_definition.json",
+            "https://github.com/google/A2UI/blob/main/specification/v0_9/json/standard_catalog.json",
             A2UIExtension.STANDARD_CATALOG_URI
         )
         assertEquals(
@@ -120,6 +120,6 @@ class A2UIClientCapabilitiesTest {
 
         // Should produce JSON that can be included in message metadata
         assertTrue(serialized.contains("\"supportedCatalogIds\""))
-        assertTrue(serialized.contains("standard_catalog_definition.json"))
+        assertTrue(serialized.contains("standard_catalog.json"))
     }
 }

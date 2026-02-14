@@ -29,8 +29,8 @@ import kotlinx.serialization.Serializable
  * ```json
  * {
  *   "supportedCatalogIds": [
- *     "https://github.com/google/A2UI/blob/main/specification/0.8/json/standard_catalog_definition.json",
- *     "https://my-company.com/a2ui/v0.8/my_custom_catalog.json"
+ *     "https://github.com/google/A2UI/blob/main/specification/v0_9/json/standard_catalog.json",
+ *     "https://my-company.com/a2ui/v0.9/my_custom_catalog.json"
  *   ],
  *   "acceptsInlineCatalogs": true
  * }

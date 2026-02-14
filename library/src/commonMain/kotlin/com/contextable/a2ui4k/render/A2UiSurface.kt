@@ -46,14 +46,17 @@ val LocalUiDefinition = compositionLocalOf<UiDefinition?> { null }
  * using widgets from the provided [Catalog]. User interactions are reported
  * via the onEvent callback as [UiEvent] instances.
  *
- * This composable implements the rendering side of the A2UI v0.8 protocol.
+ * This composable implements the rendering side of the A2UI v0.9 protocol.
  * It processes component definitions and resolves data bindings reactively.
+ *
+ * In v0.9, the root component is identified by convention: the component
+ * with id "root" serves as the entry point for rendering.
  *
  * @param definition The UI definition containing the component tree to render
  * @param modifier Modifier for the surface container
  * @param dataModel The data model for resolving path bindings (defaults to a new instance)
  * @param catalog The widget catalog to use for rendering
- * @param onEvent Callback for user interaction events ([UserActionEvent], [DataChangeEvent])
+ * @param onEvent Callback for user interaction events ([ActionEvent], [ValidationError])
  *
  * @see UiDefinition
  * @see DataModel
@@ -76,10 +79,11 @@ fun A2UISurface(
 
     CompositionLocalProvider(LocalUiDefinition provides definition) {
         Box(modifier = modifier) {
-            val rootId = definition.root
-            if (rootId != null) {
+            // v0.9: root component is identified by convention (id = "root")
+            val rootComponent = definition.rootComponent
+            if (rootComponent != null) {
                 ComponentBuilder(
-                    componentId = rootId,
+                    componentId = "root",
                     definition = definition,
                     catalog = catalog,
                     dataContext = dataContext,
@@ -122,11 +126,6 @@ internal fun ComponentBuilder(
 
     val widgetType = component.widgetType
     val widgetData = component.widgetData
-
-    if (widgetType == null || widgetData == null) {
-        InvalidComponent(componentId)
-        return
-    }
 
     val catalogItem = catalog[widgetType]
     if (catalogItem == null) {

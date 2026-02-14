@@ -21,7 +21,7 @@
  * A2UI (Agent-to-UI) surfaces. It implements the component model from
  * the A2UI protocol, enabling AI agents to generate dynamic UIs.
  *
- * a2ui-4k currently implements the A2UI v0.8 specification. The A2UI protocol
+ * a2ui-4k currently implements the A2UI v0.9 specification. The A2UI protocol
  * is under active development at [google/A2UI](https://github.com/google/A2UI).
  *
  * ## Quick Start
@@ -73,8 +73,9 @@ package com.contextable.a2ui4k
 public typealias Component = com.contextable.a2ui4k.model.Component
 public typealias UiDefinition = com.contextable.a2ui4k.model.UiDefinition
 public typealias UiEvent = com.contextable.a2ui4k.model.UiEvent
-public typealias UserActionEvent = com.contextable.a2ui4k.model.UserActionEvent
+public typealias ActionEvent = com.contextable.a2ui4k.model.ActionEvent
 public typealias DataChangeEvent = com.contextable.a2ui4k.model.DataChangeEvent
+public typealias ValidationError = com.contextable.a2ui4k.model.ValidationError
 public typealias Catalog = com.contextable.a2ui4k.model.Catalog
 public typealias CatalogItem = com.contextable.a2ui4k.model.CatalogItem
 public typealias DataContext = com.contextable.a2ui4k.model.DataContext

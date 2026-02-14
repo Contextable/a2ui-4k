@@ -29,29 +29,29 @@ import kotlin.test.assertTrue
 /**
  * Tests for Tabs widget JSON parsing.
  *
- * A2UI Spec properties (v0.8):
- * - tabItems (required): Array of tab definitions with title and child
+ * A2UI Spec properties (v0.9):
+ * - tabs (required): Array of tab definitions with title and child (renamed from tabItems)
  */
 class TabsWidgetTest {
 
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
-    fun `parseString extracts tab title literalString`() {
+    fun `parseString extracts tab title literal`() {
         val jsonStr = """
             {
-                "tabItems": [
-                    {"title": {"literalString": "Home"}, "child": "home-content"}
+                "tabs": [
+                    {"title": "Home", "child": "home-content"}
                 ]
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val tabItems = data["tabItems"]?.jsonArray
-        assertNotNull(tabItems)
-        assertEquals(1, tabItems.size)
+        val tabs = data["tabs"]?.jsonArray
+        assertNotNull(tabs)
+        assertEquals(1, tabs.size)
 
-        val firstTab = tabItems[0].jsonObject
+        val firstTab = tabs[0].jsonObject
         val titleRef = DataReferenceParser.parseString(firstTab["title"])
 
         assertNotNull(titleRef)
@@ -62,17 +62,17 @@ class TabsWidgetTest {
     fun `parseString extracts tab title path binding`() {
         val jsonStr = """
             {
-                "tabItems": [
+                "tabs": [
                     {"title": {"path": "/tabs/0/label"}, "child": "tab-content"}
                 ]
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val tabItems = data["tabItems"]?.jsonArray
-        assertNotNull(tabItems)
+        val tabs = data["tabs"]?.jsonArray
+        assertNotNull(tabs)
 
-        val firstTab = tabItems[0].jsonObject
+        val firstTab = tabs[0].jsonObject
         val titleRef = DataReferenceParser.parseString(firstTab["title"])
 
         assertNotNull(titleRef)
@@ -83,17 +83,17 @@ class TabsWidgetTest {
     fun `parseComponentRef extracts tab child`() {
         val jsonStr = """
             {
-                "tabItems": [
+                "tabs": [
                     {"title": "Settings", "child": "settings-panel"}
                 ]
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val tabItems = data["tabItems"]?.jsonArray
-        assertNotNull(tabItems)
+        val tabs = data["tabs"]?.jsonArray
+        assertNotNull(tabs)
 
-        val firstTab = tabItems[0].jsonObject
+        val firstTab = tabs[0].jsonObject
         val childRef = DataReferenceParser.parseComponentRef(firstTab["child"])
 
         assertNotNull(childRef)
@@ -104,20 +104,20 @@ class TabsWidgetTest {
     fun `multiple tabs with different titles`() {
         val jsonStr = """
             {
-                "tabItems": [
-                    {"title": {"literalString": "Tab 1"}, "child": "content-1"},
-                    {"title": {"literalString": "Tab 2"}, "child": "content-2"},
-                    {"title": {"literalString": "Tab 3"}, "child": "content-3"}
+                "tabs": [
+                    {"title": "Tab 1", "child": "content-1"},
+                    {"title": "Tab 2", "child": "content-2"},
+                    {"title": "Tab 3", "child": "content-3"}
                 ]
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val tabItems = data["tabItems"]?.jsonArray
-        assertNotNull(tabItems)
-        assertEquals(3, tabItems.size)
+        val tabs = data["tabs"]?.jsonArray
+        assertNotNull(tabs)
+        assertEquals(3, tabs.size)
 
-        val titles = tabItems.map { tab ->
+        val titles = tabs.map { tab ->
             val titleRef = DataReferenceParser.parseString(tab.jsonObject["title"])
             (titleRef as? LiteralString)?.value
         }
@@ -129,7 +129,7 @@ class TabsWidgetTest {
     fun `tab with hyphenated child IDs`() {
         val jsonStr = """
             {
-                "tabItems": [
+                "tabs": [
                     {"title": "Overview", "child": "product-overview-panel"},
                     {"title": "Details", "child": "product-details-section"}
                 ]
@@ -137,38 +137,38 @@ class TabsWidgetTest {
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val tabItems = data["tabItems"]?.jsonArray
-        assertNotNull(tabItems)
+        val tabs = data["tabs"]?.jsonArray
+        assertNotNull(tabs)
 
-        val firstTab = tabItems[0].jsonObject
+        val firstTab = tabs[0].jsonObject
         val childRef = DataReferenceParser.parseComponentRef(firstTab["child"])
         assertEquals("product-overview-panel", childRef?.componentId)
 
-        val secondTab = tabItems[1].jsonObject
+        val secondTab = tabs[1].jsonObject
         val childRef2 = DataReferenceParser.parseComponentRef(secondTab["child"])
         assertEquals("product-details-section", childRef2?.componentId)
     }
 
     @Test
-    fun `empty tabItems array`() {
+    fun `empty tabs array`() {
         val jsonStr = """
             {
-                "tabItems": []
+                "tabs": []
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val tabItems = data["tabItems"]?.jsonArray
+        val tabs = data["tabs"]?.jsonArray
 
-        assertNotNull(tabItems)
-        assertTrue(tabItems.isEmpty())
+        assertNotNull(tabs)
+        assertTrue(tabs.isEmpty())
     }
 
     @Test
-    fun `missing tabItems returns null`() {
+    fun `missing tabs returns null`() {
         val jsonStr = """{}"""
         val data = json.decodeFromString<JsonObject>(jsonStr)
 
-        assertNull(data["tabItems"])
+        assertNull(data["tabs"])
     }
 }

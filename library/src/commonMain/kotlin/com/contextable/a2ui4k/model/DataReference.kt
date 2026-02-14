@@ -17,6 +17,7 @@
 package com.contextable.a2ui4k.model
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -28,11 +29,12 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Represents a reference to data in the A2UI protocol.
+ * Represents a reference to data in the A2UI v0.9 protocol.
  *
- * In A2UI v0.8, property values can be either literal or bound to the data model:
- * - Literal values: `{"literalString": "Hello"}` or `{"literalNumber": 42}`
- * - Path-based bindings: `{"path": "/user/name"}` (resolves via [DataContext])
+ * In v0.9, property values use implicit typing:
+ * - Literal values: `"Hello"`, `42`, `true` (plain JSON primitives)
+ * - Path bindings: `{"path": "/user/name"}` (DataBinding object)
+ * - Function calls: `{"call": "formatString", "args": {...}}` (FunctionCall object)
  *
  * This sealed class hierarchy provides type-safe access to referenced data
  * and is used by widget implementations to resolve property values.
@@ -92,40 +94,58 @@ data class PathBoolean(val path: String) : DataReference<Boolean>() {
 }
 
 /**
+ * A reference to a FunctionCall for computed values.
+ *
+ * @property call The function name (e.g., "formatString", "required")
+ * @property args The function arguments
+ * @property returnType The expected return type
+ */
+data class FunctionCallReference<T>(
+    val call: String,
+    val args: JsonObject?,
+    val returnType: String?
+) : DataReference<T>() {
+    override fun resolve(pathResolver: (String) -> T?): T? {
+        // FunctionCall resolution requires the function evaluation engine
+        // which is provided by the FunctionEvaluator
+        return null
+    }
+}
+
+/**
  * A reference to a child component by ID.
  */
 data class ComponentReference(val componentId: String)
 
 /**
- * An explicit list of component IDs (for children arrays).
- */
-data class ComponentArrayReference(val componentIds: List<String>)
-
-/**
- * A template reference for data-driven lists.
- * The template component is rendered for each item in the data binding path.
- */
-data class TemplateReference(
-    val componentId: String,
-    val dataBinding: String
-)
-
-/**
- * Represents children of a container widget - either explicit list or template.
+ * Represents children of a container widget (ChildList in v0.9).
+ *
+ * In v0.9, ChildList is either:
+ * - A plain array of ComponentId strings: `["child1", "child2"]`
+ * - A template object: `{"componentId": "item-template", "path": "/items"}`
  */
 sealed class ChildrenReference {
     data class ExplicitList(val componentIds: List<String>) : ChildrenReference()
-    data class Template(val componentId: String, val dataBinding: String) : ChildrenReference()
+    data class Template(val componentId: String, val path: String) : ChildrenReference()
 }
 
 /**
  * Utilities for parsing data references from JSON.
+ *
+ * In v0.9, data references use implicit typing:
+ * - Plain primitives are literals: `"text"`, `42`, `true`
+ * - Objects with `path` key are DataBinding: `{"path": "/user/name"}`
+ * - Objects with `call` key are FunctionCall: `{"call": "formatString", "args": {...}}`
  */
 object DataReferenceParser {
 
     /**
-     * Parses a string reference from a JSON element.
-     * Supports: literalString, path, or plain string primitive.
+     * Parses a DynamicString from a JSON element.
+     *
+     * v0.9 format:
+     * - Plain string: literal value
+     * - `{"path": "/x"}`: data binding
+     * - `{"call": "fn", "args": {...}}`: function call
      */
     fun parseString(element: JsonElement?): DataReference<String>? {
         if (element == null) return null
@@ -133,16 +153,26 @@ object DataReferenceParser {
         return when (element) {
             is JsonPrimitive -> LiteralString(element.contentOrNull ?: "")
             is JsonObject -> {
-                element["literalString"]?.jsonPrimitive?.contentOrNull?.let { LiteralString(it) }
-                    ?: element["path"]?.jsonPrimitive?.contentOrNull?.let { PathString(it) }
+                element["path"]?.jsonPrimitive?.contentOrNull?.let { PathString(it) }
+                    ?: element["call"]?.jsonPrimitive?.contentOrNull?.let { call ->
+                        FunctionCallReference<String>(
+                            call = call,
+                            args = element["args"] as? JsonObject,
+                            returnType = element["returnType"]?.jsonPrimitive?.contentOrNull
+                        )
+                    }
             }
             else -> null
         }
     }
 
     /**
-     * Parses a number reference from a JSON element.
-     * Supports: literalNumber, path, or plain number primitive.
+     * Parses a DynamicNumber from a JSON element.
+     *
+     * v0.9 format:
+     * - Plain number: literal value
+     * - `{"path": "/x"}`: data binding
+     * - `{"call": "fn", "args": {...}}`: function call
      */
     fun parseNumber(element: JsonElement?): DataReference<Double>? {
         if (element == null) return null
@@ -150,16 +180,26 @@ object DataReferenceParser {
         return when (element) {
             is JsonPrimitive -> element.doubleOrNull?.let { LiteralNumber(it) }
             is JsonObject -> {
-                element["literalNumber"]?.jsonPrimitive?.doubleOrNull?.let { LiteralNumber(it) }
-                    ?: element["path"]?.jsonPrimitive?.contentOrNull?.let { PathNumber(it) }
+                element["path"]?.jsonPrimitive?.contentOrNull?.let { PathNumber(it) }
+                    ?: element["call"]?.jsonPrimitive?.contentOrNull?.let { call ->
+                        FunctionCallReference<Double>(
+                            call = call,
+                            args = element["args"] as? JsonObject,
+                            returnType = element["returnType"]?.jsonPrimitive?.contentOrNull
+                        )
+                    }
             }
             else -> null
         }
     }
 
     /**
-     * Parses a boolean reference from a JSON element.
-     * Supports: literalBoolean, path, or plain boolean primitive.
+     * Parses a DynamicBoolean from a JSON element.
+     *
+     * v0.9 format:
+     * - Plain boolean: literal value
+     * - `{"path": "/x"}`: data binding
+     * - `{"call": "fn", "args": {...}}`: function call
      */
     fun parseBoolean(element: JsonElement?): DataReference<Boolean>? {
         if (element == null) return null
@@ -167,15 +207,42 @@ object DataReferenceParser {
         return when (element) {
             is JsonPrimitive -> element.booleanOrNull?.let { LiteralBoolean(it) }
             is JsonObject -> {
-                element["literalBoolean"]?.jsonPrimitive?.booleanOrNull?.let { LiteralBoolean(it) }
-                    ?: element["path"]?.jsonPrimitive?.contentOrNull?.let { PathBoolean(it) }
+                element["path"]?.jsonPrimitive?.contentOrNull?.let { PathBoolean(it) }
+                    ?: element["call"]?.jsonPrimitive?.contentOrNull?.let { call ->
+                        FunctionCallReference<Boolean>(
+                            call = call,
+                            args = element["args"] as? JsonObject,
+                            returnType = element["returnType"]?.jsonPrimitive?.contentOrNull
+                        )
+                    }
             }
             else -> null
         }
     }
 
     /**
-     * Parses a component reference (child ID) from a JSON element.
+     * Parses a DynamicStringList from a JSON element.
+     *
+     * v0.9 format:
+     * - Plain array of strings: literal value
+     * - `{"path": "/x"}`: data binding
+     * - `{"call": "fn", "args": {...}}`: function call
+     */
+    fun parseStringList(element: JsonElement?): List<String>? {
+        if (element == null) return null
+
+        return when (element) {
+            is JsonArray -> element.mapNotNull { it.jsonPrimitive.contentOrNull }
+            is JsonObject -> {
+                // Path binding or function call - would need runtime resolution
+                null
+            }
+            else -> null
+        }
+    }
+
+    /**
+     * Parses a ComponentId reference from a JSON element.
      */
     fun parseComponentRef(element: JsonElement?): ComponentReference? {
         if (element == null) return null
@@ -187,55 +254,26 @@ object DataReferenceParser {
     }
 
     /**
-     * Parses a component array reference from a JSON element.
-     * Supports: explicitList array or path binding.
-     */
-    fun parseComponentArray(element: JsonElement?): ComponentArrayReference? {
-        if (element == null) return null
-
-        return when (element) {
-            is JsonObject -> {
-                element["explicitList"]?.jsonArray?.mapNotNull {
-                    it.jsonPrimitive.contentOrNull
-                }?.let { ComponentArrayReference(it) }
-            }
-            else -> null
-        }
-    }
-
-    /**
-     * Parses a children reference from a JSON element.
-     * Supports both explicit list and template-based children.
+     * Parses a ChildList from a JSON element.
      *
-     * Explicit list format:
-     * ```json
-     * {"explicitList": ["child1", "child2"]}
-     * ```
-     *
-     * Template format:
-     * ```json
-     * {"template": {"componentId": "item-template", "dataBinding": "/items"}}
-     * ```
+     * v0.9 format:
+     * - Plain array: `["child1", "child2"]` (static children)
+     * - Object: `{"componentId": "template", "path": "/items"}` (template)
      */
     fun parseChildren(element: JsonElement?): ChildrenReference? {
         if (element == null) return null
 
         return when (element) {
+            is JsonArray -> {
+                val ids = element.mapNotNull { it.jsonPrimitive.contentOrNull }
+                ChildrenReference.ExplicitList(ids)
+            }
             is JsonObject -> {
-                // Check for explicit list first
-                element["explicitList"]?.jsonArray?.mapNotNull {
-                    it.jsonPrimitive.contentOrNull
-                }?.let { return ChildrenReference.ExplicitList(it) }
-
-                // Check for template
-                element["template"]?.let { templateElement ->
-                    if (templateElement is JsonObject) {
-                        val componentId = templateElement["componentId"]?.jsonPrimitive?.contentOrNull
-                        val dataBinding = templateElement["dataBinding"]?.jsonPrimitive?.contentOrNull
-                        if (componentId != null && dataBinding != null) {
-                            return ChildrenReference.Template(componentId, dataBinding)
-                        }
-                    }
+                val componentId = element["componentId"]?.jsonPrimitive?.contentOrNull
+                val path = element["path"]?.jsonPrimitive?.contentOrNull
+                if (componentId != null && path != null) {
+                    ChildrenReference.Template(componentId, path)
+                } else {
                     null
                 }
             }

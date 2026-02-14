@@ -49,19 +49,21 @@ val LocalTemplateItemKey = compositionLocalOf<String?> { null }
 /**
  * List widget that displays a scrollable list of children.
  *
+ * A2UI Protocol Properties (v0.9):
+ *
  * JSON Schema:
  * ```json
  * {
- *   "children": {"explicitList": ["child1", "child2"]},
+ *   "children": ["child1", "child2"],
  *   "direction": "vertical" | "horizontal" (optional, default: vertical),
- *   "alignment": "start" | "center" | "end" (optional)
+ *   "align": "start" | "center" | "end" (optional)
  * }
  * ```
  *
  * Or with template (for data-driven lists):
  * ```json
  * {
- *   "children": {"template": {"componentId": "item-template", "dataBinding": "/items"}},
+ *   "children": {"componentId": "item-template", "path": "/items"},
  *   "direction": "vertical" | "horizontal" (optional, default: vertical)
  * }
  * ```
@@ -72,7 +74,7 @@ val ListWidget = CatalogItem(
     ListWidgetContent(data = data, buildChild = buildChild, dataContext = dataContext)
 }
 
-private val EXPECTED_PROPERTIES = setOf("children", "direction", "alignment")
+private val EXPECTED_PROPERTIES = setOf("children", "direction", "align")
 
 @Composable
 private fun ListWidgetContent(
@@ -91,10 +93,10 @@ private fun ListWidgetContent(
         else -> null
     }
 
-    val alignmentRef = DataReferenceParser.parseString(data["alignment"])
-    val alignment = when (alignmentRef) {
-        is LiteralString -> alignmentRef.value
-        is PathString -> dataContext.getString(alignmentRef.path)
+    val alignRef = DataReferenceParser.parseString(data["align"])
+    val align = when (alignRef) {
+        is LiteralString -> alignRef.value
+        is PathString -> dataContext.getString(alignRef.path)
         else -> null
     }
 
@@ -106,17 +108,17 @@ private fun ListWidgetContent(
                 children = childrenRef.componentIds,
                 buildChild = buildChild,
                 isHorizontal = isHorizontal,
-                alignment = alignment
+                alignment = align
             )
         }
         is ChildrenReference.Template -> {
             RenderTemplateChildren(
                 templateId = childrenRef.componentId,
-                dataBinding = childrenRef.dataBinding,
+                dataPath = childrenRef.path,
                 buildChild = buildChild,
                 dataContext = dataContext,
                 isHorizontal = isHorizontal,
-                alignment = alignment
+                alignment = align
             )
         }
         null -> {
@@ -156,17 +158,17 @@ private fun RenderExplicitChildren(
 @Composable
 private fun RenderTemplateChildren(
     templateId: String,
-    dataBinding: String,
+    dataPath: String,
     buildChild: ChildBuilder,
     dataContext: DataContext,
     isHorizontal: Boolean,
     alignment: String?
 ) {
     // Try array first, then fall back to object keys (like A2UI protocol)
-    val arraySize = dataContext.getArraySize(dataBinding)
-    val objectKeys = if (arraySize == null) dataContext.getObjectKeys(dataBinding) else null
+    val arraySize = dataContext.getArraySize(dataPath)
+    val objectKeys = if (arraySize == null) dataContext.getObjectKeys(dataPath) else null
 
-    println("Debug: (ListWidget) RenderTemplateChildren dataBinding=$dataBinding arraySize=$arraySize objectKeys=$objectKeys")
+    println("Debug: (ListWidget) RenderTemplateChildren dataPath=$dataPath arraySize=$arraySize objectKeys=$objectKeys")
 
     // Determine iteration keys - either array indices or object keys
     val itemKeys: List<String> = when {
@@ -184,7 +186,7 @@ private fun RenderTemplateChildren(
         ) {
             for (key in itemKeys) {
                 // Create a scoped data context for this item using the key
-                val scopedContext = dataContext.withBasePath("$dataBinding/$key")
+                val scopedContext = dataContext.withBasePath("$dataPath/$key")
 
                 // Provide the scoped context and item key for this template instance
                 CompositionLocalProvider(
@@ -202,7 +204,7 @@ private fun RenderTemplateChildren(
         ) {
             for (key in itemKeys) {
                 // Create a scoped data context for this item using the key
-                val scopedContext = dataContext.withBasePath("$dataBinding/$key")
+                val scopedContext = dataContext.withBasePath("$dataPath/$key")
 
                 // Provide the scoped context and item key for this template instance
                 CompositionLocalProvider(

@@ -20,8 +20,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.doubleOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -29,67 +27,67 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Tests for A2UI operations - BeginRendering, SurfaceUpdate, DataModelUpdate, DeleteSurface.
+ * Tests for A2UI operations - CreateSurface, UpdateComponents, UpdateDataModel, DeleteSurface.
  *
- * These operations modify surface state per the A2UI protocol.
+ * These operations modify surface state per the A2UI v0.9 protocol.
  */
 class A2UIOperationTest {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    // ========== BeginRendering tests ==========
+    // ========== CreateSurface tests ==========
 
     @Test
-    fun `BeginRendering has required properties`() {
-        val op = BeginRendering(
+    fun `CreateSurface has required properties`() {
+        val op = CreateSurface(
             surfaceId = "main",
-            root = "root-column"
+            catalogId = "standard"
         )
 
         assertEquals("main", op.surfaceId)
-        assertEquals("root-column", op.root)
-        assertNull(op.styles)
+        assertEquals("standard", op.catalogId)
+        assertNull(op.theme)
     }
 
     @Test
-    fun `BeginRendering with styles`() {
-        val styles = JsonObject(mapOf(
+    fun `CreateSurface with theme`() {
+        val theme = JsonObject(mapOf(
             "theme" to JsonPrimitive("dark"),
             "fontSize" to JsonPrimitive(16)
         ))
 
-        val op = BeginRendering(
+        val op = CreateSurface(
             surfaceId = "styled-surface",
-            root = "root",
-            styles = styles
+            catalogId = "standard",
+            theme = theme
         )
 
-        assertNotNull(op.styles)
-        assertEquals("dark", op.styles?.get("theme")?.toString()?.trim('"'))
+        assertNotNull(op.theme)
+        assertEquals("dark", op.theme?.get("theme")?.toString()?.trim('"'))
     }
 
     @Test
-    fun `BeginRendering deserializes from JSON`() {
+    fun `CreateSurface deserializes from JSON`() {
         val jsonStr = """
             {
                 "surfaceId": "test-surface",
-                "root": "main-column",
-                "styles": {"background": "white"}
+                "catalogId": "standard",
+                "theme": {"background": "white"}
             }
         """.trimIndent()
 
-        val op = json.decodeFromString<BeginRendering>(jsonStr)
+        val op = json.decodeFromString<CreateSurface>(jsonStr)
 
         assertEquals("test-surface", op.surfaceId)
-        assertEquals("main-column", op.root)
-        assertNotNull(op.styles)
+        assertEquals("standard", op.catalogId)
+        assertNotNull(op.theme)
     }
 
-    // ========== SurfaceUpdate tests ==========
+    // ========== UpdateComponents tests ==========
 
     @Test
-    fun `SurfaceUpdate with empty components`() {
-        val op = SurfaceUpdate(
+    fun `UpdateComponents with empty components`() {
+        val op = UpdateComponents(
             surfaceId = "main",
             components = emptyList()
         )
@@ -99,16 +97,16 @@ class A2UIOperationTest {
     }
 
     @Test
-    fun `SurfaceUpdate with components`() {
+    fun `UpdateComponents with components`() {
         val compDef = ComponentDef(
             id = "text1",
             component = "Text",
             properties = JsonObject(mapOf(
-                "text" to JsonObject(mapOf("literalString" to JsonPrimitive("Hello")))
+                "text" to JsonPrimitive("Hello")
             ))
         )
 
-        val op = SurfaceUpdate(
+        val op = UpdateComponents(
             surfaceId = "main",
             components = listOf(compDef)
         )
@@ -118,40 +116,51 @@ class A2UIOperationTest {
         assertEquals("Text", op.components[0].component)
     }
 
-    // ========== DataModelUpdate tests ==========
+    // ========== UpdateDataModel tests ==========
 
     @Test
-    fun `DataModelUpdate with string entry`() {
-        val entry = DataEntry(key = "name", valueString = "John")
-
-        val op = DataModelUpdate(
+    fun `UpdateDataModel with string value`() {
+        val op = UpdateDataModel(
             surfaceId = "form",
-            path = "/user",
-            contents = listOf(entry)
+            path = "/user/name",
+            value = JsonPrimitive("John")
         )
 
         assertEquals("form", op.surfaceId)
-        assertEquals("/user", op.path)
-        assertEquals(1, op.contents.size)
-        assertEquals("name", op.contents[0].key)
-        assertEquals("John", op.contents[0].valueString)
+        assertEquals("/user/name", op.path)
+        assertEquals(JsonPrimitive("John"), op.value)
     }
 
     @Test
-    fun `DataModelUpdate with multiple entries`() {
-        val entries = listOf(
-            DataEntry(key = "firstName", valueString = "John"),
-            DataEntry(key = "age", valueNumber = 30.0),
-            DataEntry(key = "active", valueBoolean = true)
-        )
+    fun `UpdateDataModel with object value`() {
+        val value = JsonObject(mapOf(
+            "firstName" to JsonPrimitive("John"),
+            "age" to JsonPrimitive(30),
+            "active" to JsonPrimitive(true)
+        ))
 
-        val op = DataModelUpdate(
+        val op = UpdateDataModel(
             surfaceId = "profile",
             path = "/user",
-            contents = entries
+            value = value
         )
 
-        assertEquals(3, op.contents.size)
+        assertEquals("profile", op.surfaceId)
+        assertEquals("/user", op.path)
+        assertNotNull(op.value)
+        assertTrue(op.value is JsonObject)
+    }
+
+    @Test
+    fun `UpdateDataModel with null value deletes key`() {
+        val op = UpdateDataModel(
+            surfaceId = "form",
+            path = "/user/name"
+        )
+
+        assertEquals("form", op.surfaceId)
+        assertEquals("/user/name", op.path)
+        assertNull(op.value)
     }
 
     // ========== DeleteSurface tests ==========
@@ -161,67 +170,6 @@ class A2UIOperationTest {
         val op = DeleteSurface(surfaceId = "temp-surface")
 
         assertEquals("temp-surface", op.surfaceId)
-    }
-
-    // ========== DataEntry tests ==========
-
-    @Test
-    fun `DataEntry toJsonElement with string`() {
-        val entry = DataEntry(key = "name", valueString = "Alice")
-        val element = entry.toJsonElement()
-
-        assertTrue(element is JsonPrimitive)
-        assertEquals("Alice", (element as JsonPrimitive).content)
-    }
-
-    @Test
-    fun `DataEntry toJsonElement with number`() {
-        val entry = DataEntry(key = "count", valueNumber = 42.0)
-        val element = entry.toJsonElement()
-
-        assertTrue(element is JsonPrimitive)
-        assertEquals(42.0, (element as JsonPrimitive).doubleOrNull)
-    }
-
-    @Test
-    fun `DataEntry toJsonElement with boolean`() {
-        val entry = DataEntry(key = "enabled", valueBoolean = true)
-        val element = entry.toJsonElement()
-
-        assertTrue(element is JsonPrimitive)
-        assertEquals(true, (element as JsonPrimitive).booleanOrNull)
-    }
-
-    @Test
-    fun `DataEntry toJsonElement with nested map`() {
-        val nestedEntries = listOf(
-            DataEntry(key = "city", valueString = "NYC"),
-            DataEntry(key = "zip", valueString = "10001")
-        )
-        val entry = DataEntry(key = "address", valueMap = nestedEntries)
-        val element = entry.toJsonElement()
-
-        assertTrue(element is JsonObject)
-        val obj = element as JsonObject
-        assertEquals("NYC", (obj["city"] as JsonPrimitive).content)
-        assertEquals("10001", (obj["zip"] as JsonPrimitive).content)
-    }
-
-    @Test
-    fun `DataEntry toJsonElement with raw JSON`() {
-        val rawJson = JsonObject(mapOf("custom" to JsonPrimitive("data")))
-        val entry = DataEntry(key = "raw", valueJson = rawJson)
-        val element = entry.toJsonElement()
-
-        assertTrue(element is JsonObject)
-    }
-
-    @Test
-    fun `DataEntry toJsonElement with no value returns null`() {
-        val entry = DataEntry(key = "empty")
-        val element = entry.toJsonElement()
-
-        assertEquals(JsonNull, element)
     }
 
     // ========== A2UIActivityContent tests ==========
@@ -236,9 +184,9 @@ class A2UIOperationTest {
     @Test
     fun `A2UIActivityContent with operations`() {
         val op = JsonObject(mapOf(
-            "type" to JsonPrimitive("beginRendering"),
+            "type" to JsonPrimitive("createSurface"),
             "surfaceId" to JsonPrimitive("main"),
-            "root" to JsonPrimitive("root")
+            "catalogId" to JsonPrimitive("standard")
         ))
 
         val content = A2UIActivityContent(operations = listOf(op))

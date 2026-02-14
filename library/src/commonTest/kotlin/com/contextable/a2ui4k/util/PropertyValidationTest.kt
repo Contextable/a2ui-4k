@@ -32,9 +32,9 @@ class PropertyValidationTest {
     fun `warnUnexpectedProperties with all expected properties`() {
         val data = JsonObject(mapOf(
             "text" to JsonPrimitive("Hello"),
-            "usageHint" to JsonPrimitive("h1")
+            "variant" to JsonPrimitive("h1")
         ))
-        val expected = setOf("text", "usageHint")
+        val expected = setOf("text", "variant")
 
         // Should not warn - all properties are expected
         PropertyValidation.warnUnexpectedProperties("Text", data, expected)
@@ -46,7 +46,7 @@ class PropertyValidationTest {
             "text" to JsonPrimitive("Hello"),
             "unknownProp" to JsonPrimitive("value")
         ))
-        val expected = setOf("text", "usageHint")
+        val expected = setOf("text", "variant")
 
         // Should warn about "unknownProp"
         PropertyValidation.warnUnexpectedProperties("Text", data, expected)
@@ -68,7 +68,7 @@ class PropertyValidationTest {
     @Test
     fun `warnUnexpectedProperties with empty data`() {
         val data = JsonObject(emptyMap())
-        val expected = setOf("text", "usageHint")
+        val expected = setOf("text", "variant")
 
         // Should not warn - no unexpected properties
         PropertyValidation.warnUnexpectedProperties("Text", data, expected)
@@ -100,12 +100,12 @@ class PropertyValidationTest {
     @Test
     fun `warnUnexpectedProperties with Image widget`() {
         val data = JsonObject(mapOf(
-            "url" to JsonObject(mapOf("literalString" to JsonPrimitive("https://example.com/img.jpg"))),
+            "url" to JsonPrimitive("https://example.com/img.jpg"),
             "fit" to JsonPrimitive("cover"),
-            "usageHint" to JsonPrimitive("avatar"),
+            "variant" to JsonPrimitive("avatar"),
             "altText" to JsonPrimitive("not in spec")  // Should warn
         ))
-        val expected = setOf("url", "fit", "usageHint")
+        val expected = setOf("url", "fit", "variant")
 
         PropertyValidation.warnUnexpectedProperties("Image", data, expected)
     }
@@ -114,10 +114,10 @@ class PropertyValidationTest {
     fun `warnUnexpectedProperties with Row widget`() {
         val data = JsonObject(mapOf(
             "children" to JsonObject(emptyMap()),
-            "alignment" to JsonPrimitive("center"),
+            "align" to JsonPrimitive("center"),
             "gap" to JsonPrimitive(8)  // Not in A2UI spec - should warn
         ))
-        val expected = setOf("children", "alignment")
+        val expected = setOf("children", "align")
 
         PropertyValidation.warnUnexpectedProperties("Row", data, expected)
     }

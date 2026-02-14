@@ -26,9 +26,10 @@ import kotlin.test.assertNull
 /**
  * Tests for ButtonWidget JSON parsing.
  *
- * The Button widget in A2UI uses a `child` property that references
+ * The Button widget in A2UI v0.9 uses a `child` property that references
  * another component (typically Text) rather than a direct label.
- * This matches the A2UI protocol Button schema.
+ * The `variant` property accepts values: "filled", "outlined", "text", "elevated", "tonal".
+ * Action format uses `{"event": {"name": "...", "context": {...}}}`.
  */
 class ButtonWidgetTest {
 
@@ -39,9 +40,9 @@ class ButtonWidgetTest {
         val jsonStr = """
             {
                 "child": "book-now-text",
-                "primary": true,
+                "variant": "filled",
                 "action": {
-                    "name": "book_restaurant"
+                    "event": {"name": "book_restaurant"}
                 }
             }
         """.trimIndent()
@@ -54,23 +55,23 @@ class ButtonWidgetTest {
     }
 
     @Test
-    fun `parseBoolean extracts primary property`() {
+    fun `parseString extracts variant property`() {
         val jsonStr = """
             {
                 "child": "button-text",
-                "primary": true
+                "variant": "filled"
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val primaryRef = DataReferenceParser.parseBoolean(data["primary"])
+        val variantRef = DataReferenceParser.parseString(data["variant"])
 
-        assertNotNull(primaryRef)
-        assertEquals(true, (primaryRef as LiteralBoolean).value)
+        assertNotNull(variantRef)
+        assertEquals("filled", (variantRef as LiteralString).value)
     }
 
     @Test
-    fun `parseBoolean returns null when primary is missing`() {
+    fun `parseString returns null when variant is missing`() {
         val jsonStr = """
             {
                 "child": "button-text"
@@ -78,21 +79,21 @@ class ButtonWidgetTest {
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val primaryRef = DataReferenceParser.parseBoolean(data["primary"])
+        val variantRef = DataReferenceParser.parseString(data["variant"])
 
-        assertNull(primaryRef)
+        assertNull(variantRef)
     }
 
     @Test
-    fun `action schema parses name correctly`() {
+    fun `action event schema parses name correctly`() {
         val jsonStr = """
             {
                 "child": "submit-text",
                 "action": {
-                    "name": "submit_form",
-                    "context": [
-                        {"key": "formId", "value": {"literalString": "contact-form"}}
-                    ]
+                    "event": {
+                        "name": "submit_form",
+                        "context": {"formId": "contact-form"}
+                    }
                 }
             }
         """.trimIndent()
@@ -101,91 +102,108 @@ class ButtonWidgetTest {
         val action = data["action"] as? JsonObject
 
         assertNotNull(action)
-        assertEquals("submit_form", action["name"]?.let {
+        val event = action["event"] as? JsonObject
+        assertNotNull(event)
+        assertEquals("submit_form", event["name"]?.let {
             (it as? kotlinx.serialization.json.JsonPrimitive)?.content
         })
     }
 
     @Test
-    fun `action context with literal values parses correctly`() {
+    fun `action event context with literal values parses correctly`() {
         val jsonStr = """
             {
                 "child": "book-text",
                 "action": {
-                    "name": "book_restaurant",
-                    "context": [
-                        {"key": "restaurantId", "value": {"literalString": "rest-123"}},
-                        {"key": "guests", "value": {"literalNumber": 4}},
-                        {"key": "confirmed", "value": {"literalBoolean": true}}
-                    ]
+                    "event": {
+                        "name": "book_restaurant",
+                        "context": {
+                            "restaurantId": "rest-123",
+                            "guests": 4,
+                            "confirmed": true
+                        }
+                    }
                 }
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
         val action = data["action"] as? JsonObject
-        val context = action?.get("context") as? kotlinx.serialization.json.JsonArray
+        val event = action?.get("event") as? JsonObject
+        val context = event?.get("context") as? JsonObject
 
         assertNotNull(context)
         assertEquals(3, context.size)
 
-        // First context entry
-        val first = context[0] as JsonObject
-        assertEquals("restaurantId", first["key"]?.let {
+        assertEquals("rest-123", context["restaurantId"]?.let {
             (it as? kotlinx.serialization.json.JsonPrimitive)?.content
         })
     }
 
     @Test
-    fun `action context with path bindings parses correctly`() {
-        // This matches the restaurant app button format
+    fun `action event context with path bindings parses correctly`() {
         val jsonStr = """
             {
                 "child": "book-now-text",
-                "primary": true,
+                "variant": "filled",
                 "action": {
-                    "name": "book_restaurant",
-                    "context": [
-                        {"key": "restaurantName", "value": {"path": "name"}},
-                        {"key": "imageUrl", "value": {"path": "imageUrl"}},
-                        {"key": "address", "value": {"path": "address"}}
-                    ]
+                    "event": {
+                        "name": "book_restaurant",
+                        "context": {
+                            "restaurantName": {"path": "name"},
+                            "imageUrl": {"path": "imageUrl"},
+                            "address": {"path": "address"}
+                        }
+                    }
                 }
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
         val action = data["action"] as? JsonObject
-        val context = action?.get("context") as? kotlinx.serialization.json.JsonArray
+        val event = action?.get("event") as? JsonObject
+        val context = event?.get("context") as? JsonObject
 
         assertNotNull(context)
         assertEquals(3, context.size)
 
         // Verify path binding structure
-        val first = context[0] as JsonObject
-        assertEquals("restaurantName", first["key"]?.let {
-            (it as? kotlinx.serialization.json.JsonPrimitive)?.content
-        })
-        val value = first["value"] as? JsonObject
-        assertNotNull(value)
-        assertEquals("name", value["path"]?.let {
+        val nameValue = context["restaurantName"] as? JsonObject
+        assertNotNull(nameValue)
+        assertEquals("name", nameValue["path"]?.let {
             (it as? kotlinx.serialization.json.JsonPrimitive)?.content
         })
     }
 
     @Test
-    fun `fallback label property is supported for backwards compatibility`() {
-        // Some implementations may use "label" directly instead of "child"
+    fun `variant outlined is supported`() {
         val jsonStr = """
             {
-                "label": {"literalString": "Click Me"}
+                "child": "button-text",
+                "variant": "outlined"
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val labelRef = DataReferenceParser.parseString(data["label"])
+        val variantRef = DataReferenceParser.parseString(data["variant"])
 
-        assertNotNull(labelRef)
-        assertEquals("Click Me", (labelRef as LiteralString).value)
+        assertNotNull(variantRef)
+        assertEquals("outlined", (variantRef as LiteralString).value)
+    }
+
+    @Test
+    fun `variant text is supported`() {
+        val jsonStr = """
+            {
+                "child": "button-text",
+                "variant": "text"
+            }
+        """.trimIndent()
+
+        val data = json.decodeFromString<JsonObject>(jsonStr)
+        val variantRef = DataReferenceParser.parseString(data["variant"])
+
+        assertNotNull(variantRef)
+        assertEquals("text", (variantRef as LiteralString).value)
     }
 }

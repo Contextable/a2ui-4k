@@ -48,29 +48,34 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * MultipleChoice widget for selecting one or more options.
+ * ChoicePicker widget for selecting one or more options.
  *
- * A2UI Protocol Properties (v0.8):
- * - selections (required): Path for data binding to selected values
+ * A2UI Protocol Properties (v0.9):
+ * - value (required): Path for data binding to selected values (DynamicStringList)
  * - options (required): Array of {label, value} objects
- * - maxAllowedSelections (optional): Number of selections allowed (1 = single, >1 = multiple)
+ * - variant (optional): "multipleSelection" | "mutuallyExclusive"
+ * - displayStyle (optional): "checkbox" | "chips"
+ * - filterable (optional): Boolean indicating whether options can be filtered
  *
  * JSON Schema:
  * ```json
  * {
- *   "selections": {"path": "/form/selections"},
+ *   "component": "ChoicePicker",
+ *   "value": {"path": "/form/selections"},
  *   "options": [
  *     {"label": "Option 1", "value": "opt1"},
  *     {"label": "Option 2", "value": "opt2"}
  *   ],
- *   "maxAllowedSelections": {"literalNumber": 3}
+ *   "variant": "multipleSelection",
+ *   "displayStyle": "checkbox",
+ *   "filterable": true
  * }
  * ```
  */
-val MultipleChoiceWidget = CatalogItem(
-    name = "MultipleChoice"
+val ChoicePickerWidget = CatalogItem(
+    name = "ChoicePicker"
 ) { componentId, data, buildChild, dataContext, onEvent ->
-    MultipleChoiceWidgetContent(
+    ChoicePickerWidgetContent(
         componentId = componentId,
         data = data,
         dataContext = dataContext,
@@ -78,23 +83,23 @@ val MultipleChoiceWidget = CatalogItem(
     )
 }
 
-private val EXPECTED_PROPERTIES = setOf("selections", "options", "maxAllowedSelections")
+private val EXPECTED_PROPERTIES = setOf("value", "options", "variant", "displayStyle", "filterable")
 
 @Composable
-private fun MultipleChoiceWidgetContent(
+private fun ChoicePickerWidgetContent(
     componentId: String,
     data: JsonObject,
     dataContext: DataContext,
     onEvent: EventDispatcher
 ) {
-    PropertyValidation.warnUnexpectedProperties("MultipleChoice", data, EXPECTED_PROPERTIES)
+    PropertyValidation.warnUnexpectedProperties("ChoicePicker", data, EXPECTED_PROPERTIES)
 
     // Get surfaceId from UiDefinition
     val uiDefinition = LocalUiDefinition.current
     val surfaceId = uiDefinition?.surfaceId ?: "default"
 
-    val maxAllowedSelections = data["maxAllowedSelections"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
-    val multipleSelection = maxAllowedSelections != 1
+    val variant = data["variant"]?.jsonPrimitive?.contentOrNull
+    val multipleSelection = variant != "mutuallyExclusive"
 
     val options = (data["options"]?.jsonArray ?: JsonArray(emptyList())).mapNotNull { optElement ->
         val optObj = optElement.jsonObject
@@ -103,11 +108,11 @@ private fun MultipleChoiceWidgetContent(
         optLabel to optValue
     }
 
-    val selectionsElement = data["selections"]
-    val selectionsPath = (selectionsElement as? JsonObject)?.get("path")?.jsonPrimitive?.contentOrNull
+    val valueElement = data["value"]
+    val valuePath = (valueElement as? JsonObject)?.get("path")?.jsonPrimitive?.contentOrNull
     val selections = when {
-        selectionsPath != null -> dataContext.getStringList(selectionsPath) ?: emptyList()
-        selectionsElement is JsonArray -> selectionsElement.mapNotNull { it.jsonPrimitive.contentOrNull }
+        valuePath != null -> dataContext.getStringList(valuePath) ?: emptyList()
+        valueElement is JsonArray -> valueElement.mapNotNull { it.jsonPrimitive.contentOrNull }
         else -> emptyList()
     }
 
@@ -128,12 +133,12 @@ private fun MultipleChoiceWidgetContent(
                             setOf(optValue)
                         }
 
-                        if (selectionsPath != null) {
-                            dataContext.update(selectionsPath, selectedValues.toList())
+                        if (valuePath != null) {
+                            dataContext.update(valuePath, selectedValues.toList())
                             onEvent(
                                 DataChangeEvent(
                                     surfaceId = surfaceId,
-                                    path = selectionsPath,
+                                    path = valuePath,
                                     value = selectedValues.joinToString(",")
                                 )
                             )

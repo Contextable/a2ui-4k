@@ -26,8 +26,8 @@ import kotlin.test.assertNull
 /**
  * Tests for List widget JSON parsing.
  *
- * A2UI Spec properties:
- * - children (required): Either explicitList or template
+ * A2UI Spec properties (v0.9):
+ * - children (required): Either plain array or template object
  * - direction (optional): vertical, horizontal
  * - alignment (optional): start, center, end
  */
@@ -36,10 +36,10 @@ class ListWidgetTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
-    fun `parseChildren extracts explicit list`() {
+    fun `parseChildren extracts plain array`() {
         val jsonStr = """
             {
-                "children": {"explicitList": ["item1", "item2", "item3"]}
+                "children": ["item1", "item2", "item3"]
             }
         """.trimIndent()
 
@@ -52,14 +52,12 @@ class ListWidgetTest {
     }
 
     @Test
-    fun `parseChildren extracts template with dataBinding`() {
+    fun `parseChildren extracts template with path`() {
         val jsonStr = """
             {
                 "children": {
-                    "template": {
-                        "componentId": "item-template",
-                        "dataBinding": "/items"
-                    }
+                    "componentId": "item-template",
+                    "path": "/items"
                 }
             }
         """.trimIndent()
@@ -71,7 +69,7 @@ class ListWidgetTest {
         assertTrue(childrenRef is ChildrenReference.Template)
         val template = childrenRef as ChildrenReference.Template
         assertEquals("item-template", template.componentId)
-        assertEquals("/items", template.dataBinding)
+        assertEquals("/items", template.path)
     }
 
     @Test
@@ -123,10 +121,8 @@ class ListWidgetTest {
         val jsonStr = """
             {
                 "children": {
-                    "template": {
-                        "componentId": "card-template",
-                        "dataBinding": "/products"
-                    }
+                    "componentId": "card-template",
+                    "path": "/products"
                 },
                 "direction": "vertical",
                 "alignment": "center"
@@ -149,7 +145,7 @@ class ListWidgetTest {
     fun `missing optional properties return null`() {
         val jsonStr = """
             {
-                "children": {"explicitList": ["a", "b"]}
+                "children": ["a", "b"]
             }
         """.trimIndent()
 

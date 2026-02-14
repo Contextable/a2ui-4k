@@ -33,15 +33,15 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Text widget that displays a string with optional markdown formatting.
  *
- * A2UI Protocol Properties (v0.8):
+ * A2UI Protocol Properties (v0.9):
  * - text (required): Text content to display
- * - usageHint (optional): h1, h2, h3, h4, h5, caption, body
+ * - variant (optional): h1, h2, h3, h4, h5, caption, body
  *
  * JSON Schema:
  * ```json
  * {
- *   "text": {"literalString": "Hello"} | {"path": "/user/name"},
- *   "usageHint": {"literalString": "h1"} | {"literalString": "body"}
+ *   "text": "Hello" | {"path": "/user/name"},
+ *   "variant": "h1" | "body"
  * }
  * ```
  */
@@ -51,7 +51,7 @@ val TextWidget = CatalogItem(
     TextWidgetContent(data = data, dataContext = dataContext)
 }
 
-private val EXPECTED_PROPERTIES = setOf("text", "usageHint")
+private val EXPECTED_PROPERTIES = setOf("text", "variant")
 
 @Composable
 private fun TextWidgetContent(
@@ -61,7 +61,7 @@ private fun TextWidgetContent(
     PropertyValidation.warnUnexpectedProperties("Text", data, EXPECTED_PROPERTIES)
 
     val textRef = DataReferenceParser.parseString(data["text"])
-    val usageHint = data["usageHint"]?.let {
+    val variantRef = data["variant"]?.let {
         DataReferenceParser.parseString(it)
     }
 
@@ -71,13 +71,13 @@ private fun TextWidgetContent(
         else -> ""
     }
 
-    val hint = when (usageHint) {
-        is LiteralString -> usageHint.value
-        is PathString -> dataContext.getString(usageHint.path)
+    val variant = when (variantRef) {
+        is LiteralString -> variantRef.value
+        is PathString -> dataContext.getString(variantRef.path)
         else -> null
     }
 
-    val style = getTextStyle(hint)
+    val style = getTextStyle(variant)
     val annotatedString = parseBasicMarkdown(text)
 
     Text(
@@ -87,14 +87,14 @@ private fun TextWidgetContent(
 }
 
 /**
- * Maps A2UI usageHint values to Compose TextStyle.
+ * Maps A2UI variant values to Compose TextStyle.
  *
- * Valid usageHint values per A2UI v0.8 spec:
+ * Valid variant values per A2UI v0.9 spec:
  * h1, h2, h3, h4, h5, caption, body
  */
 @Composable
-private fun getTextStyle(usageHint: String?): TextStyle {
-    return when (usageHint?.lowercase()) {
+private fun getTextStyle(variant: String?): TextStyle {
+    return when (variant?.lowercase()) {
         "h1" -> MaterialTheme.typography.headlineLarge
         "h2" -> MaterialTheme.typography.headlineMedium
         "h3" -> MaterialTheme.typography.headlineSmall
