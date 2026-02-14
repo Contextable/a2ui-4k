@@ -649,7 +649,7 @@ class SurfaceStateManagerTest {
     // --- Multiple operations in sequence ---
 
     @Test
-    fun `full lifecycle - create, update components, update data, delete`() {
+    fun `full lifecycle - create then update components then update data then delete`() {
         val manager = SurfaceStateManager()
 
         // Create
