@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Chores
+- Fix `formatNumber` to apply thousands separators on the integer fast-path and `formatCurrency` to round cents instead of truncating, fixing Kotlin/Native test failures
+
 ## [0.9.0] - 2026-02-14
 
 A2UI protocol upgrade from v0.8 to v0.9. This is a **breaking release** that changes the wire format, operation names, component structure, and data binding system.
