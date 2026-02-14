@@ -13,8 +13,11 @@
 #   JRELEASER_GPG_SECRET_KEY - GPG private key (armored)
 #
 # Usage:
-#   ./publish.sh           # Publish to Maven Central
-#   ./publish.sh --dry-run # Test without uploading
+#   ./publish.sh                    # Publish stable release from main
+#   ./publish.sh --channel alpha    # Publish alpha pre-release (from any branch)
+#   ./publish.sh --channel beta     # Publish beta pre-release (from any branch)
+#   ./publish.sh --dry-run          # Test without uploading
+#   ./publish.sh --channel alpha --dry-run
 #
 
 set -e
@@ -27,14 +30,30 @@ NC='\033[0m' # No Color
 
 # Parse arguments
 DRY_RUN=false
+CHANNEL=""
 for arg in "$@"; do
     case $arg in
         --dry-run)
             DRY_RUN=true
             shift
             ;;
+        --channel)
+            shift
+            CHANNEL="$1"
+            shift
+            ;;
+        --channel=*)
+            CHANNEL="${arg#*=}"
+            shift
+            ;;
     esac
 done
+
+# Validate channel
+if [ -n "$CHANNEL" ] && [ "$CHANNEL" != "alpha" ] && [ "$CHANNEL" != "beta" ]; then
+    echo -e "${RED}Error: Invalid channel '${CHANNEL}'. Must be 'alpha' or 'beta'.${NC}"
+    exit 1
+fi
 
 echo -e "${GREEN}================================================${NC}"
 echo -e "${GREEN}  a2ui-4k Maven Central Publishing Script${NC}"
@@ -75,9 +94,47 @@ fi
 echo -e "${GREEN}✓ All required environment variables are set${NC}"
 echo ""
 
-# Get version from build.gradle.kts
-VERSION=$(grep "^version = " build.gradle.kts | sed 's/version = "\(.*\)"/\1/')
-echo -e "Publishing version: ${GREEN}${VERSION}${NC}"
+# Get base version from build.gradle.kts
+BASE_VERSION=$(grep "^version = " build.gradle.kts | sed 's/version = .*"\(.*\)"/\1/')
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Compute the full version based on channel
+if [ -n "$CHANNEL" ]; then
+    # Count commits ahead of main to generate a build number
+    # This auto-increments as commits are added to the branch
+    if git rev-parse --verify origin/main >/dev/null 2>&1; then
+        BUILD_NUMBER=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
+    elif git rev-parse --verify main >/dev/null 2>&1; then
+        BUILD_NUMBER=$(git rev-list --count main..HEAD 2>/dev/null || echo "0")
+    else
+        BUILD_NUMBER="0"
+    fi
+
+    # Ensure build number is at least 1 for pre-release versions
+    if [ "$BUILD_NUMBER" -eq "0" ]; then
+        BUILD_NUMBER=1
+    fi
+
+    VERSION="${BASE_VERSION}-${CHANNEL}.${BUILD_NUMBER}"
+else
+    # Stable release: warn if not on main
+    if [ "$BRANCH" != "main" ] && [ "$BRANCH" != "HEAD" ]; then
+        echo -e "${YELLOW}Warning: Publishing a stable release from branch '${BRANCH}' (not main).${NC}"
+        echo -e "${YELLOW}Consider using --channel alpha or --channel beta for pre-release versions.${NC}"
+        echo ""
+        read -p "Continue with stable release? (y/N) " -n 1 -r
+        echo ""
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "Aborted."
+            exit 1
+        fi
+    fi
+    VERSION="${BASE_VERSION}"
+fi
+
+echo -e "Branch:  ${GREEN}${BRANCH}${NC}"
+echo -e "Channel: ${GREEN}${CHANNEL:-stable}${NC}"
+echo -e "Version: ${GREEN}${VERSION}${NC}"
 echo ""
 
 if [ "$DRY_RUN" = true ]; then
@@ -98,9 +155,9 @@ echo -e "${YELLOW}Step 2: Running tests...${NC}"
 echo -e "${GREEN}✓ All tests passed${NC}"
 echo ""
 
-# Step 3: Build and stage artifacts
+# Step 3: Build and stage artifacts (pass version override to Gradle)
 echo -e "${YELLOW}Step 3: Building and staging artifacts...${NC}"
-./gradlew :a2ui-4k:publish --no-daemon
+./gradlew :a2ui-4k:publish -PpublishVersion="${VERSION}" --no-daemon
 echo -e "${GREEN}✓ Artifacts staged${NC}"
 echo ""
 
@@ -112,6 +169,9 @@ if [ ! -f "jreleaser-cli.jar" ]; then
 fi
 echo -e "${GREEN}✓ JReleaser CLI ready${NC}"
 echo ""
+
+# Override JReleaser project version via environment variable
+export JRELEASER_PROJECT_VERSION="${VERSION}"
 
 if [ "$DRY_RUN" = true ]; then
     echo -e "${YELLOW}Step 5: Running JReleaser in dry-run mode...${NC}"
@@ -142,6 +202,11 @@ else
     echo "  - com.contextable:a2ui-4k-iosarm64:${VERSION} (iOS ARM64)"
     echo "  - com.contextable:a2ui-4k-iossimulatorarm64:${VERSION} (iOS Simulator ARM64)"
     echo ""
+    if [ -n "$CHANNEL" ]; then
+        echo "This is a ${CHANNEL} pre-release. Consumers can depend on it with:"
+        echo "  implementation(\"com.contextable:a2ui-4k:${VERSION}\")"
+        echo ""
+    fi
     echo "Next steps:"
     echo "  1. Check deployment status at: https://central.sonatype.com/publishing"
     echo "  2. Artifacts will be validated automatically"
