@@ -224,7 +224,8 @@ object FunctionEvaluator {
 
         // Basic number formatting
         val formatted = if (maximumFractionDigits == 0 && value == value.toLong().toDouble()) {
-            value.toLong().toString()
+            val intStr = value.toLong().toString()
+            if (useGrouping) addThousandsSeparator(intStr) else intStr
         } else {
             val str = doubleToPlainString(value)
             val parts = str.split(".")
@@ -252,7 +253,7 @@ object FunctionEvaluator {
             else -> currency
         }
         val formatted = addThousandsSeparator(value.toLong().toString())
-        val cents = ((value - value.toLong()) * 100).toLong().toString().padStart(2, '0')
+        val cents = kotlin.math.round((value - value.toLong()) * 100).toLong().toString().padStart(2, '0')
         return JsonPrimitive("$symbol$formatted.$cents")
     }
 
