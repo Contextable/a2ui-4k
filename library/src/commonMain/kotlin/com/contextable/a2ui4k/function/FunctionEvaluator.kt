@@ -113,7 +113,7 @@ object FunctionEvaluator {
         val pattern = resolveArgString(args, "pattern", dataContext) ?: return JsonPrimitive(false)
         return try {
             JsonPrimitive(Regex(pattern).matches(value))
-        } catch (e: Exception) {
+        } catch (_: Throwable) {
             JsonPrimitive(false)
         }
     }
