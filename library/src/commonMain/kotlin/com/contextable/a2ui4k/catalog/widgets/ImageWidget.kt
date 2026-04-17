@@ -66,7 +66,8 @@ val ImageWidget = CatalogItem(
     ImageWidgetContent(data = data, dataContext = dataContext)
 }
 
-private val EXPECTED_PROPERTIES = setOf("url", "fit", "variant", "accessibility")
+// `usageHint` is the v0.8 alias for v0.9 `variant`.
+private val EXPECTED_PROPERTIES = setOf("url", "fit", "variant", "accessibility", "usageHint")
 
 @Composable
 private fun ImageWidgetContent(
@@ -77,7 +78,9 @@ private fun ImageWidgetContent(
 
     val urlRef = DataReferenceParser.parseString(data["url"])
     val fitRef = DataReferenceParser.parseString(data["fit"])
+    // v0.8 used `usageHint`; accept as an alias for `variant`.
     val variantRef = DataReferenceParser.parseString(data["variant"])
+        ?: DataReferenceParser.parseString(data["usageHint"])
 
     val url = when (urlRef) {
         is LiteralString -> urlRef.value
@@ -97,13 +100,13 @@ private fun ImageWidgetContent(
         else -> null
     }
 
-    // v0.9 `fit` uses camelCase `scaleDown` (maps to CSS object-fit: scale-down).
+    // v0.9 uses camelCase `scaleDown`; v0.8 used kebab-case `scale-down`. Accept both.
     val contentScale = when (fit) {
         "contain" -> ContentScale.Fit
         "cover" -> ContentScale.Crop
         "fill" -> ContentScale.FillBounds
         "none" -> ContentScale.None
-        "scaleDown" -> ContentScale.Fit
+        "scaleDown", "scale-down" -> ContentScale.Fit
         else -> ContentScale.Crop
     }
 
@@ -149,16 +152,26 @@ private fun ImageWidgetContent(
 private val ImageCornerRadius = RoundedCornerShape(12.dp)
 
 /**
- * Maps A2UI v0.9 `variant` to dimensions + shape.
+ * Maps the image variant/hint to dimensions + shape.
  *
+ * v0.9 values:
  * - `thumbnail`: small rounded square
  * - `avatar`: circular
- * - (absent): default rounded-corner 100dp square
+ *
+ * v0.8 legacy values (honored for backwards compatibility with v0.8 servers):
+ * - `icon`: tiny square, no corners
+ * - `smallFeature`/`mediumFeature`/`largeFeature`/`header`: full-width features
  */
 private fun getImageDimensions(variant: String?): Triple<Dp?, Boolean, Shape?> {
     return when (variant) {
         "thumbnail" -> Triple(80.dp, false, ImageCornerRadius)
         "avatar" -> Triple(48.dp, false, CircleShape)
+        // v0.8 usageHints:
+        "icon" -> Triple(24.dp, false, null)
+        "smallFeature" -> Triple(80.dp, true, ImageCornerRadius)
+        "mediumFeature" -> Triple(150.dp, true, ImageCornerRadius)
+        "largeFeature" -> Triple(220.dp, true, ImageCornerRadius)
+        "header" -> Triple(200.dp, true, ImageCornerRadius)
         else -> Triple(100.dp, false, ImageCornerRadius)
     }
 }

@@ -72,7 +72,11 @@ val ButtonWidget = CatalogItem(
     )
 }
 
-private val EXPECTED_PROPERTIES = setOf("child", "variant", "action", "checks", "accessibility")
+// `label` and `usageHint` are v0.8 aliases we still accept for compatibility.
+private val EXPECTED_PROPERTIES = setOf(
+    "child", "variant", "action", "checks", "accessibility",
+    "label", "usageHint"
+)
 
 @Composable
 private fun ButtonWidgetContent(
@@ -91,7 +95,19 @@ private fun ButtonWidgetContent(
         else -> null
     }
 
+    // v0.8 legacy: `label` was a DynamicString rendered directly inside the
+    // button. When `child` isn't present, fall back to rendering this as the
+    // button's text content.
+    val labelRef = DataReferenceParser.parseString(data["label"])
+    val labelText = when (labelRef) {
+        is LiteralString -> labelRef.value
+        is PathString -> dataContext.getString(labelRef.path)
+        else -> null
+    }
+
+    // Accept v0.8 `usageHint` as an alias for v0.9 `variant`.
     val variantRef = DataReferenceParser.parseString(data["variant"])
+        ?: DataReferenceParser.parseString(data["usageHint"])
     val variant = when (variantRef) {
         is LiteralString -> variantRef.value
         is PathString -> dataContext.getString(variantRef.path)
@@ -148,7 +164,7 @@ private fun ButtonWidgetContent(
         "borderless" -> TextButton(
             onClick = onClick,
             enabled = enabled
-        ) { renderButtonChild(childId, buildChild, a11yLabel) }
+        ) { renderButtonChild(childId, buildChild, a11yLabel, labelText) }
         "primary" -> Button(
             onClick = onClick,
             enabled = enabled,
@@ -156,11 +172,11 @@ private fun ButtonWidgetContent(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             )
-        ) { renderButtonChild(childId, buildChild, a11yLabel) }
+        ) { renderButtonChild(childId, buildChild, a11yLabel, labelText) }
         else -> Button(
             onClick = onClick,
             enabled = enabled
-        ) { renderButtonChild(childId, buildChild, a11yLabel) }
+        ) { renderButtonChild(childId, buildChild, a11yLabel, labelText) }
     }
 }
 
@@ -168,10 +184,12 @@ private fun ButtonWidgetContent(
 private fun renderButtonChild(
     childId: String?,
     buildChild: ChildBuilder,
-    accessibilityLabel: String?
+    accessibilityLabel: String?,
+    labelText: String?
 ) {
     when {
         childId != null -> buildChild(childId)
+        labelText != null -> Text(labelText)
         accessibilityLabel != null -> Text(accessibilityLabel)
         else -> Text("Button")
     }

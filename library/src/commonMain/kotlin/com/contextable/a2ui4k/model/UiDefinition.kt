@@ -20,19 +20,26 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
 /**
- * Represents the complete state of a UI surface in the A2UI v0.9 protocol.
+ * Represents the complete state of a UI surface.
  *
  * A UiDefinition contains all the components that make up a surface,
  * along with metadata about which catalog should be used for rendering.
  *
- * In v0.9, the root component is identified by convention: the component
- * with id "root" serves as the entry point for rendering.
+ * In v0.9, the root is identified by convention (the component with id
+ * `"root"`). In v0.8, the root was an explicit property on `beginRendering` —
+ * when a surface was created via the v0.8 path, [rootComponentId] carries
+ * that id forward.
  *
  * @property surfaceId Unique identifier for this surface
  * @property components Map of component ID to [Component] definitions
  * @property catalogId Identifier of the catalog to use for this surface
  * @property theme Optional theme parameters for the surface
  * @property sendDataModel When true, client includes full data model in metadata
+ * @property rootComponentId Explicit root id (v0.8-style). If `null`, the
+ *                           component with id `"root"` is used per v0.9 convention.
+ * @property protocolVersion The wire protocol version this surface was
+ *                           created under. Used to pick the right outbound
+ *                           serialization shape for user events.
  *
  * @see Component
  * @see com.contextable.a2ui4k.state.SurfaceStateManager
@@ -44,16 +51,16 @@ data class UiDefinition(
     val components: Map<String, Component> = emptyMap(),
     val catalogId: String? = null,
     val theme: JsonObject? = null,
-    val sendDataModel: Boolean = false
+    val sendDataModel: Boolean = false,
+    val rootComponentId: String? = null,
+    val protocolVersion: ProtocolVersion = ProtocolVersion.V0_9
 ) {
     /**
-     * Returns the root component (component with id "root").
-     *
-     * In v0.9, the root is identified by convention rather than
-     * an explicit property.
+     * Returns the root component. Falls back to the component with id
+     * `"root"` (v0.9 convention) when [rootComponentId] is not set.
      */
     val rootComponent: Component?
-        get() = components["root"]
+        get() = rootComponentId?.let { components[it] } ?: components["root"]
 
     /**
      * Creates a copy with updated components.

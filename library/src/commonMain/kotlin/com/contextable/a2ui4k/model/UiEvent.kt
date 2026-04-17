@@ -134,10 +134,33 @@ data class ClientError(
 }
 
 /**
- * Returns the wire-ready v0.9 envelope for this event, or `null` if the event
- * is not a wire message (e.g. [DataChangeEvent]).
+ * Returns the wire-ready envelope for this event in the given protocol
+ * [version], or `null` if this event doesn't emit under that version.
+ *
+ * ## v0.9
+ *
+ * - [ActionEvent] → `{"version":"v0.9","action":{…}}`
+ * - [ValidationError] / [ClientError] → `{"version":"v0.9","error":{…}}`
+ * - [DataChangeEvent] → `null` (v0.9 has no upstream data-change message;
+ *   local changes ride along in `a2uiClientDataModel` metadata)
+ *
+ * ## v0.8
+ *
+ * - [ActionEvent] → `{"userAction":{name, surfaceId, sourceComponentId,
+ *   timestamp, context}}` (no version envelope)
+ * - [DataChangeEvent] → `{"dataChange":{surfaceId, path, value}}` (becomes
+ *   a real wire message)
+ * - [ValidationError] / [ClientError] → `null` (v0.8 has no formal client
+ *   error shape; callers should log locally)
  */
-fun UiEvent.toClientMessage(): JsonObject? = when (this) {
+fun UiEvent.toClientMessage(
+    version: ProtocolVersion = ProtocolVersion.V0_9
+): JsonObject? = when (version) {
+    ProtocolVersion.V0_9 -> toClientMessageV09()
+    ProtocolVersion.V0_8 -> toClientMessageV08()
+}
+
+private fun UiEvent.toClientMessageV09(): JsonObject? = when (this) {
     is ActionEvent -> buildJsonObject {
         put("version", JsonPrimitive(A2UI_PROTOCOL_VERSION))
         put("action", buildJsonObject {
@@ -166,4 +189,26 @@ fun UiEvent.toClientMessage(): JsonObject? = when (this) {
         })
     }
     is DataChangeEvent -> null
+}
+
+private fun UiEvent.toClientMessageV08(): JsonObject? = when (this) {
+    is ActionEvent -> buildJsonObject {
+        put("userAction", buildJsonObject {
+            put("name", JsonPrimitive(name))
+            put("surfaceId", JsonPrimitive(surfaceId))
+            put("sourceComponentId", JsonPrimitive(sourceComponentId))
+            put("timestamp", JsonPrimitive(timestamp))
+            put("context", context ?: JsonObject(emptyMap()))
+        })
+    }
+    is DataChangeEvent -> buildJsonObject {
+        put("dataChange", buildJsonObject {
+            put("surfaceId", JsonPrimitive(surfaceId))
+            put("path", JsonPrimitive(path))
+            put("value", JsonPrimitive(value))
+        })
+    }
+    // v0.8 has no formal error-reporting wire shape. Swallow and log locally
+    // in the caller; we return null here so no stray message goes on the wire.
+    is ValidationError, is ClientError -> null
 }

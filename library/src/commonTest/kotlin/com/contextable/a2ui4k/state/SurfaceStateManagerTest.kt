@@ -16,6 +16,7 @@
 
 package com.contextable.a2ui4k.state
 
+import com.contextable.a2ui4k.model.ProtocolVersion
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -396,5 +397,117 @@ class SurfaceStateManagerTest {
         val comp = manager.getSurface("s1")?.components?.get("col1")
         assertNotNull(comp)
         assertEquals(2, comp.weight)
+    }
+
+    // --- v0.8 dispatch (ACTIVITY_SNAPSHOT transcode) ---
+
+    @Test
+    fun `v0_8 ACTIVITY_SNAPSHOT is transcoded and dispatched`() {
+        val manager = SurfaceStateManager()
+        val v08Msg: JsonObject = json.decodeFromString(
+            """
+            {
+                "kind":"ACTIVITY_SNAPSHOT",
+                "messageId":"m1",
+                "content":{"operations":[
+                    {"beginRendering":{"surfaceId":"s1","root":"root"}},
+                    {"surfaceUpdate":{"surfaceId":"s1","components":[
+                        {"id":"root","component":{"Column":{"children":{"explicitList":["t"]}}}},
+                        {"id":"t","component":{"Text":{"text":{"literalString":"Hello"}}}}
+                    ]}}
+                ]}
+            }
+            """.trimIndent()
+        )
+        val handled = manager.processMessage(v08Msg)
+        assertTrue(handled)
+        assertEquals(1, manager.surfaceCount)
+        val surface = manager.getSurface("s1")
+        assertNotNull(surface)
+        assertEquals(ProtocolVersion.V0_8, surface.protocolVersion)
+        // v0.8 `root` was captured as rootComponentId.
+        assertEquals("root", surface.rootComponentId)
+        // Components are flattened and available.
+        assertEquals(2, surface.components.size)
+        assertEquals("Text", surface.components["t"]?.widgetType)
+    }
+
+    @Test
+    fun `v0_8 and v0_9 surfaces coexist and carry different protocolVersion`() {
+        val manager = SurfaceStateManager()
+        // v0.9 surface
+        manager.processMessage(
+            envelope("createSurface", """{"surfaceId":"v9","catalogId":"c"}""")
+        )
+        // v0.8 surface
+        val v08Msg: JsonObject = json.decodeFromString(
+            """
+            {
+                "kind":"ACTIVITY_SNAPSHOT",
+                "content":{"operations":[
+                    {"beginRendering":{"surfaceId":"v8","root":"root"}}
+                ]}
+            }
+            """.trimIndent()
+        )
+        manager.processMessage(v08Msg)
+
+        assertEquals(ProtocolVersion.V0_9, manager.getSurfaceProtocolVersion("v9"))
+        assertEquals(ProtocolVersion.V0_8, manager.getSurfaceProtocolVersion("v8"))
+    }
+
+    @Test
+    fun `v0_8 ACTIVITY_DELTA replays JSON Patch and dispatches new ops`() {
+        val manager = SurfaceStateManager()
+        manager.processMessage(
+            json.decodeFromString(
+                """
+                {
+                    "kind":"ACTIVITY_SNAPSHOT",
+                    "messageId":"m1",
+                    "content":{"operations":[
+                        {"beginRendering":{"surfaceId":"s1","root":"root"}}
+                    ]}
+                }
+                """.trimIndent()
+            )
+        )
+        val before = manager.getSurface("s1")?.components?.size ?: 0
+        assertEquals(0, before)
+
+        manager.processMessage(
+            json.decodeFromString(
+                """
+                {
+                    "kind":"ACTIVITY_DELTA",
+                    "messageId":"m1",
+                    "patch":[{"op":"add","path":"/operations/1","value":{
+                        "surfaceUpdate":{"surfaceId":"s1","components":[
+                            {"id":"root","component":{"Text":{"text":{"literalString":"Hi"}}}}
+                        ]}
+                    }}]
+                }
+                """.trimIndent()
+            )
+        )
+        assertEquals(1, manager.getSurface("s1")?.components?.size)
+    }
+
+    @Test
+    fun `v0_8 surface does not emit a2uiClientDataModel envelope`() {
+        // v0.8 has no equivalent mechanism; buildClientDataModel should skip v0.8 surfaces.
+        val manager = SurfaceStateManager()
+        val v08Msg: JsonObject = json.decodeFromString(
+            """
+            {
+                "kind":"ACTIVITY_SNAPSHOT",
+                "content":{"operations":[
+                    {"beginRendering":{"surfaceId":"s1","root":"root"}}
+                ]}
+            }
+            """.trimIndent()
+        )
+        manager.processMessage(v08Msg)
+        assertNull(manager.buildClientDataModel())
     }
 }

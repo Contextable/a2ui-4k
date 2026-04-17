@@ -75,8 +75,11 @@ val TextFieldWidget = CatalogItem(
     )
 }
 
-private val EXPECTED_PROPERTIES =
-    setOf("label", "value", "variant", "validationRegexp", "checks", "accessibility")
+// v0.8 used `text`/`textFieldType`; accepted as aliases for v0.9 `value`/`variant`.
+private val EXPECTED_PROPERTIES = setOf(
+    "label", "value", "variant", "validationRegexp", "checks", "accessibility",
+    "text", "textFieldType"
+)
 
 @Composable
 private fun TextFieldWidgetContent(
@@ -89,7 +92,9 @@ private fun TextFieldWidgetContent(
 
     val labelRef = DataReferenceParser.parseString(data["label"])
     val valueRef = DataReferenceParser.parseString(data["value"])
+        ?: DataReferenceParser.parseString(data["text"])
     val variantRef = DataReferenceParser.parseString(data["variant"])
+        ?: DataReferenceParser.parseString(data["textFieldType"])
     val validationRegexpRef = DataReferenceParser.parseString(data["validationRegexp"])
 
     val label = when (labelRef) {
@@ -133,6 +138,15 @@ private fun TextFieldWidgetContent(
     when (variant?.lowercase()) {
         "number" -> {
             keyboardType = KeyboardType.Number
+            visualTransformation = VisualTransformation.None
+            singleLine = true
+            modifier = Modifier.fillMaxWidth()
+        }
+        // v0.8 `date` variant: no v0.9 equivalent (spec uses DateTimeInput).
+        // Render as single-line text; callers concerned about date pickers should
+        // migrate to DateTimeInput.
+        "date" -> {
+            keyboardType = KeyboardType.Text
             visualTransformation = VisualTransformation.None
             singleLine = true
             modifier = Modifier.fillMaxWidth()

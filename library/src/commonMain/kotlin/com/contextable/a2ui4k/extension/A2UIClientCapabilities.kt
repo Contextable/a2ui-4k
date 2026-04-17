@@ -110,3 +110,38 @@ fun a2uiClientCapabilities(vararg catalogIds: String): A2UIClientCapabilities =
     A2UIClientCapabilities(
         supportedCatalogIds = catalogIds.toList()
     )
+
+/**
+ * Creates [A2UIClientCapabilities] that advertise support for both the v0.9
+ * and v0.8 standard catalogs.
+ *
+ * Use this when your client can render both protocol versions and wants the
+ * agent to pick — typically: prefer v0.9, fall back to v0.8 against legacy
+ * agents. The server chooses which catalog (and therefore which wire protocol)
+ * to emit based on its own capabilities.
+ *
+ * ```kotlin
+ * val capabilities = a2uiBothVersionsClientCapabilities()
+ * // supportedCatalogIds = [v0.9 catalog URI, v0.8 catalog URI]
+ * ```
+ *
+ * @see A2UIExtension.STANDARD_CATALOG_URI
+ * @see A2UIExtension.STANDARD_CATALOG_URI_V08
+ */
+fun a2uiBothVersionsClientCapabilities(): A2UIClientCapabilities =
+    A2UIClientCapabilities(
+        supportedCatalogIds = listOf(
+            A2UIExtension.STANDARD_CATALOG_URI,
+            A2UIExtension.STANDARD_CATALOG_URI_V08
+        )
+    )
+
+/**
+ * Creates [A2UIClientCapabilities] for the v0.8 standard catalog only. Prefer
+ * [a2uiBothVersionsClientCapabilities] unless you have a specific reason to
+ * decline v0.9.
+ */
+fun a2uiV08StandardClientCapabilities(): A2UIClientCapabilities =
+    A2UIClientCapabilities(
+        supportedCatalogIds = listOf(A2UIExtension.STANDARD_CATALOG_URI_V08)
+    )

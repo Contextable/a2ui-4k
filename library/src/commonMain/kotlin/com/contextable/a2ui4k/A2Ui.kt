@@ -79,6 +79,7 @@ public typealias ValidationError = com.contextable.a2ui4k.model.ValidationError
 public typealias ClientError = com.contextable.a2ui4k.model.ClientError
 public typealias CheckRule = com.contextable.a2ui4k.model.CheckRule
 public typealias Accessibility = com.contextable.a2ui4k.model.Accessibility
+public typealias ProtocolVersion = com.contextable.a2ui4k.model.ProtocolVersion
 public typealias Catalog = com.contextable.a2ui4k.model.Catalog
 public typealias CatalogItem = com.contextable.a2ui4k.model.CatalogItem
 public typealias DataContext = com.contextable.a2ui4k.model.DataContext

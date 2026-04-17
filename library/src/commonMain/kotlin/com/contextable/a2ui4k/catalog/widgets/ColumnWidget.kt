@@ -58,7 +58,8 @@ val ColumnWidget = CatalogItem(
     ColumnWidgetContent(data = data, buildChild = buildChild, dataContext = dataContext)
 }
 
-private val EXPECTED_PROPERTIES = setOf("children", "justify", "align")
+// Accept both v0.9 and v0.8 property names. v0.8 used `distribution`/`alignment`.
+private val EXPECTED_PROPERTIES = setOf("children", "justify", "align", "distribution", "alignment")
 
 @Composable
 private fun ColumnWidgetContent(
@@ -71,7 +72,9 @@ private fun ColumnWidgetContent(
     val childrenRef = DataReferenceParser.parseChildren(data["children"])
     val children = (childrenRef as? ChildrenReference.ExplicitList)?.componentIds ?: emptyList()
 
+    // Prefer the v0.9 keys; fall back to the v0.8 aliases when absent.
     val justifyRef = DataReferenceParser.parseString(data["justify"])
+        ?: DataReferenceParser.parseString(data["distribution"])
     val justify = when (justifyRef) {
         is LiteralString -> justifyRef.value
         is PathString -> dataContext.getString(justifyRef.path)
@@ -79,6 +82,7 @@ private fun ColumnWidgetContent(
     }
 
     val alignRef = DataReferenceParser.parseString(data["align"])
+        ?: DataReferenceParser.parseString(data["alignment"])
     val align = when (alignRef) {
         is LiteralString -> alignRef.value
         is PathString -> dataContext.getString(alignRef.path)
@@ -88,10 +92,9 @@ private fun ColumnWidgetContent(
     val definition = LocalUiDefinition.current
 
     // Apply fillMaxWidth only for justify values that need space to distribute.
-    // Alignment works within the Column's natural width.
-    // This prevents Columns inside Rows from each trying to fill full width.
+    // `spaceEvenly` is v0.8-only but cheap to honor unconditionally for forward compat.
     val needsFullWidth = justify?.lowercase() in listOf(
-        "spacebetween", "spacearound"
+        "spacebetween", "spacearound", "spaceevenly"
     )
     val modifier = if (needsFullWidth) Modifier.fillMaxWidth() else Modifier
 
@@ -130,7 +133,8 @@ private fun ColumnScope.BuildWeightedChild(
  * Parse vertical arrangement from A2UI justify values.
  *
  * Valid justify values per A2UI v0.9 spec:
- * start, center, end, spaceBetween, spaceAround
+ * start, center, end, spaceBetween, spaceAround. `spaceEvenly` (v0.8-only)
+ * is also honored.
  */
 private fun parseVerticalArrangement(justify: String?): Arrangement.Vertical {
     return when (justify?.lowercase()) {
@@ -139,6 +143,7 @@ private fun parseVerticalArrangement(justify: String?): Arrangement.Vertical {
         "end" -> Arrangement.Bottom
         "spacebetween" -> Arrangement.SpaceBetween
         "spacearound" -> Arrangement.SpaceAround
+        "spaceevenly" -> Arrangement.SpaceEvenly
         else -> Arrangement.Top
     }
 }

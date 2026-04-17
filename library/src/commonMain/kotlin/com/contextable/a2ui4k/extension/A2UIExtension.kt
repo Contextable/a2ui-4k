@@ -32,9 +32,22 @@ object A2UIExtension {
     const val URI_V09 = "https://a2ui.org/a2a-extension/a2ui/v0.9"
 
     /**
+     * The URI identifying the A2UI v0.8 extension. Advertised alongside
+     * [URI_V09] when a client wants to accept either protocol from the server.
+     */
+    const val URI_V08 = "https://a2ui.org/a2a-extension/a2ui/v0.8"
+
+    /**
      * The URI of the standard A2UI v0.9 component catalog definition.
      */
     const val STANDARD_CATALOG_URI = "https://github.com/google/A2UI/blob/main/specification/v0_9/json/standard_catalog.json"
+
+    /**
+     * The URI of the standard A2UI v0.8 component catalog definition. Clients
+     * that want to negotiate down to v0.8 when talking to legacy agents should
+     * include this in `a2uiClientCapabilities.supportedCatalogIds`.
+     */
+    const val STANDARD_CATALOG_URI_V08 = "https://github.com/google/A2UI/blob/main/specification/0.8/json/standard_catalog_definition.json"
 
     /**
      * The MIME type for A2UI data in message parts.
@@ -45,4 +58,7 @@ object A2UIExtension {
      * The protocol version string.
      */
     const val PROTOCOL_VERSION = "v0.9"
+
+    /** The v0.8 protocol version string. */
+    const val PROTOCOL_VERSION_V08 = "v0.8"
 }
