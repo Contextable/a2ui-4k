@@ -17,12 +17,14 @@
 package com.contextable.a2ui4k.extension
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 /**
  * Declares the A2UI capabilities of a client.
  *
  * Clients include this in message metadata when communicating with A2UI-capable
- * agents. It tells the agent which component catalogs the client can render.
+ * agents. It tells the agent which component catalogs the client can render and
+ * optionally ships inline catalog definitions for custom or ad-hoc components.
  *
  * ## Example JSON
  *
@@ -49,13 +51,17 @@ import kotlinx.serialization.Serializable
  * @property supportedCatalogIds List of catalog URIs the client can render.
  *                               The agent will only generate components from
  *                               catalogs the client supports.
+ * @property inlineCatalogs Optional inline catalog definitions shipped verbatim
+ *                          to the agent. Useful for custom or ad-hoc components
+ *                          that the agent can reference without a separate URI.
  *
  * @see A2UIExtension.STANDARD_CATALOG_URI
  * @see A2UIExtensionParams
  */
 @Serializable
 data class A2UIClientCapabilities(
-    val supportedCatalogIds: List<String>
+    val supportedCatalogIds: List<String>,
+    val inlineCatalogs: List<JsonObject>? = null
 )
 
 /**

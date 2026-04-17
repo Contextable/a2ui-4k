@@ -18,18 +18,15 @@ package com.contextable.a2ui4k.function
 
 import com.contextable.a2ui4k.model.DataContext
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /**
- * Tests for [FunctionEvaluator], focusing on formatting functions
- * that must compile and run correctly on all Kotlin targets (JVM, JS, iOS).
+ * Tests for [FunctionEvaluator] — v0.9 standard functions. All argument
+ * names come straight from the v0.9 basic catalog.
  */
 class FunctionEvaluatorTest {
 
@@ -44,139 +41,195 @@ class FunctionEvaluatorTest {
         override fun withBasePath(basePath: String): DataContext = this
     }
 
-    private fun formatNumberArgs(
+    private fun numArgs(
         value: Double,
-        minimumFractionDigits: Int? = null,
-        maximumFractionDigits: Int? = null,
-        useGrouping: Boolean? = null
+        decimals: Int? = null,
+        grouping: Boolean? = null
     ): JsonObject {
         val map = mutableMapOf<String, JsonPrimitive>("value" to JsonPrimitive(value))
-        minimumFractionDigits?.let { map["minimumFractionDigits"] = JsonPrimitive(it) }
-        maximumFractionDigits?.let { map["maximumFractionDigits"] = JsonPrimitive(it) }
-        useGrouping?.let { map["useGrouping"] = JsonPrimitive(it) }
+        decimals?.let { map["decimals"] = JsonPrimitive(it) }
+        grouping?.let { map["grouping"] = JsonPrimitive(it) }
         return JsonObject(map)
     }
 
-    // --- formatNumber tests ---
+    // --- formatNumber ---
 
     @Test
     fun formatNumber_integer() {
-        val result = FunctionEvaluator.evaluateString(
-            "formatNumber",
-            formatNumberArgs(value = 42.0, maximumFractionDigits = 0),
-            emptyContext
+        assertEquals(
+            "42",
+            FunctionEvaluator.evaluateString("formatNumber", numArgs(42.0, decimals = 0), emptyContext)
         )
-        assertEquals("42", result)
     }
 
     @Test
     fun formatNumber_withDecimals() {
-        val result = FunctionEvaluator.evaluateString(
-            "formatNumber",
-            formatNumberArgs(value = 1234.56, minimumFractionDigits = 2, maximumFractionDigits = 2),
-            emptyContext
+        assertEquals(
+            "1,234.56",
+            FunctionEvaluator.evaluateString("formatNumber", numArgs(1234.56, decimals = 2), emptyContext)
         )
-        assertEquals("1,234.56", result)
     }
 
     @Test
     fun formatNumber_largeNumber() {
-        val result = FunctionEvaluator.evaluateString(
-            "formatNumber",
-            formatNumberArgs(value = 1000000.0, maximumFractionDigits = 0),
-            emptyContext
+        assertEquals(
+            "1,000,000",
+            FunctionEvaluator.evaluateString("formatNumber", numArgs(1000000.0, decimals = 0), emptyContext)
         )
-        assertEquals("1,000,000", result)
     }
 
     @Test
     fun formatNumber_noGrouping() {
-        val result = FunctionEvaluator.evaluateString(
-            "formatNumber",
-            formatNumberArgs(value = 1234.5, useGrouping = false, maximumFractionDigits = 1),
-            emptyContext
+        assertEquals(
+            "1234.5",
+            FunctionEvaluator.evaluateString("formatNumber", numArgs(1234.5, decimals = 1, grouping = false), emptyContext)
         )
-        assertEquals("1234.5", result)
     }
 
     @Test
-    fun formatNumber_minimumFractionDigitsPads() {
-        val result = FunctionEvaluator.evaluateString(
-            "formatNumber",
-            formatNumberArgs(value = 5.0, minimumFractionDigits = 2, maximumFractionDigits = 2),
-            emptyContext
+    fun formatNumber_decimalsPads() {
+        assertEquals(
+            "5.00",
+            FunctionEvaluator.evaluateString("formatNumber", numArgs(5.0, decimals = 2), emptyContext)
         )
-        assertEquals("5.00", result)
     }
 
     @Test
     fun formatNumber_smallDecimal() {
-        // Regression test: small decimals must not produce scientific notation
-        val result = FunctionEvaluator.evaluateString(
-            "formatNumber",
-            formatNumberArgs(value = 0.001, minimumFractionDigits = 3, maximumFractionDigits = 3),
-            emptyContext
+        assertEquals(
+            "0.001",
+            FunctionEvaluator.evaluateString("formatNumber", numArgs(0.001, decimals = 3), emptyContext)
         )
-        assertEquals("0.001", result)
     }
 
     @Test
     fun formatNumber_negativeNumber() {
-        val result = FunctionEvaluator.evaluateString(
-            "formatNumber",
-            formatNumberArgs(value = -1234.5, maximumFractionDigits = 1),
-            emptyContext
+        assertEquals(
+            "-1,234.5",
+            FunctionEvaluator.evaluateString("formatNumber", numArgs(-1234.5, decimals = 1), emptyContext)
         )
-        assertEquals("-1,234.5", result)
     }
 
-    // --- formatCurrency tests ---
+    // --- formatCurrency ---
 
     @Test
-    fun formatCurrency_usd() {
-        val args = JsonObject(
-            mapOf(
-                "value" to JsonPrimitive(1234.56),
-                "currency" to JsonPrimitive("USD")
-            )
-        )
-        val result = FunctionEvaluator.evaluateString("formatCurrency", args, emptyContext)
-        assertEquals("$1,234.56", result)
+    fun formatCurrency_usdDefaults() {
+        val args = JsonObject(mapOf(
+            "value" to JsonPrimitive(1234.56),
+            "currency" to JsonPrimitive("USD")
+        ))
+        assertEquals("$1,234.56", FunctionEvaluator.evaluateString("formatCurrency", args, emptyContext))
     }
 
-    // --- required validation tests ---
+    @Test
+    fun formatCurrency_eur() {
+        val args = JsonObject(mapOf(
+            "value" to JsonPrimitive(99.99),
+            "currency" to JsonPrimitive("EUR")
+        ))
+        assertEquals("\u20AC99.99", FunctionEvaluator.evaluateString("formatCurrency", args, emptyContext))
+    }
+
+    @Test
+    fun formatCurrency_gbp() {
+        val args = JsonObject(mapOf(
+            "value" to JsonPrimitive(50.0),
+            "currency" to JsonPrimitive("GBP")
+        ))
+        assertEquals("\u00A350.00", FunctionEvaluator.evaluateString("formatCurrency", args, emptyContext))
+    }
+
+    @Test
+    fun formatCurrency_jpy() {
+        val args = JsonObject(mapOf(
+            "value" to JsonPrimitive(1000.0),
+            "currency" to JsonPrimitive("JPY")
+        ))
+        assertEquals("\u00A51,000.00", FunctionEvaluator.evaluateString("formatCurrency", args, emptyContext))
+    }
+
+    @Test
+    fun formatCurrency_unknownCurrencyUsesCode() {
+        val args = JsonObject(mapOf(
+            "value" to JsonPrimitive(42.0),
+            "currency" to JsonPrimitive("CHF")
+        ))
+        assertEquals("CHF42.00", FunctionEvaluator.evaluateString("formatCurrency", args, emptyContext))
+    }
+
+    @Test
+    fun formatCurrency_defaultsToUsd() {
+        val args = JsonObject(mapOf("value" to JsonPrimitive(10.0)))
+        assertEquals("$10.00", FunctionEvaluator.evaluateString("formatCurrency", args, emptyContext))
+    }
+
+    @Test
+    fun formatCurrency_customDecimals() {
+        val args = JsonObject(mapOf(
+            "value" to JsonPrimitive(10.0),
+            "currency" to JsonPrimitive("USD"),
+            "decimals" to JsonPrimitive(0)
+        ))
+        assertEquals("$10", FunctionEvaluator.evaluateString("formatCurrency", args, emptyContext))
+    }
+
+    @Test
+    fun formatCurrency_noGrouping() {
+        val args = JsonObject(mapOf(
+            "value" to JsonPrimitive(1234567.0),
+            "currency" to JsonPrimitive("USD"),
+            "grouping" to JsonPrimitive(false),
+            "decimals" to JsonPrimitive(0)
+        ))
+        assertEquals("$1234567", FunctionEvaluator.evaluateString("formatCurrency", args, emptyContext))
+    }
+
+    // --- required ---
 
     @Test
     fun required_emptyString_isFalse() {
         val args = JsonObject(mapOf("value" to JsonPrimitive("")))
-        val result = FunctionEvaluator.evaluateBoolean("required", args, emptyContext)
-        assertEquals(false, result)
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("required", args, emptyContext))
     }
 
     @Test
     fun required_nonEmpty_isTrue() {
         val args = JsonObject(mapOf("value" to JsonPrimitive("hello")))
-        val result = FunctionEvaluator.evaluateBoolean("required", args, emptyContext)
-        assertEquals(true, result)
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("required", args, emptyContext))
     }
 
-    // --- email validation tests ---
+    @Test
+    fun required_nullArgsReturnsFalse() {
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("required", null, emptyContext))
+    }
+
+    @Test
+    fun required_blankStringIsFalse() {
+        val args = JsonObject(mapOf("value" to JsonPrimitive("   ")))
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("required", args, emptyContext))
+    }
+
+    @Test
+    fun required_numberIsTrue() {
+        val args = JsonObject(mapOf("value" to JsonPrimitive(42)))
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("required", args, emptyContext))
+    }
+
+    // --- email ---
 
     @Test
     fun email_valid() {
         val args = JsonObject(mapOf("value" to JsonPrimitive("test@example.com")))
-        val result = FunctionEvaluator.evaluateBoolean("email", args, emptyContext)
-        assertEquals(true, result)
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("email", args, emptyContext))
     }
 
     @Test
     fun email_invalid() {
         val args = JsonObject(mapOf("value" to JsonPrimitive("not-an-email")))
-        val result = FunctionEvaluator.evaluateBoolean("email", args, emptyContext)
-        assertEquals(false, result)
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("email", args, emptyContext))
     }
 
-    // --- regex validation tests ---
+    // --- regex ---
 
     @Test
     fun regex_matchesPattern() {
@@ -184,8 +237,7 @@ class FunctionEvaluatorTest {
             "value" to JsonPrimitive("ABC123"),
             "pattern" to JsonPrimitive("^[A-Z]+[0-9]+$")
         ))
-        val result = FunctionEvaluator.evaluateBoolean("regex", args, emptyContext)
-        assertEquals(true, result)
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("regex", args, emptyContext))
     }
 
     @Test
@@ -194,8 +246,7 @@ class FunctionEvaluatorTest {
             "value" to JsonPrimitive("abc"),
             "pattern" to JsonPrimitive("^[0-9]+$")
         ))
-        val result = FunctionEvaluator.evaluateBoolean("regex", args, emptyContext)
-        assertEquals(false, result)
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("regex", args, emptyContext))
     }
 
     @Test
@@ -204,20 +255,16 @@ class FunctionEvaluatorTest {
             "value" to JsonPrimitive("test"),
             "pattern" to JsonPrimitive("[invalid(")
         ))
-        val result = FunctionEvaluator.evaluateBoolean("regex", args, emptyContext)
-        assertEquals(false, result)
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("regex", args, emptyContext))
     }
 
     @Test
     fun regex_missingValueReturnsFalse() {
-        val args = JsonObject(mapOf(
-            "pattern" to JsonPrimitive(".*")
-        ))
-        val result = FunctionEvaluator.evaluateBoolean("regex", args, emptyContext)
-        assertEquals(false, result)
+        val args = JsonObject(mapOf("pattern" to JsonPrimitive(".*")))
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("regex", args, emptyContext))
     }
 
-    // --- length validation tests ---
+    // --- length ---
 
     @Test
     fun length_withinRange() {
@@ -226,8 +273,7 @@ class FunctionEvaluatorTest {
             "min" to JsonPrimitive(3),
             "max" to JsonPrimitive(10)
         ))
-        val result = FunctionEvaluator.evaluateBoolean("length", args, emptyContext)
-        assertEquals(true, result)
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("length", args, emptyContext))
     }
 
     @Test
@@ -236,8 +282,7 @@ class FunctionEvaluatorTest {
             "value" to JsonPrimitive("hi"),
             "min" to JsonPrimitive(3)
         ))
-        val result = FunctionEvaluator.evaluateBoolean("length", args, emptyContext)
-        assertEquals(false, result)
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("length", args, emptyContext))
     }
 
     @Test
@@ -246,8 +291,7 @@ class FunctionEvaluatorTest {
             "value" to JsonPrimitive("this is too long"),
             "max" to JsonPrimitive(5)
         ))
-        val result = FunctionEvaluator.evaluateBoolean("length", args, emptyContext)
-        assertEquals(false, result)
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("length", args, emptyContext))
     }
 
     @Test
@@ -257,20 +301,16 @@ class FunctionEvaluatorTest {
             "min" to JsonPrimitive(3),
             "max" to JsonPrimitive(3)
         ))
-        val result = FunctionEvaluator.evaluateBoolean("length", args, emptyContext)
-        assertEquals(true, result)
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("length", args, emptyContext))
     }
 
     @Test
     fun length_noConstraintsAlwaysTrue() {
-        val args = JsonObject(mapOf(
-            "value" to JsonPrimitive("anything")
-        ))
-        val result = FunctionEvaluator.evaluateBoolean("length", args, emptyContext)
-        assertEquals(true, result)
+        val args = JsonObject(mapOf("value" to JsonPrimitive("anything")))
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("length", args, emptyContext))
     }
 
-    // --- numeric validation tests ---
+    // --- numeric ---
 
     @Test
     fun numeric_withinRange() {
@@ -279,8 +319,7 @@ class FunctionEvaluatorTest {
             "min" to JsonPrimitive(1.0),
             "max" to JsonPrimitive(10.0)
         ))
-        val result = FunctionEvaluator.evaluateBoolean("numeric", args, emptyContext)
-        assertEquals(true, result)
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("numeric", args, emptyContext))
     }
 
     @Test
@@ -289,8 +328,7 @@ class FunctionEvaluatorTest {
             "value" to JsonPrimitive(0.5),
             "min" to JsonPrimitive(1.0)
         ))
-        val result = FunctionEvaluator.evaluateBoolean("numeric", args, emptyContext)
-        assertEquals(false, result)
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("numeric", args, emptyContext))
     }
 
     @Test
@@ -299,54 +337,37 @@ class FunctionEvaluatorTest {
             "value" to JsonPrimitive(100.0),
             "max" to JsonPrimitive(50.0)
         ))
-        val result = FunctionEvaluator.evaluateBoolean("numeric", args, emptyContext)
-        assertEquals(false, result)
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("numeric", args, emptyContext))
     }
 
     @Test
     fun numeric_missingValueReturnsFalse() {
-        val args = JsonObject(mapOf(
-            "min" to JsonPrimitive(0.0)
-        ))
-        val result = FunctionEvaluator.evaluateBoolean("numeric", args, emptyContext)
-        assertEquals(false, result)
+        val args = JsonObject(mapOf("min" to JsonPrimitive(0.0)))
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("numeric", args, emptyContext))
     }
 
-    // --- and logic tests ---
+    // --- and ---
 
     @Test
     fun and_allTrueReturnsTrue() {
         val args = JsonObject(mapOf(
-            "conditions" to JsonArray(listOf(
-                JsonPrimitive(true),
-                JsonPrimitive(true),
-                JsonPrimitive(true)
-            ))
+            "conditions" to JsonArray(listOf(JsonPrimitive(true), JsonPrimitive(true), JsonPrimitive(true)))
         ))
-        val result = FunctionEvaluator.evaluateBoolean("and", args, emptyContext)
-        assertEquals(true, result)
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("and", args, emptyContext))
     }
 
     @Test
     fun and_oneFalseReturnsFalse() {
         val args = JsonObject(mapOf(
-            "conditions" to JsonArray(listOf(
-                JsonPrimitive(true),
-                JsonPrimitive(false),
-                JsonPrimitive(true)
-            ))
+            "conditions" to JsonArray(listOf(JsonPrimitive(true), JsonPrimitive(false), JsonPrimitive(true)))
         ))
-        val result = FunctionEvaluator.evaluateBoolean("and", args, emptyContext)
-        assertEquals(false, result)
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("and", args, emptyContext))
     }
 
     @Test
     fun and_emptyConditionsReturnsTrue() {
-        val args = JsonObject(mapOf(
-            "conditions" to JsonArray(emptyList())
-        ))
-        val result = FunctionEvaluator.evaluateBoolean("and", args, emptyContext)
-        assertEquals(true, result) // all() on empty returns true
+        val args = JsonObject(mapOf("conditions" to JsonArray(emptyList())))
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("and", args, emptyContext))
     }
 
     @Test
@@ -360,51 +381,36 @@ class FunctionEvaluatorTest {
                 ))
             ))
         ))
-        val result = FunctionEvaluator.evaluateBoolean("and", args, emptyContext)
-        assertEquals(true, result)
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("and", args, emptyContext))
     }
 
     @Test
     fun and_noConditionsKeyReturnsFalse() {
-        val args = JsonObject(emptyMap())
-        val result = FunctionEvaluator.evaluateBoolean("and", args, emptyContext)
-        assertEquals(false, result)
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("and", JsonObject(emptyMap()), emptyContext))
     }
 
-    // --- or logic tests ---
+    // --- or ---
 
     @Test
     fun or_oneTrueReturnsTrue() {
         val args = JsonObject(mapOf(
-            "conditions" to JsonArray(listOf(
-                JsonPrimitive(false),
-                JsonPrimitive(true),
-                JsonPrimitive(false)
-            ))
+            "conditions" to JsonArray(listOf(JsonPrimitive(false), JsonPrimitive(true), JsonPrimitive(false)))
         ))
-        val result = FunctionEvaluator.evaluateBoolean("or", args, emptyContext)
-        assertEquals(true, result)
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("or", args, emptyContext))
     }
 
     @Test
     fun or_allFalseReturnsFalse() {
         val args = JsonObject(mapOf(
-            "conditions" to JsonArray(listOf(
-                JsonPrimitive(false),
-                JsonPrimitive(false)
-            ))
+            "conditions" to JsonArray(listOf(JsonPrimitive(false), JsonPrimitive(false)))
         ))
-        val result = FunctionEvaluator.evaluateBoolean("or", args, emptyContext)
-        assertEquals(false, result)
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("or", args, emptyContext))
     }
 
     @Test
     fun or_emptyConditionsReturnsFalse() {
-        val args = JsonObject(mapOf(
-            "conditions" to JsonArray(emptyList())
-        ))
-        val result = FunctionEvaluator.evaluateBoolean("or", args, emptyContext)
-        assertEquals(false, result) // any() on empty returns false
+        val args = JsonObject(mapOf("conditions" to JsonArray(emptyList())))
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("or", args, emptyContext))
     }
 
     @Test
@@ -418,52 +424,42 @@ class FunctionEvaluatorTest {
                 ))
             ))
         ))
-        val result = FunctionEvaluator.evaluateBoolean("or", args, emptyContext)
-        assertEquals(true, result)
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("or", args, emptyContext))
     }
 
-    // --- not logic tests ---
+    // --- not ---
 
     @Test
     fun not_trueReturnsFalse() {
-        val args = JsonObject(mapOf(
-            "condition" to JsonPrimitive(true)
-        ))
-        val result = FunctionEvaluator.evaluateBoolean("not", args, emptyContext)
-        assertEquals(false, result)
+        val args = JsonObject(mapOf("value" to JsonPrimitive(true)))
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("not", args, emptyContext))
     }
 
     @Test
     fun not_falseReturnsTrue() {
-        val args = JsonObject(mapOf(
-            "condition" to JsonPrimitive(false)
-        ))
-        val result = FunctionEvaluator.evaluateBoolean("not", args, emptyContext)
-        assertEquals(true, result)
+        val args = JsonObject(mapOf("value" to JsonPrimitive(false)))
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("not", args, emptyContext))
     }
 
     @Test
     fun not_withNestedFunctionCall() {
         val args = JsonObject(mapOf(
-            "condition" to JsonObject(mapOf(
+            "value" to JsonObject(mapOf(
                 "call" to JsonPrimitive("required"),
                 "args" to JsonObject(mapOf("value" to JsonPrimitive("")))
             ))
         ))
         // required("") = false, not(false) = true
-        val result = FunctionEvaluator.evaluateBoolean("not", args, emptyContext)
-        assertEquals(true, result)
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("not", args, emptyContext))
     }
 
     @Test
-    fun not_missingConditionReturnsTrue() {
-        val args = JsonObject(emptyMap())
-        // condition is null -> value defaults to false -> not(false) = true
-        val result = FunctionEvaluator.evaluateBoolean("not", args, emptyContext)
-        assertEquals(true, result)
+    fun not_missingValueReturnsTrue() {
+        // Missing value → defaults to false → not(false) = true
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("not", JsonObject(emptyMap()), emptyContext))
     }
 
-    // --- formatString tests ---
+    // --- formatString ---
 
     @Test
     fun formatString_simpleTemplate() {
@@ -481,57 +477,52 @@ class FunctionEvaluatorTest {
             override fun withBasePath(basePath: String): DataContext = this
         }
 
-        val args = JsonObject(mapOf(
-            "template" to JsonPrimitive("Hello, \${/user/name}!")
-        ))
-        val result = FunctionEvaluator.evaluateString("formatString", args, dataContext)
-        assertEquals("Hello, Alice!", result)
+        val args = JsonObject(mapOf("value" to JsonPrimitive("Hello, \${/user/name}!")))
+        assertEquals("Hello, Alice!", FunctionEvaluator.evaluateString("formatString", args, dataContext))
     }
 
     @Test
     fun formatString_missingPathReplacesWithEmpty() {
-        val args = JsonObject(mapOf(
-            "template" to JsonPrimitive("Value: \${/missing}")
-        ))
-        val result = FunctionEvaluator.evaluateString("formatString", args, emptyContext)
-        assertEquals("Value: ", result)
+        val args = JsonObject(mapOf("value" to JsonPrimitive("Value: \${/missing}")))
+        assertEquals("Value: ", FunctionEvaluator.evaluateString("formatString", args, emptyContext))
     }
 
     @Test
     fun formatString_noPlaceholders() {
-        val args = JsonObject(mapOf(
-            "template" to JsonPrimitive("No placeholders here")
-        ))
-        val result = FunctionEvaluator.evaluateString("formatString", args, emptyContext)
-        assertEquals("No placeholders here", result)
+        val args = JsonObject(mapOf("value" to JsonPrimitive("No placeholders here")))
+        assertEquals("No placeholders here", FunctionEvaluator.evaluateString("formatString", args, emptyContext))
     }
 
     @Test
-    fun formatString_missingTemplateReturnsEmpty() {
-        val args = JsonObject(emptyMap())
-        val result = FunctionEvaluator.evaluateString("formatString", args, emptyContext)
-        assertEquals("", result)
+    fun formatString_missingValueReturnsEmpty() {
+        assertEquals("", FunctionEvaluator.evaluateString("formatString", JsonObject(emptyMap()), emptyContext))
     }
 
-    // --- formatDate tests ---
+    // --- formatDate ---
 
     @Test
-    fun formatDate_passesThrough() {
+    fun formatDate_passesThroughWhenNoFormat() {
+        val args = JsonObject(mapOf("value" to JsonPrimitive("2026-01-15")))
+        assertEquals("2026-01-15", FunctionEvaluator.evaluateString("formatDate", args, emptyContext))
+    }
+
+    @Test
+    fun formatDate_acceptsFormatAndLocale() {
+        // Platform date formatting isn't implemented; ensure args are accepted without error.
         val args = JsonObject(mapOf(
-            "value" to JsonPrimitive("2026-01-15")
+            "value" to JsonPrimitive("2026-01-15"),
+            "format" to JsonPrimitive("yyyy-MM-dd"),
+            "locale" to JsonPrimitive("en-US")
         ))
-        val result = FunctionEvaluator.evaluateString("formatDate", args, emptyContext)
-        assertEquals("2026-01-15", result)
+        assertEquals("2026-01-15", FunctionEvaluator.evaluateString("formatDate", args, emptyContext))
     }
 
     @Test
     fun formatDate_missingValueReturnsEmpty() {
-        val args = JsonObject(emptyMap())
-        val result = FunctionEvaluator.evaluateString("formatDate", args, emptyContext)
-        assertEquals("", result)
+        assertEquals("", FunctionEvaluator.evaluateString("formatDate", JsonObject(emptyMap()), emptyContext))
     }
 
-    // --- pluralize tests ---
+    // --- pluralize ---
 
     @Test
     fun pluralize_zeroUsesZeroForm() {
@@ -541,8 +532,7 @@ class FunctionEvaluatorTest {
             "one" to JsonPrimitive("1 item"),
             "other" to JsonPrimitive("items")
         ))
-        val result = FunctionEvaluator.evaluateString("pluralize", args, emptyContext)
-        assertEquals("no items", result)
+        assertEquals("no items", FunctionEvaluator.evaluateString("pluralize", args, emptyContext))
     }
 
     @Test
@@ -553,8 +543,7 @@ class FunctionEvaluatorTest {
             "one" to JsonPrimitive("1 item"),
             "other" to JsonPrimitive("items")
         ))
-        val result = FunctionEvaluator.evaluateString("pluralize", args, emptyContext)
-        assertEquals("1 item", result)
+        assertEquals("1 item", FunctionEvaluator.evaluateString("pluralize", args, emptyContext))
     }
 
     @Test
@@ -565,8 +554,7 @@ class FunctionEvaluatorTest {
             "one" to JsonPrimitive("1 item"),
             "other" to JsonPrimitive("items")
         ))
-        val result = FunctionEvaluator.evaluateString("pluralize", args, emptyContext)
-        assertEquals("items", result)
+        assertEquals("items", FunctionEvaluator.evaluateString("pluralize", args, emptyContext))
     }
 
     @Test
@@ -576,8 +564,7 @@ class FunctionEvaluatorTest {
             "one" to JsonPrimitive("1 item"),
             "other" to JsonPrimitive("items")
         ))
-        val result = FunctionEvaluator.evaluateString("pluralize", args, emptyContext)
-        assertEquals("items", result)
+        assertEquals("items", FunctionEvaluator.evaluateString("pluralize", args, emptyContext))
     }
 
     @Test
@@ -586,101 +573,29 @@ class FunctionEvaluatorTest {
             "count" to JsonPrimitive(1),
             "other" to JsonPrimitive("items")
         ))
-        val result = FunctionEvaluator.evaluateString("pluralize", args, emptyContext)
-        assertEquals("items", result)
-    }
-
-    // --- formatCurrency additional tests ---
-
-    @Test
-    fun formatCurrency_eur() {
-        val args = JsonObject(mapOf(
-            "value" to JsonPrimitive(99.99),
-            "currency" to JsonPrimitive("EUR")
-        ))
-        val result = FunctionEvaluator.evaluateString("formatCurrency", args, emptyContext)
-        assertEquals("\u20AC99.99", result)
-    }
-
-    @Test
-    fun formatCurrency_gbp() {
-        val args = JsonObject(mapOf(
-            "value" to JsonPrimitive(50.0),
-            "currency" to JsonPrimitive("GBP")
-        ))
-        val result = FunctionEvaluator.evaluateString("formatCurrency", args, emptyContext)
-        assertEquals("\u00A350.00", result)
-    }
-
-    @Test
-    fun formatCurrency_jpy() {
-        val args = JsonObject(mapOf(
-            "value" to JsonPrimitive(1000.0),
-            "currency" to JsonPrimitive("JPY")
-        ))
-        val result = FunctionEvaluator.evaluateString("formatCurrency", args, emptyContext)
-        assertEquals("\u00A51,000.00", result)
-    }
-
-    @Test
-    fun formatCurrency_unknownCurrencyUsesCode() {
-        val args = JsonObject(mapOf(
-            "value" to JsonPrimitive(42.0),
-            "currency" to JsonPrimitive("CHF")
-        ))
-        val result = FunctionEvaluator.evaluateString("formatCurrency", args, emptyContext)
-        assertEquals("CHF42.00", result)
-    }
-
-    @Test
-    fun formatCurrency_defaultsToUsd() {
-        val args = JsonObject(mapOf(
-            "value" to JsonPrimitive(10.0)
-        ))
-        val result = FunctionEvaluator.evaluateString("formatCurrency", args, emptyContext)
-        assertEquals("$10.00", result)
-    }
-
-    // --- required additional tests ---
-
-    @Test
-    fun required_nullArgsReturnsFalse() {
-        val result = FunctionEvaluator.evaluateBoolean("required", null, emptyContext)
-        assertEquals(false, result)
-    }
-
-    @Test
-    fun required_blankStringIsFalse() {
-        val args = JsonObject(mapOf("value" to JsonPrimitive("   ")))
-        val result = FunctionEvaluator.evaluateBoolean("required", args, emptyContext)
-        assertEquals(false, result)
-    }
-
-    @Test
-    fun required_numberIsTrue() {
-        val args = JsonObject(mapOf("value" to JsonPrimitive(42)))
-        val result = FunctionEvaluator.evaluateBoolean("required", args, emptyContext)
-        assertEquals(true, result)
+        assertEquals("items", FunctionEvaluator.evaluateString("pluralize", args, emptyContext))
     }
 
     // --- openUrl ---
 
     @Test
     fun openUrl_returnsNull() {
-        val args = JsonObject(mapOf("url" to JsonPrimitive("https://example.com")))
-        val result = FunctionEvaluator.evaluate("openUrl", args, emptyContext)
-        assertNull(result) // openUrl is an action, not a value function
+        val args = JsonObject(mapOf(
+            "url" to JsonPrimitive("https://example.com"),
+            "target" to JsonPrimitive("_blank")
+        ))
+        // openUrl is an action, not a value-returning function
+        assertNull(FunctionEvaluator.evaluate("openUrl", args, emptyContext))
     }
 
     // --- unknown function ---
 
     @Test
     fun unknownFunction_returnsNull() {
-        val result = FunctionEvaluator.evaluate("nonexistent", null, emptyContext)
-        assertNull(result)
+        assertNull(FunctionEvaluator.evaluate("nonexistent", null, emptyContext))
     }
 
-    // --- path resolution in args ---
+    // --- arg resolution ---
 
     @Test
     fun resolveArg_resolvesPathReference() {
@@ -698,10 +613,20 @@ class FunctionEvaluatorTest {
             override fun withBasePath(basePath: String): DataContext = this
         }
 
+        val args = JsonObject(mapOf("value" to JsonObject(mapOf("path" to JsonPrimitive("/email")))))
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("email", args, dataContext))
+    }
+
+    @Test
+    fun resolveArg_resolvesNestedFunctionCall() {
+        // `regex` value is itself a `formatString` call that builds the target string.
         val args = JsonObject(mapOf(
-            "value" to JsonObject(mapOf("path" to JsonPrimitive("/email")))
+            "value" to JsonObject(mapOf(
+                "call" to JsonPrimitive("formatString"),
+                "args" to JsonObject(mapOf("value" to JsonPrimitive("ABC123")))
+            )),
+            "pattern" to JsonPrimitive("^[A-Z]+[0-9]+$")
         ))
-        val result = FunctionEvaluator.evaluateBoolean("email", args, dataContext)
-        assertEquals(true, result)
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("regex", args, emptyContext))
     }
 }

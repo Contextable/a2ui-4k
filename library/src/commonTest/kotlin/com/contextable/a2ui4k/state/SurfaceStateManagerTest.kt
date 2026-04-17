@@ -17,43 +17,86 @@
 package com.contextable.a2ui4k.state
 
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Tests for [SurfaceStateManager], covering all four A2UI v0.9 operations:
+ * Tests for [SurfaceStateManager], covering the A2UI v0.9 server-to-client
+ * envelope (`{"version":"v0.9", "<op>": {...}}`) and all four operations:
  * createSurface, updateComponents, updateDataModel, deleteSurface.
  */
 class SurfaceStateManagerTest {
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    private fun envelope(opKey: String, body: String): JsonObject =
+        json.decodeFromString(
+            """{"version":"v0.9","$opKey":$body}"""
+        )
+
+    // --- version envelope ---
+
+    @Test
+    fun `message with correct v09 version is processed`() {
+        val manager = SurfaceStateManager()
+        val handled = manager.processMessage(
+            envelope("createSurface", """{"surfaceId":"s","catalogId":"cat"}""")
+        )
+        assertTrue(handled)
+        assertEquals(1, manager.surfaceCount)
+    }
+
+    @Test
+    fun `message with foreign version is rejected`() {
+        val manager = SurfaceStateManager()
+        val msg: JsonObject = json.decodeFromString(
+            """{"version":"v0.8","createSurface":{"surfaceId":"s","catalogId":"c"}}"""
+        )
+        val handled = manager.processMessage(msg)
+        assertFalse(handled)
+        assertEquals(0, manager.surfaceCount)
+    }
+
+    @Test
+    fun `message without version key is still processed`() {
+        // The spec requires version, but we accept the operation if absent rather
+        // than reject — the version check's job is to catch wrong versions.
+        val manager = SurfaceStateManager()
+        val msg: JsonObject = json.decodeFromString(
+            """{"createSurface":{"surfaceId":"s","catalogId":"c"}}"""
+        )
+        val handled = manager.processMessage(msg)
+        assertTrue(handled)
+        assertEquals(1, manager.surfaceCount)
+    }
+
+    @Test
+    fun `unknown operation key returns false`() {
+        val manager = SurfaceStateManager()
+        val msg: JsonObject = json.decodeFromString(
+            """{"version":"v0.9","mysteryOp":{}}"""
+        )
+        assertFalse(manager.processMessage(msg))
+    }
+
     // --- createSurface ---
 
     @Test
     fun `createSurface initializes a new surface`() {
         val manager = SurfaceStateManager()
-
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {
-                            "surfaceId": "surface-1",
-                            "catalogId": "https://example.com/catalog.json"
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
+        manager.processMessage(
+            envelope(
+                "createSurface",
+                """{"surfaceId":"surface-1","catalogId":"https://example.com/catalog.json"}"""
+            )
+        )
 
         assertEquals(1, manager.surfaceCount)
         val surface = manager.getSurface("surface-1")
@@ -65,23 +108,12 @@ class SurfaceStateManagerTest {
     @Test
     fun `createSurface with theme and sendDataModel`() {
         val manager = SurfaceStateManager()
-
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {
-                            "surfaceId": "surface-2",
-                            "catalogId": "https://example.com/catalog.json",
-                            "theme": {"primaryColor": "#FF0000"},
-                            "sendDataModel": true
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
+        manager.processMessage(
+            envelope(
+                "createSurface",
+                """{"surfaceId":"surface-2","catalogId":"c","theme":{"primaryColor":"#FF0000"},"sendDataModel":true}"""
+            )
+        )
 
         val surface = manager.getSurface("surface-2")
         assertNotNull(surface)
@@ -93,21 +125,9 @@ class SurfaceStateManagerTest {
     @Test
     fun `createSurface without surfaceId is ignored`() {
         val manager = SurfaceStateManager()
-
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {
-                            "catalogId": "https://example.com/catalog.json"
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
-
+        manager.processMessage(
+            envelope("createSurface", """{"catalogId":"https://example.com/catalog.json"}""")
+        )
         assertEquals(0, manager.surfaceCount)
     }
 
@@ -116,130 +136,57 @@ class SurfaceStateManagerTest {
     @Test
     fun `updateComponents adds components to surface`() {
         val manager = SurfaceStateManager()
-
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {
-                            "surfaceId": "s1",
-                            "catalogId": "https://example.com/catalog.json"
-                        }
-                    },
-                    {
-                        "updateComponents": {
-                            "surfaceId": "s1",
-                            "components": [
-                                {
-                                    "id": "root",
-                                    "component": "Column",
-                                    "children": ["title"]
-                                },
-                                {
-                                    "id": "title",
-                                    "component": "Text",
-                                    "text": "Hello World",
-                                    "variant": "h1"
-                                }
-                            ]
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"s1","catalogId":"c"}"""))
+        manager.processMessage(
+            envelope(
+                "updateComponents",
+                """{"surfaceId":"s1","components":[
+                    {"id":"root","component":"Column","children":["title"]},
+                    {"id":"title","component":"Text","text":"Hello World","variant":"h1"}
+                ]}"""
+            )
+        )
 
         val surface = manager.getSurface("s1")
         assertNotNull(surface)
         assertEquals(2, surface.components.size)
-
-        val rootComp = surface.components["root"]
-        assertNotNull(rootComp)
-        assertEquals("Column", rootComp.widgetType)
-
-        val titleComp = surface.components["title"]
-        assertNotNull(titleComp)
-        assertEquals("Text", titleComp.widgetType)
+        assertEquals("Column", surface.components["root"]?.widgetType)
+        assertEquals("Text", surface.components["title"]?.widgetType)
     }
 
     @Test
     fun `updateComponents replaces existing component`() {
         val manager = SurfaceStateManager()
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"s1","catalogId":"c"}"""))
+        manager.processMessage(
+            envelope(
+                "updateComponents",
+                """{"surfaceId":"s1","components":[{"id":"t","component":"Text","text":"Original"}]}"""
+            )
+        )
+        manager.processMessage(
+            envelope(
+                "updateComponents",
+                """{"surfaceId":"s1","components":[{"id":"t","component":"Text","text":"Updated"}]}"""
+            )
+        )
 
-        val snapshot1 = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {
-                            "surfaceId": "s1",
-                            "catalogId": "catalog"
-                        }
-                    },
-                    {
-                        "updateComponents": {
-                            "surfaceId": "s1",
-                            "components": [
-                                {"id": "title", "component": "Text", "text": "Original"}
-                            ]
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot1)
-
-        // Update the same component with new text
-        val snapshot2 = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "updateComponents": {
-                            "surfaceId": "s1",
-                            "components": [
-                                {"id": "title", "component": "Text", "text": "Updated"}
-                            ]
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-2", snapshot2)
-
-        val surface = manager.getSurface("s1")
-        assertNotNull(surface)
-        val titleComp = surface.components["title"]
-        assertNotNull(titleComp)
-        assertEquals("Updated", (titleComp.widgetData["text"] as? JsonPrimitive)?.content)
+        val comp = manager.getSurface("s1")?.components?.get("t")
+        assertNotNull(comp)
+        assertEquals("Updated", (comp.widgetData["text"] as? JsonPrimitive)?.content)
     }
 
     @Test
     fun `updateComponents creates surface implicitly if not already created`() {
         val manager = SurfaceStateManager()
-
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "updateComponents": {
-                            "surfaceId": "implicit",
-                            "components": [
-                                {"id": "root", "component": "Text", "text": "Auto"}
-                            ]
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
-
+        manager.processMessage(
+            envelope(
+                "updateComponents",
+                """{"surfaceId":"implicit","components":[{"id":"root","component":"Text","text":"Auto"}]}"""
+            )
+        )
         assertEquals(1, manager.surfaceCount)
-        val surface = manager.getSurface("implicit")
-        assertNotNull(surface)
-        assertEquals(1, surface.components.size)
+        assertEquals(1, manager.getSurface("implicit")?.components?.size)
     }
 
     // --- updateDataModel ---
@@ -247,139 +194,61 @@ class SurfaceStateManagerTest {
     @Test
     fun `updateDataModel sets value at path`() {
         val manager = SurfaceStateManager()
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"s1","catalogId":"c"}"""))
+        manager.processMessage(
+            envelope("updateDataModel", """{"surfaceId":"s1","path":"/user/name","value":"Alice"}""")
+        )
 
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {
-                            "surfaceId": "s1",
-                            "catalogId": "catalog"
-                        }
-                    },
-                    {
-                        "updateDataModel": {
-                            "surfaceId": "s1",
-                            "path": "/user/name",
-                            "value": "Alice"
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
-
-        val dataModel = manager.getDataModel("s1")
-        assertNotNull(dataModel)
-        assertEquals("Alice", dataModel.getString("/user/name"))
+        assertEquals("Alice", manager.getDataModel("s1")?.getString("/user/name"))
     }
 
     @Test
     fun `updateDataModel with object value`() {
         val manager = SurfaceStateManager()
-
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {
-                            "surfaceId": "s1",
-                            "catalogId": "catalog"
-                        }
-                    },
-                    {
-                        "updateDataModel": {
-                            "surfaceId": "s1",
-                            "path": "/user",
-                            "value": {"name": "Bob", "age": 30}
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
-
-        val dataModel = manager.getDataModel("s1")
-        assertNotNull(dataModel)
-        assertEquals("Bob", dataModel.getString("/user/name"))
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"s1","catalogId":"c"}"""))
+        manager.processMessage(
+            envelope(
+                "updateDataModel",
+                """{"surfaceId":"s1","path":"/user","value":{"name":"Bob","age":30}}"""
+            )
+        )
+        assertEquals("Bob", manager.getDataModel("s1")?.getString("/user/name"))
     }
 
     @Test
-    fun `updateDataModel without value deletes the key`() {
+    fun `updateDataModel with absent value deletes the key`() {
         val manager = SurfaceStateManager()
-
-        // First set a value
-        val snapshot1 = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {
-                            "surfaceId": "s1",
-                            "catalogId": "catalog"
-                        }
-                    },
-                    {
-                        "updateDataModel": {
-                            "surfaceId": "s1",
-                            "path": "/temp",
-                            "value": "to-be-deleted"
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot1)
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"s1","catalogId":"c"}"""))
+        manager.processMessage(
+            envelope("updateDataModel", """{"surfaceId":"s1","path":"/temp","value":"to-be-deleted"}""")
+        )
         assertEquals("to-be-deleted", manager.getDataModel("s1")?.getString("/temp"))
 
-        // Now delete the key by omitting value
-        val snapshot2 = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "updateDataModel": {
-                            "surfaceId": "s1",
-                            "path": "/temp"
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-2", snapshot2)
+        manager.processMessage(
+            envelope("updateDataModel", """{"surfaceId":"s1","path":"/temp"}""")
+        )
         assertNull(manager.getDataModel("s1")?.getString("/temp"))
+        assertNull(manager.getDataModel("s1")?.get("/temp"))
+    }
+
+    @Test
+    fun `updateDataModel with explicit null value stores JsonNull, not delete`() {
+        val manager = SurfaceStateManager()
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"s1","catalogId":"c"}"""))
+        manager.processMessage(
+            envelope("updateDataModel", """{"surfaceId":"s1","path":"/nullable","value":null}""")
+        )
+        assertEquals(JsonNull, manager.getDataModel("s1")?.get("/nullable"))
     }
 
     @Test
     fun `updateDataModel defaults path to root`() {
         val manager = SurfaceStateManager()
-
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {
-                            "surfaceId": "s1",
-                            "catalogId": "catalog"
-                        }
-                    },
-                    {
-                        "updateDataModel": {
-                            "surfaceId": "s1",
-                            "value": {"greeting": "hello"}
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
-
-        val dataModel = manager.getDataModel("s1")
-        assertNotNull(dataModel)
-        assertEquals("hello", dataModel.getString("/greeting"))
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"s1","catalogId":"c"}"""))
+        manager.processMessage(
+            envelope("updateDataModel", """{"surfaceId":"s1","value":{"greeting":"hello"}}""")
+        )
+        assertEquals("hello", manager.getDataModel("s1")?.getString("/greeting"))
     }
 
     // --- deleteSurface ---
@@ -387,26 +256,8 @@ class SurfaceStateManagerTest {
     @Test
     fun `deleteSurface removes surface`() {
         val manager = SurfaceStateManager()
-
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {
-                            "surfaceId": "s1",
-                            "catalogId": "catalog"
-                        }
-                    },
-                    {
-                        "deleteSurface": {
-                            "surfaceId": "s1"
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"s1","catalogId":"c"}"""))
+        manager.processMessage(envelope("deleteSurface", """{"surfaceId":"s1"}"""))
 
         assertEquals(0, manager.surfaceCount)
         assertNull(manager.getSurface("s1"))
@@ -416,164 +267,54 @@ class SurfaceStateManagerTest {
     @Test
     fun `deleteSurface for non-existent surface is no-op`() {
         val manager = SurfaceStateManager()
-
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "deleteSurface": {
-                            "surfaceId": "nonexistent"
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
-
+        manager.processMessage(envelope("deleteSurface", """{"surfaceId":"nonexistent"}"""))
         assertEquals(0, manager.surfaceCount)
     }
 
-    // --- processDelta ---
+    // --- clientDataModel metadata ---
 
     @Test
-    fun `processDelta adds operation via JSON Patch`() {
+    fun `buildClientDataModel returns null when no surface has sendDataModel`() {
         val manager = SurfaceStateManager()
-
-        // First create a surface via snapshot
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {
-                            "surfaceId": "s1",
-                            "catalogId": "catalog"
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
-
-        // Delta adds a new updateComponents operation
-        val patch = json.decodeFromString<JsonArray>("""
-            [
-                {
-                    "op": "add",
-                    "path": "/operations/1",
-                    "value": {
-                        "updateComponents": {
-                            "surfaceId": "s1",
-                            "components": [
-                                {"id": "root", "component": "Text", "text": "Delta added"}
-                            ]
-                        }
-                    }
-                }
-            ]
-        """.trimIndent())
-
-        manager.processDelta("msg-1", patch)
-
-        val surface = manager.getSurface("s1")
-        assertNotNull(surface)
-        assertEquals(1, surface.components.size)
-        assertNotNull(surface.components["root"])
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"s","catalogId":"c"}"""))
+        assertNull(manager.buildClientDataModel())
     }
 
     @Test
-    fun `processDelta ignores non-add operations`() {
+    fun `buildClientDataModel returns envelope for sendDataModel surfaces`() {
         val manager = SurfaceStateManager()
-
-        val patch = json.decodeFromString<JsonArray>("""
-            [
-                {
-                    "op": "remove",
-                    "path": "/operations/0"
-                }
-            ]
-        """.trimIndent())
-
-        manager.processDelta("msg-1", patch)
-
-        assertEquals(0, manager.surfaceCount)
+        manager.processMessage(
+            envelope("createSurface", """{"surfaceId":"s","catalogId":"c","sendDataModel":true}""")
+        )
+        manager.processMessage(
+            envelope("updateDataModel", """{"surfaceId":"s","path":"/n","value":"x"}""")
+        )
+        val payload = manager.buildClientDataModel()
+        assertNotNull(payload)
+        assertEquals("v0.9", (payload["version"] as? JsonPrimitive)?.content)
+        val surfaces = payload["surfaces"] as? JsonObject
+        assertNotNull(surfaces)
+        assertTrue(surfaces.containsKey("s"))
     }
 
-    @Test
-    fun `processDelta ignores patches to non-operations paths`() {
-        val manager = SurfaceStateManager()
-
-        val patch = json.decodeFromString<JsonArray>("""
-            [
-                {
-                    "op": "add",
-                    "path": "/metadata/key",
-                    "value": "something"
-                }
-            ]
-        """.trimIndent())
-
-        manager.processDelta("msg-1", patch)
-
-        assertEquals(0, manager.surfaceCount)
-    }
-
-    // --- getSurfaces ---
+    // --- getSurfaces / clear ---
 
     @Test
     fun `getSurfaces returns all active surfaces`() {
         val manager = SurfaceStateManager()
-
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {
-                            "surfaceId": "s1",
-                            "catalogId": "catalog"
-                        }
-                    },
-                    {
-                        "createSurface": {
-                            "surfaceId": "s2",
-                            "catalogId": "catalog"
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
-
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"s1","catalogId":"c"}"""))
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"s2","catalogId":"c"}"""))
         val surfaces = manager.getSurfaces()
         assertEquals(2, surfaces.size)
         assertTrue(surfaces.containsKey("s1"))
         assertTrue(surfaces.containsKey("s2"))
     }
 
-    // --- clear ---
-
     @Test
     fun `clear removes all surfaces`() {
         val manager = SurfaceStateManager()
-
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {
-                            "surfaceId": "s1",
-                            "catalogId": "catalog"
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"s1","catalogId":"c"}"""))
         assertEquals(1, manager.surfaceCount)
-
         manager.clear()
         assertEquals(0, manager.surfaceCount)
     }
@@ -583,30 +324,16 @@ class SurfaceStateManagerTest {
     @Test
     fun `surface UiDefinition has correct rootComponent`() {
         val manager = SurfaceStateManager()
-
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {
-                            "surfaceId": "s1",
-                            "catalogId": "catalog"
-                        }
-                    },
-                    {
-                        "updateComponents": {
-                            "surfaceId": "s1",
-                            "components": [
-                                {"id": "root", "component": "Column", "children": ["text1"]},
-                                {"id": "text1", "component": "Text", "text": "Hello"}
-                            ]
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"s1","catalogId":"c"}"""))
+        manager.processMessage(
+            envelope(
+                "updateComponents",
+                """{"surfaceId":"s1","components":[
+                    {"id":"root","component":"Column","children":["text1"]},
+                    {"id":"text1","component":"Text","text":"Hello"}
+                ]}"""
+            )
+        )
 
         val surface = manager.getSurface("s1")
         assertNotNull(surface)
@@ -617,29 +344,13 @@ class SurfaceStateManagerTest {
     @Test
     fun `surface without root component returns null rootComponent`() {
         val manager = SurfaceStateManager()
-
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {
-                            "surfaceId": "s1",
-                            "catalogId": "catalog"
-                        }
-                    },
-                    {
-                        "updateComponents": {
-                            "surfaceId": "s1",
-                            "components": [
-                                {"id": "not-root", "component": "Text", "text": "Hello"}
-                            ]
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"s1","catalogId":"c"}"""))
+        manager.processMessage(
+            envelope(
+                "updateComponents",
+                """{"surfaceId":"s1","components":[{"id":"not-root","component":"Text","text":"Hello"}]}"""
+            )
+        )
 
         val surface = manager.getSurface("s1")
         assertNotNull(surface)
@@ -651,57 +362,36 @@ class SurfaceStateManagerTest {
     @Test
     fun `full lifecycle - create then update components then update data then delete`() {
         val manager = SurfaceStateManager()
-
-        // Create
-        manager.processSnapshot("msg-1", json.decodeFromString("""
-            {"operations": [{"createSurface": {"surfaceId": "life", "catalogId": "cat"}}]}
-        """.trimIndent()))
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"life","catalogId":"cat"}"""))
         assertEquals(1, manager.surfaceCount)
 
-        // Update components
-        manager.processSnapshot("msg-2", json.decodeFromString("""
-            {"operations": [{"updateComponents": {"surfaceId": "life", "components": [
-                {"id": "root", "component": "Text", "text": {"path": "/msg"}}
-            ]}}]}
-        """.trimIndent()))
+        manager.processMessage(
+            envelope(
+                "updateComponents",
+                """{"surfaceId":"life","components":[{"id":"root","component":"Text","text":{"path":"/msg"}}]}"""
+            )
+        )
         assertNotNull(manager.getSurface("life")?.rootComponent)
 
-        // Update data model
-        manager.processSnapshot("msg-3", json.decodeFromString("""
-            {"operations": [{"updateDataModel": {"surfaceId": "life", "path": "/msg", "value": "Hello!"}}]}
-        """.trimIndent()))
+        manager.processMessage(
+            envelope("updateDataModel", """{"surfaceId":"life","path":"/msg","value":"Hello!"}""")
+        )
         assertEquals("Hello!", manager.getDataModel("life")?.getString("/msg"))
 
-        // Delete
-        manager.processSnapshot("msg-4", json.decodeFromString("""
-            {"operations": [{"deleteSurface": {"surfaceId": "life"}}]}
-        """.trimIndent()))
+        manager.processMessage(envelope("deleteSurface", """{"surfaceId":"life"}"""))
         assertEquals(0, manager.surfaceCount)
     }
 
     @Test
     fun `component weight is preserved through processing`() {
         val manager = SurfaceStateManager()
-
-        val snapshot = json.decodeFromString<JsonObject>("""
-            {
-                "operations": [
-                    {
-                        "createSurface": {"surfaceId": "s1", "catalogId": "cat"}
-                    },
-                    {
-                        "updateComponents": {
-                            "surfaceId": "s1",
-                            "components": [
-                                {"id": "col1", "component": "Column", "children": ["a"], "weight": 2}
-                            ]
-                        }
-                    }
-                ]
-            }
-        """.trimIndent())
-
-        manager.processSnapshot("msg-1", snapshot)
+        manager.processMessage(envelope("createSurface", """{"surfaceId":"s1","catalogId":"c"}"""))
+        manager.processMessage(
+            envelope(
+                "updateComponents",
+                """{"surfaceId":"s1","components":[{"id":"col1","component":"Column","children":["a"],"weight":2}]}"""
+            )
+        )
 
         val comp = manager.getSurface("s1")?.components?.get("col1")
         assertNotNull(comp)

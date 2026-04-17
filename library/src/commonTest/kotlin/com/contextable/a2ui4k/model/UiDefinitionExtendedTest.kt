@@ -208,7 +208,7 @@ class UiDefinitionExtendedTest {
 
     @Test
     fun `Component fromComponentDef maps all fields`() {
-        val props = JsonObject(mapOf("variant" to JsonPrimitive("filled")))
+        val props = JsonObject(mapOf("variant" to JsonPrimitive("primary")))
         val def = ComponentDef(
             id = "btn-1",
             component = "Button",

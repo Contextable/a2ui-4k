@@ -16,9 +16,11 @@
 
 package com.contextable.a2ui4k.catalog.widgets
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,6 +34,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.contextable.a2ui4k.model.CatalogItem
+import com.contextable.a2ui4k.model.CheckRule
 import com.contextable.a2ui4k.model.DataChangeEvent
 import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
@@ -72,7 +75,8 @@ val TextFieldWidget = CatalogItem(
     )
 }
 
-private val EXPECTED_PROPERTIES = setOf("label", "value", "variant", "validationRegexp")
+private val EXPECTED_PROPERTIES =
+    setOf("label", "value", "variant", "validationRegexp", "checks", "accessibility")
 
 @Composable
 private fun TextFieldWidgetContent(
@@ -153,37 +157,49 @@ private fun TextFieldWidgetContent(
         }
     }
 
-    OutlinedTextField(
-        value = textValue,
-        onValueChange = { newValue ->
-            textValue = newValue
+    val rules = CheckRule.fromJsonArray(data["checks"])
+    val checkFailures = CheckRule.evaluateAll(rules, dataContext)
 
-            // Validate against regex if provided
-            isError = if (validationRegexp != null && newValue.isNotEmpty()) {
-                !Regex(validationRegexp).matches(newValue)
-            } else {
-                false
-            }
+    Column {
+        OutlinedTextField(
+            value = textValue,
+            onValueChange = { newValue ->
+                textValue = newValue
 
-            // Update data context and fire event if bound
-            if (valueRef is PathString) {
-                dataContext.update(valueRef.path, newValue)
-                onEvent(
-                    DataChangeEvent(
-                        surfaceId = surfaceId,
-                        path = valueRef.path,
-                        value = newValue
+                // Validate against regex if provided
+                isError = if (validationRegexp != null && newValue.isNotEmpty()) {
+                    !Regex(validationRegexp).matches(newValue)
+                } else {
+                    false
+                }
+
+                // Update data context and fire event if bound
+                if (valueRef is PathString) {
+                    dataContext.update(valueRef.path, newValue)
+                    onEvent(
+                        DataChangeEvent(
+                            surfaceId = surfaceId,
+                            path = valueRef.path,
+                            value = newValue
+                        )
                     )
-                )
-            }
-        },
-        label = if (label.isNotEmpty()) {
-            { Text(label) }
-        } else null,
-        modifier = modifier,
-        singleLine = singleLine,
-        isError = isError,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        visualTransformation = visualTransformation
-    )
+                }
+            },
+            label = if (label.isNotEmpty()) {
+                { Text(label) }
+            } else null,
+            modifier = modifier,
+            singleLine = singleLine,
+            isError = isError || checkFailures.isNotEmpty(),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            visualTransformation = visualTransformation
+        )
+        checkFailures.firstOrNull()?.let { failure ->
+            Text(
+                text = failure,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+    }
 }

@@ -40,7 +40,7 @@ import kotlinx.serialization.json.JsonObject
  *
  * A2UI Protocol Properties (v0.9):
  * - children (required): List of child component IDs
- * - justify (optional): start, center, end, spaceBetween, spaceAround, spaceEvenly
+ * - justify (optional): start, center, end, spaceBetween, spaceAround
  * - align (optional): start, center, end, stretch
  *
  * JSON Schema:
@@ -91,7 +91,7 @@ private fun RowWidgetContent(
     // This allows simple Rows to be centered by parent alignment, while
     // spaceAround/spaceBetween/etc. get full width to distribute children.
     val needsFullWidth = justify?.lowercase() in listOf(
-        "spacebetween", "spacearound", "spaceevenly"
+        "spacebetween", "spacearound"
     )
     val modifier = if (needsFullWidth) Modifier.fillMaxWidth() else Modifier
 
@@ -130,7 +130,7 @@ private fun RowScope.BuildWeightedChild(
  * Parse horizontal arrangement from A2UI justify values.
  *
  * Valid justify values per A2UI v0.9 spec:
- * start, center, end, spaceBetween, spaceAround, spaceEvenly
+ * start, center, end, spaceBetween, spaceAround
  */
 private fun parseHorizontalArrangement(justify: String?): Arrangement.Horizontal {
     return when (justify?.lowercase()) {
@@ -139,7 +139,6 @@ private fun parseHorizontalArrangement(justify: String?): Arrangement.Horizontal
         "end" -> Arrangement.End
         "spacebetween" -> Arrangement.SpaceBetween
         "spacearound" -> Arrangement.SpaceAround
-        "spaceevenly" -> Arrangement.SpaceEvenly
         else -> Arrangement.Start
     }
 }
@@ -152,9 +151,9 @@ private fun parseHorizontalArrangement(justify: String?): Arrangement.Horizontal
  */
 private fun parseVerticalAlignment(alignment: String?): Alignment.Vertical {
     return when (alignment?.lowercase()) {
-        "top", "start" -> Alignment.Top
+        "start" -> Alignment.Top
         "center" -> Alignment.CenterVertically
-        "bottom", "end" -> Alignment.Bottom
+        "end" -> Alignment.Bottom
         // "stretch" - Compose doesn't have a direct equivalent for vertical alignment
         // Using CenterVertically as fallback. True stretch would need to be handled at the child level.
         "stretch" -> Alignment.CenterVertically

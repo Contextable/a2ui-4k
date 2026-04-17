@@ -17,7 +17,9 @@
 package com.contextable.a2ui4k.function
 
 import com.contextable.a2ui4k.model.DataContext
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -28,50 +30,50 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * Evaluates A2UI v0.9 standard functions.
  *
- * The A2UI v0.9 protocol defines a set of named functions that can be
- * referenced in FunctionCall objects. These functions handle validation,
- * formatting, logic operations, and actions.
+ * Argument names match the v0.9 basic catalog exactly. Each arg may be a
+ * literal, a `{"path":"…"}` binding, or a nested `{"call":"…","args":{…}}`
+ * function call — all three resolve uniformly.
  *
- * ## Standard Functions
+ * ## Standard functions
  *
- * **Validation:** required, regex, length, numeric, email
- * **Formatting:** formatString, formatNumber, formatCurrency, formatDate, pluralize
- * **Logic:** and, or, not
- * **Actions:** openUrl
+ * | Group | Function | Args |
+ * |---|---|---|
+ * | Validation | `required` | `value` |
+ * |            | `regex` | `value`, `pattern` |
+ * |            | `length` | `value`, `min?`, `max?` |
+ * |            | `numeric` | `value`, `min?`, `max?` |
+ * |            | `email` | `value` |
+ * | Logic      | `and` | `conditions` |
+ * |            | `or`  | `conditions` |
+ * |            | `not` | `value` |
+ * | Formatting | `formatString` | `value` |
+ * |            | `formatNumber` | `value`, `decimals?`, `grouping?` |
+ * |            | `formatCurrency` | `value`, `currency`, `decimals?`, `grouping?` |
+ * |            | `formatDate` | `value`, `format?`, `locale?` |
+ * |            | `pluralize` | `count`, `zero?`, `one?`, `other` |
+ * | Actions    | `openUrl` | `url`, `target?` |
  */
 object FunctionEvaluator {
 
-    /**
-     * Evaluates a function call and returns the result.
-     *
-     * @param call The function name
-     * @param args The function arguments (may contain dynamic values)
-     * @param dataContext The data context for resolving path references in args
-     * @return The function result, or null if the function is unknown or evaluation fails
-     */
     fun evaluate(call: String, args: JsonObject?, dataContext: DataContext): JsonElement? {
         return when (call) {
-            // Validation functions
             "required" -> evaluateRequired(args, dataContext)
             "regex" -> evaluateRegex(args, dataContext)
             "length" -> evaluateLength(args, dataContext)
             "numeric" -> evaluateNumeric(args, dataContext)
             "email" -> evaluateEmail(args, dataContext)
 
-            // Logic functions
             "and" -> evaluateAnd(args, dataContext)
             "or" -> evaluateOr(args, dataContext)
             "not" -> evaluateNot(args, dataContext)
 
-            // Formatting functions
             "formatString" -> evaluateFormatString(args, dataContext)
             "formatNumber" -> evaluateFormatNumber(args, dataContext)
             "formatCurrency" -> evaluateFormatCurrency(args, dataContext)
             "formatDate" -> evaluateFormatDate(args, dataContext)
             "pluralize" -> evaluatePluralize(args, dataContext)
 
-            // Action functions
-            "openUrl" -> null // openUrl is an action, not a value-returning function
+            "openUrl" -> null // action, not a value-returning function
 
             else -> {
                 println("Info: Unknown function '$call'")
@@ -80,29 +82,20 @@ object FunctionEvaluator {
         }
     }
 
-    /**
-     * Evaluates a function call that returns a boolean result.
-     */
-    fun evaluateBoolean(call: String, args: JsonObject?, dataContext: DataContext): Boolean? {
-        val result = evaluate(call, args, dataContext) ?: return null
-        return (result as? JsonPrimitive)?.booleanOrNull
-    }
+    fun evaluateBoolean(call: String, args: JsonObject?, dataContext: DataContext): Boolean? =
+        (evaluate(call, args, dataContext) as? JsonPrimitive)?.booleanOrNull
 
-    /**
-     * Evaluates a function call that returns a string result.
-     */
-    fun evaluateString(call: String, args: JsonObject?, dataContext: DataContext): String? {
-        val result = evaluate(call, args, dataContext) ?: return null
-        return (result as? JsonPrimitive)?.contentOrNull
-    }
+    fun evaluateString(call: String, args: JsonObject?, dataContext: DataContext): String? =
+        (evaluate(call, args, dataContext) as? JsonPrimitive)?.contentOrNull
 
-    // --- Validation Functions ---
+    // --- Validation -----------------------------------------------------
 
     private fun evaluateRequired(args: JsonObject?, dataContext: DataContext): JsonElement {
         val value = resolveArg(args, "value", dataContext)
         val isValid = when {
-            value == null -> false
+            value == null || value is JsonNull -> false
             value is JsonPrimitive && value.contentOrNull.isNullOrBlank() -> false
+            value is JsonArray && value.isEmpty() -> false
             else -> true
         }
         return JsonPrimitive(isValid)
@@ -122,128 +115,66 @@ object FunctionEvaluator {
         val value = resolveArgString(args, "value", dataContext) ?: return JsonPrimitive(false)
         val min = resolveArgNumber(args, "min", dataContext)?.toInt()
         val max = resolveArgNumber(args, "max", dataContext)?.toInt()
-
         val len = value.length
-        val minOk = min == null || len >= min
-        val maxOk = max == null || len <= max
-        return JsonPrimitive(minOk && maxOk)
+        return JsonPrimitive((min == null || len >= min) && (max == null || len <= max))
     }
 
     private fun evaluateNumeric(args: JsonObject?, dataContext: DataContext): JsonElement {
         val value = resolveArgNumber(args, "value", dataContext) ?: return JsonPrimitive(false)
         val min = resolveArgNumber(args, "min", dataContext)
         val max = resolveArgNumber(args, "max", dataContext)
-
-        val minOk = min == null || value >= min
-        val maxOk = max == null || value <= max
-        return JsonPrimitive(minOk && maxOk)
+        return JsonPrimitive((min == null || value >= min) && (max == null || value <= max))
     }
 
     private fun evaluateEmail(args: JsonObject?, dataContext: DataContext): JsonElement {
         val value = resolveArgString(args, "value", dataContext) ?: return JsonPrimitive(false)
-        // Simple email validation
         val emailRegex = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
         return JsonPrimitive(emailRegex.matches(value))
     }
 
-    // --- Logic Functions ---
+    // --- Logic ----------------------------------------------------------
 
     private fun evaluateAnd(args: JsonObject?, dataContext: DataContext): JsonElement {
-        val conditions = args?.get("conditions")
-        if (conditions is kotlinx.serialization.json.JsonArray) {
-            return JsonPrimitive(conditions.all { elem ->
-                when {
-                    elem is JsonPrimitive -> elem.booleanOrNull ?: false
-                    elem is JsonObject && elem.containsKey("call") -> {
-                        val innerCall = elem["call"]?.jsonPrimitive?.contentOrNull ?: return@all false
-                        val innerArgs = elem["args"] as? JsonObject
-                        evaluateBoolean(innerCall, innerArgs, dataContext) ?: false
-                    }
-                    else -> false
-                }
-            })
-        }
-        return JsonPrimitive(false)
+        val conditions = args?.get("conditions") as? JsonArray ?: return JsonPrimitive(false)
+        return JsonPrimitive(conditions.all { resolveBoolean(it, dataContext) })
     }
 
     private fun evaluateOr(args: JsonObject?, dataContext: DataContext): JsonElement {
-        val conditions = args?.get("conditions")
-        if (conditions is kotlinx.serialization.json.JsonArray) {
-            return JsonPrimitive(conditions.any { elem ->
-                when {
-                    elem is JsonPrimitive -> elem.booleanOrNull ?: false
-                    elem is JsonObject && elem.containsKey("call") -> {
-                        val innerCall = elem["call"]?.jsonPrimitive?.contentOrNull ?: return@any false
-                        val innerArgs = elem["args"] as? JsonObject
-                        evaluateBoolean(innerCall, innerArgs, dataContext) ?: false
-                    }
-                    else -> false
-                }
-            })
-        }
-        return JsonPrimitive(false)
+        val conditions = args?.get("conditions") as? JsonArray ?: return JsonPrimitive(false)
+        return JsonPrimitive(conditions.any { resolveBoolean(it, dataContext) })
     }
 
     private fun evaluateNot(args: JsonObject?, dataContext: DataContext): JsonElement {
-        val condition = args?.get("condition")
-        val value = when {
-            condition is JsonPrimitive -> condition.booleanOrNull ?: false
-            condition is JsonObject && condition.containsKey("call") -> {
-                val innerCall = condition["call"]?.jsonPrimitive?.contentOrNull ?: return JsonPrimitive(true)
-                val innerArgs = condition["args"] as? JsonObject
-                evaluateBoolean(innerCall, innerArgs, dataContext) ?: false
-            }
-            else -> false
-        }
-        return JsonPrimitive(!value)
+        val value = args?.get("value") ?: return JsonPrimitive(true)
+        return JsonPrimitive(!resolveBoolean(value, dataContext))
     }
 
-    // --- Formatting Functions ---
+    // --- Formatting -----------------------------------------------------
 
     private fun evaluateFormatString(args: JsonObject?, dataContext: DataContext): JsonElement {
-        val template = resolveArgString(args, "template", dataContext) ?: return JsonPrimitive("")
-
-        // Replace ${expression} patterns with resolved values
+        val template = resolveArgString(args, "value", dataContext) ?: return JsonPrimitive("")
         val result = Regex("\\$\\{([^}]+)\\}").replace(template) { match ->
             val expression = match.groupValues[1].trim()
-            // Check if it's a path reference (starts with / or is a relative path)
-            val resolved = dataContext.getString(expression)
-                ?: dataContext.getNumber(expression)?.toString()
+            dataContext.getString(expression)
+                ?: dataContext.getNumber(expression)?.let { formatPlain(it) }
                 ?: dataContext.getBoolean(expression)?.toString()
                 ?: ""
-            resolved
         }
         return JsonPrimitive(result)
     }
 
     private fun evaluateFormatNumber(args: JsonObject?, dataContext: DataContext): JsonElement {
         val value = resolveArgNumber(args, "value", dataContext) ?: return JsonPrimitive("")
-        val minimumFractionDigits = resolveArgNumber(args, "minimumFractionDigits", dataContext)?.toInt() ?: 0
-        val maximumFractionDigits = resolveArgNumber(args, "maximumFractionDigits", dataContext)?.toInt() ?: 3
-        val useGrouping = resolveArgBoolean(args, "useGrouping", dataContext) ?: true
-
-        // Basic number formatting
-        val formatted = if (maximumFractionDigits == 0 && value == value.toLong().toDouble()) {
-            val intStr = value.toLong().toString()
-            if (useGrouping) addThousandsSeparator(intStr) else intStr
-        } else {
-            val str = doubleToPlainString(value)
-            val parts = str.split(".")
-            val intPart = if (useGrouping) addThousandsSeparator(parts[0]) else parts[0]
-            if (parts.size > 1) {
-                val fracPart = parts[1].take(maximumFractionDigits).padEnd(minimumFractionDigits, '0')
-                if (fracPart.isEmpty()) intPart else "$intPart.$fracPart"
-            } else {
-                if (minimumFractionDigits > 0) "$intPart.${"0".repeat(minimumFractionDigits)}"
-                else intPart
-            }
-        }
-        return JsonPrimitive(formatted)
+        val decimals = resolveArgNumber(args, "decimals", dataContext)?.toInt()
+        val grouping = resolveArgBoolean(args, "grouping", dataContext) ?: true
+        return JsonPrimitive(formatDecimal(value, decimals, grouping))
     }
 
     private fun evaluateFormatCurrency(args: JsonObject?, dataContext: DataContext): JsonElement {
         val value = resolveArgNumber(args, "value", dataContext) ?: return JsonPrimitive("")
         val currency = resolveArgString(args, "currency", dataContext) ?: "USD"
+        val decimals = resolveArgNumber(args, "decimals", dataContext)?.toInt() ?: 2
+        val grouping = resolveArgBoolean(args, "grouping", dataContext) ?: true
 
         val symbol = when (currency.uppercase()) {
             "USD" -> "$"
@@ -252,15 +183,15 @@ object FunctionEvaluator {
             "JPY" -> "\u00A5"
             else -> currency
         }
-        val formatted = addThousandsSeparator(value.toLong().toString())
-        val cents = kotlin.math.round((value - value.toLong()) * 100).toLong().toString().padStart(2, '0')
-        return JsonPrimitive("$symbol$formatted.$cents")
+        return JsonPrimitive("$symbol${formatDecimal(value, decimals, grouping)}")
     }
 
     private fun evaluateFormatDate(args: JsonObject?, dataContext: DataContext): JsonElement {
         val value = resolveArgString(args, "value", dataContext) ?: return JsonPrimitive("")
-        // Basic pass-through for now — full Unicode TR35 format support would require
-        // a date parsing library
+        // `format` and `locale` are spec-defined but require a platform date library
+        // to honor fully; recognize them so they don't warn, pass through the ISO value.
+        resolveArgString(args, "format", dataContext)
+        resolveArgString(args, "locale", dataContext)
         return JsonPrimitive(value)
     }
 
@@ -269,8 +200,6 @@ object FunctionEvaluator {
         val other = resolveArgString(args, "other", dataContext) ?: ""
         val one = resolveArgString(args, "one", dataContext)
         val zero = resolveArgString(args, "zero", dataContext)
-
-        // Basic CLDR-like pluralization for English
         val result = when {
             count == 0L && zero != null -> zero
             count == 1L && one != null -> one
@@ -279,61 +208,89 @@ object FunctionEvaluator {
         return JsonPrimitive(result)
     }
 
-    // --- Argument Resolution Helpers ---
+    // --- Argument resolution -------------------------------------------
 
+    /**
+     * Resolves an arg value as a raw [JsonElement]. Handles:
+     *   * absent / `null` → `null`
+     *   * primitive literal → itself
+     *   * `{"path":"…"}` → looked up via [dataContext] (string then number then boolean)
+     *   * `{"call":"…","args":{…}}` → recursive function evaluation
+     */
     private fun resolveArg(args: JsonObject?, name: String, dataContext: DataContext): JsonElement? {
         val element = args?.get(name) ?: return null
-        return when {
-            element is JsonObject && element.containsKey("path") -> {
-                val path = element["path"]?.jsonPrimitive?.contentOrNull ?: return null
-                dataContext.getString(path)?.let { JsonPrimitive(it) }
-                    ?: dataContext.getNumber(path)?.let { JsonPrimitive(it) }
-                    ?: dataContext.getBoolean(path)?.let { JsonPrimitive(it) }
+        return resolveElement(element, dataContext)
+    }
+
+    private fun resolveArgString(args: JsonObject?, name: String, dataContext: DataContext): String? {
+        val resolved = resolveArg(args, name, dataContext) ?: return null
+        return (resolved as? JsonPrimitive)?.contentOrNull
+    }
+
+    private fun resolveArgNumber(args: JsonObject?, name: String, dataContext: DataContext): Double? {
+        val resolved = resolveArg(args, name, dataContext) ?: return null
+        return (resolved as? JsonPrimitive)?.let { p ->
+            p.doubleOrNull ?: p.contentOrNull?.toDoubleOrNull()
+        }
+    }
+
+    private fun resolveArgBoolean(args: JsonObject?, name: String, dataContext: DataContext): Boolean? {
+        val resolved = resolveArg(args, name, dataContext) ?: return null
+        return (resolved as? JsonPrimitive)?.booleanOrNull
+    }
+
+    private fun resolveElement(element: JsonElement, dataContext: DataContext): JsonElement? {
+        return when (element) {
+            is JsonPrimitive -> element
+            is JsonObject -> when {
+                element.containsKey("path") -> {
+                    val path = element["path"]?.jsonPrimitive?.contentOrNull ?: return null
+                    dataContext.getString(path)?.let { JsonPrimitive(it) }
+                        ?: dataContext.getNumber(path)?.let { JsonPrimitive(it) }
+                        ?: dataContext.getBoolean(path)?.let { JsonPrimitive(it) }
+                }
+                element.containsKey("call") -> {
+                    val call = element["call"]?.jsonPrimitive?.contentOrNull ?: return null
+                    val innerArgs = element["args"] as? JsonObject
+                    evaluate(call, innerArgs, dataContext)
+                }
+                else -> element
             }
             else -> element
         }
     }
 
-    private fun resolveArgString(args: JsonObject?, name: String, dataContext: DataContext): String? {
-        val element = args?.get(name) ?: return null
-        return when {
-            element is JsonPrimitive -> element.contentOrNull
-            element is JsonObject && element.containsKey("path") -> {
-                val path = element["path"]?.jsonPrimitive?.contentOrNull ?: return null
-                dataContext.getString(path)
-            }
-            else -> null
-        }
+    private fun resolveBoolean(element: JsonElement, dataContext: DataContext): Boolean {
+        val resolved = resolveElement(element, dataContext)
+        return (resolved as? JsonPrimitive)?.booleanOrNull ?: false
     }
 
-    private fun resolveArgNumber(args: JsonObject?, name: String, dataContext: DataContext): Double? {
-        val element = args?.get(name) ?: return null
-        return when {
-            element is JsonPrimitive -> element.doubleOrNull
-            element is JsonObject && element.containsKey("path") -> {
-                val path = element["path"]?.jsonPrimitive?.contentOrNull ?: return null
-                dataContext.getNumber(path)
-            }
-            else -> null
+    // --- Number formatting helpers --------------------------------------
+
+    private fun formatDecimal(value: Double, decimals: Int?, grouping: Boolean): String {
+        val isIntegral = value == value.toLong().toDouble()
+        val effective = when {
+            decimals != null -> decimals
+            isIntegral -> 0
+            else -> 3
         }
+        val str = if (effective == 0 && isIntegral) {
+            value.toLong().toString()
+        } else {
+            val plain = doubleToPlainString(value)
+            val parts = plain.split(".")
+            val intPart = parts[0]
+            val frac = (parts.getOrNull(1) ?: "")
+            val truncated = frac.take(effective).padEnd(effective, '0')
+            if (effective > 0) "$intPart.$truncated" else intPart
+        }
+        return if (grouping) groupInt(str) else str
     }
 
-    private fun resolveArgBoolean(args: JsonObject?, name: String, dataContext: DataContext): Boolean? {
-        val element = args?.get(name) ?: return null
-        return when {
-            element is JsonPrimitive -> element.booleanOrNull
-            element is JsonObject && element.containsKey("path") -> {
-                val path = element["path"]?.jsonPrimitive?.contentOrNull ?: return null
-                dataContext.getBoolean(path)
-            }
-            else -> null
-        }
-    }
+    private fun formatPlain(value: Double): String =
+        if (value == value.toLong().toDouble()) value.toLong().toString()
+        else doubleToPlainString(value)
 
-    /**
-     * Converts a Double to a plain decimal string without scientific notation.
-     * This is a multiplatform replacement for JVM's BigDecimal.toPlainString().
-     */
     private fun doubleToPlainString(value: Double): String {
         val str = value.toString()
         if ('E' !in str && 'e' !in str) return str
@@ -350,24 +307,20 @@ object FunctionEvaluator {
         val newDecimalPos = currentDecimalPos + exponent
 
         val result = when {
-            newDecimalPos <= 0 -> {
-                "0." + "0".repeat(-newDecimalPos) + digits
-            }
-            newDecimalPos >= digits.length -> {
-                digits + "0".repeat(newDecimalPos - digits.length)
-            }
-            else -> {
-                digits.substring(0, newDecimalPos) + "." + digits.substring(newDecimalPos)
-            }
+            newDecimalPos <= 0 -> "0." + "0".repeat(-newDecimalPos) + digits
+            newDecimalPos >= digits.length -> digits + "0".repeat(newDecimalPos - digits.length)
+            else -> digits.substring(0, newDecimalPos) + "." + digits.substring(newDecimalPos)
         }
-
         return if (negative) "-$result" else result
     }
 
-    private fun addThousandsSeparator(intPart: String): String {
+    private fun groupInt(numberStr: String): String {
+        val dot = numberStr.indexOf('.')
+        val intPart = if (dot >= 0) numberStr.substring(0, dot) else numberStr
+        val fracPart = if (dot >= 0) numberStr.substring(dot) else ""
         val negative = intPart.startsWith("-")
         val digits = if (negative) intPart.substring(1) else intPart
-        val result = digits.reversed().chunked(3).joinToString(",").reversed()
-        return if (negative) "-$result" else result
+        val grouped = digits.reversed().chunked(3).joinToString(",").reversed()
+        return (if (negative) "-$grouped" else grouped) + fracPart
     }
 }

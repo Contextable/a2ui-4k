@@ -179,10 +179,3 @@ data class ComponentDef(
     }
 }
 
-/**
- * Container for A2UI operations in an ACTIVITY_SNAPSHOT event.
- */
-@Serializable
-data class A2UIActivityContent(
-    val operations: List<JsonObject> = emptyList()
-)

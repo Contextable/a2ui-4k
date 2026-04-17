@@ -40,7 +40,7 @@ import kotlinx.serialization.json.JsonObject
  *
  * A2UI Protocol Properties (v0.9):
  * - children (required): List of child component IDs
- * - justify (optional): start, center, end, spaceBetween, spaceAround, spaceEvenly
+ * - justify (optional): start, center, end, spaceBetween, spaceAround
  * - align (optional): start, center, end, stretch
  *
  * JSON Schema:
@@ -91,7 +91,7 @@ private fun ColumnWidgetContent(
     // Alignment works within the Column's natural width.
     // This prevents Columns inside Rows from each trying to fill full width.
     val needsFullWidth = justify?.lowercase() in listOf(
-        "spacebetween", "spacearound", "spaceevenly"
+        "spacebetween", "spacearound"
     )
     val modifier = if (needsFullWidth) Modifier.fillMaxWidth() else Modifier
 
@@ -130,16 +130,15 @@ private fun ColumnScope.BuildWeightedChild(
  * Parse vertical arrangement from A2UI justify values.
  *
  * Valid justify values per A2UI v0.9 spec:
- * start, center, end, spaceBetween, spaceAround, spaceEvenly
+ * start, center, end, spaceBetween, spaceAround
  */
 private fun parseVerticalArrangement(justify: String?): Arrangement.Vertical {
     return when (justify?.lowercase()) {
-        "start", "top" -> Arrangement.Top
+        "start" -> Arrangement.Top
         "center" -> Arrangement.Center
-        "end", "bottom" -> Arrangement.Bottom
+        "end" -> Arrangement.Bottom
         "spacebetween" -> Arrangement.SpaceBetween
         "spacearound" -> Arrangement.SpaceAround
-        "spaceevenly" -> Arrangement.SpaceEvenly
         else -> Arrangement.Top
     }
 }
@@ -152,9 +151,9 @@ private fun parseVerticalArrangement(justify: String?): Arrangement.Vertical {
  */
 private fun parseHorizontalAlignment(alignment: String?): Alignment.Horizontal {
     return when (alignment?.lowercase()) {
-        "start", "left" -> Alignment.Start
+        "start" -> Alignment.Start
         "center" -> Alignment.CenterHorizontally
-        "end", "right" -> Alignment.End
+        "end" -> Alignment.End
         // "stretch" - Compose doesn't have a direct equivalent for horizontal alignment
         // Using CenterHorizontally as fallback. True stretch would need fillMaxWidth on children.
         "stretch" -> Alignment.CenterHorizontally

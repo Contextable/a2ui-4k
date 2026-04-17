@@ -28,8 +28,8 @@ import kotlin.test.assertNull
  *
  * A2UI Spec properties (v0.9):
  * - url (required): Image URL as plain string or path binding
- * - fit (optional): contain, cover, fill, none, scale-down
- * - variant (optional): icon, avatar, smallFeature, mediumFeature, largeFeature, header
+ * - fit (optional): contain, cover, fill, none, scaleDown
+ * - variant (optional): thumbnail, avatar
  */
 class ImageWidgetTest {
 
@@ -67,7 +67,7 @@ class ImageWidgetTest {
 
     @Test
     fun `all fit values are valid`() {
-        val fitValues = listOf("contain", "cover", "fill", "none", "scale-down")
+        val fitValues = listOf("contain", "cover", "fill", "none", "scaleDown")
 
         fitValues.forEach { fit ->
             val jsonStr = """{"fit": "$fit"}"""
@@ -81,7 +81,7 @@ class ImageWidgetTest {
 
     @Test
     fun `all variant values are valid`() {
-        val variants = listOf("icon", "avatar", "smallFeature", "mediumFeature", "largeFeature", "header")
+        val variants = listOf("thumbnail", "avatar")
 
         variants.forEach { variant ->
             val jsonStr = """{"variant": "$variant"}"""

@@ -17,65 +17,37 @@
 package com.contextable.a2ui4k.state
 
 import com.contextable.a2ui4k.data.DataModel
-import com.contextable.a2ui4k.model.A2UIActivityContent
-import com.contextable.a2ui4k.model.A2UIOperation
-import com.contextable.a2ui4k.model.CreateSurface
 import com.contextable.a2ui4k.model.Component
 import com.contextable.a2ui4k.model.ComponentDef
-import com.contextable.a2ui4k.model.UpdateDataModel
-import com.contextable.a2ui4k.model.DeleteSurface
-import com.contextable.a2ui4k.model.UpdateComponents
 import com.contextable.a2ui4k.model.UiDefinition
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Manages the state of A2UI surfaces.
+ * Manages A2UI v0.9 surface state.
  *
- * Receives A2UI v0.9 operations from streaming messages and builds
- * [UiDefinition] instances that can be rendered by A2UISurface.
+ * The v0.9 protocol is transport-agnostic: the server streams JSON objects
+ * (JSONL, SSE frames, WebSocket messages, MCP tool outputs, etc.), each
+ * carrying a `version` tag and exactly one operation key:
  *
- * In the A2UI v0.9 protocol, the manager handles four operation types:
- * - `createSurface`: Initializes a surface with catalogId and optional theme
- * - `updateComponents`: Adds or updates component definitions
- * - `updateDataModel`: Updates data at specified path with any JSON value
- * - `deleteSurface`: Removes a surface
+ * - `createSurface`
+ * - `updateComponents`
+ * - `updateDataModel`
+ * - `deleteSurface`
  *
- * **Note:** This class processes parsed JSON operations. Stream parsing
- * is left to the application's transport layer.
- *
- * ## Usage
- *
- * ```kotlin
- * val manager = SurfaceStateManager()
- *
- * // Process operations from streaming messages
- * manager.processSnapshot(messageId, activityContent)
- * manager.processDelta(messageId, jsonPatch)
- *
- * // Get current surfaces for rendering
- * val surfaces = manager.getSurfaces()
- * val dataModel = manager.getDataModel(surfaceId)
- * ```
- *
- * @see UiDefinition
- * @see com.contextable.a2ui4k.data.DataModel
- * @see com.contextable.a2ui4k.render.A2UISurface
+ * Pass each decoded message to [processMessage]. This class does no I/O
+ * and has no knowledge of any specific transport.
  */
 class SurfaceStateManager {
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
+    /** Protocol version string this manager speaks. */
+    val protocolVersion: String = PROTOCOL_VERSION
 
-    /**
-     * Internal state for a single surface.
-     */
     private data class SurfaceState(
         val surfaceId: String,
         var catalogId: String? = null,
@@ -96,78 +68,44 @@ class SurfaceStateManager {
     private val surfaces = mutableMapOf<String, SurfaceState>()
 
     /**
-     * Processes an ACTIVITY_SNAPSHOT event for a2ui-surface.
+     * Processes a single server→client message.
      *
-     * @param messageId The message ID associated with this activity
-     * @param content The activity content containing operations
+     * The message envelope must include `version: "v0.9"` and exactly one of
+     * the four operation keys. Returns `true` if the message was recognized
+     * and dispatched, `false` if it was ignored (e.g. wrong version).
      */
-    fun processSnapshot(messageId: String, content: JsonElement) {
-        val contentObj = content.jsonObject
-        val operationsArray = contentObj["operations"]?.jsonArray ?: return
-
-        for (opElement in operationsArray) {
-            val opObj = opElement.jsonObject
-            processOperationObject(opObj)
+    fun processMessage(message: JsonObject): Boolean {
+        val version = (message["version"] as? JsonPrimitive)?.contentOrNullSafe
+        if (version != null && version != PROTOCOL_VERSION) {
+            return false
         }
-    }
-
-    /**
-     * Processes an ACTIVITY_DELTA event for a2ui-surface.
-     *
-     * The patch contains JSON Patch operations that may add new operations
-     * to the surface state.
-     *
-     * @param messageId The message ID associated with this activity
-     * @param patch The JSON Patch array
-     */
-    fun processDelta(messageId: String, patch: JsonArray) {
-        for (patchOp in patch) {
-            val patchObj = patchOp.jsonObject
-            val op = (patchObj["op"] as? kotlinx.serialization.json.JsonPrimitive)?.content
-            val path = (patchObj["path"] as? kotlinx.serialization.json.JsonPrimitive)?.content
-            val value = patchObj["value"]
-
-            // Handle add operations to /operations/-
-            if (op == "add" && path?.startsWith("/operations/") == true && value != null) {
-                val opObj = value.jsonObject
-                processOperationObject(opObj)
+        return when {
+            message.containsKey("createSurface") -> {
+                handleCreateSurface(message["createSurface"]!!.jsonObject)
+                true
             }
-        }
-    }
-
-    /**
-     * Processes a raw operation JSON object.
-     *
-     * v0.9 message types: createSurface, updateComponents, updateDataModel, deleteSurface
-     */
-    private fun processOperationObject(opObj: JsonObject) {
-        when {
-            opObj.containsKey("createSurface") -> {
-                val data = opObj["createSurface"]!!.jsonObject
-                handleCreateSurface(data)
+            message.containsKey("updateComponents") -> {
+                handleUpdateComponents(message["updateComponents"]!!.jsonObject)
+                true
             }
-            opObj.containsKey("updateComponents") -> {
-                val data = opObj["updateComponents"]!!.jsonObject
-                handleUpdateComponents(data)
+            message.containsKey("updateDataModel") -> {
+                handleUpdateDataModel(message["updateDataModel"]!!.jsonObject)
+                true
             }
-            opObj.containsKey("updateDataModel") -> {
-                val data = opObj["updateDataModel"]!!.jsonObject
-                handleUpdateDataModel(data)
+            message.containsKey("deleteSurface") -> {
+                handleDeleteSurface(message["deleteSurface"]!!.jsonObject)
+                true
             }
-            opObj.containsKey("deleteSurface") -> {
-                val data = opObj["deleteSurface"]!!.jsonObject
-                handleDeleteSurface(data)
-            }
+            else -> false
         }
     }
 
     private fun handleCreateSurface(data: JsonObject) {
-        val surfaceId = (data["surfaceId"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return
-        val catalogId = (data["catalogId"] as? kotlinx.serialization.json.JsonPrimitive)?.content
-        val theme = data["theme"]?.jsonObject
-        val sendDataModel = (data["sendDataModel"] as? kotlinx.serialization.json.JsonPrimitive)?.let {
-            it.content.toBooleanStrictOrNull()
-        } ?: false
+        val surfaceId = data["surfaceId"]?.asStringOrNull() ?: return
+        val catalogId = data["catalogId"]?.asStringOrNull()
+        val theme = data["theme"] as? JsonObject
+        val sendDataModel = (data["sendDataModel"] as? JsonPrimitive)
+            ?.contentOrNullSafe?.toBooleanStrictOrNull() ?: false
 
         val state = surfaces.getOrPut(surfaceId) { SurfaceState(surfaceId) }
         state.catalogId = catalogId
@@ -176,7 +114,7 @@ class SurfaceStateManager {
     }
 
     private fun handleUpdateComponents(data: JsonObject) {
-        val surfaceId = (data["surfaceId"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return
+        val surfaceId = data["surfaceId"]?.asStringOrNull() ?: return
         val componentsArray = data["components"]?.jsonArray ?: return
 
         val state = surfaces.getOrPut(surfaceId) { SurfaceState(surfaceId) }
@@ -190,57 +128,66 @@ class SurfaceStateManager {
     }
 
     private fun handleUpdateDataModel(data: JsonObject) {
-        val surfaceId = (data["surfaceId"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return
-        val path = (data["path"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: "/"
-        val value = data["value"]
+        val surfaceId = data["surfaceId"]?.asStringOrNull() ?: return
+        val path = data["path"]?.asStringOrNull() ?: "/"
 
         val state = surfaces.getOrPut(surfaceId) { SurfaceState(surfaceId) }
 
-        if (value != null) {
-            // v0.9: value is any JSON - set it directly at the path
-            state.dataModel.update(path, value)
-        } else {
-            // Omitting value deletes the key
+        // Spec distinguishes absent `value` (delete the key) from explicit
+        // `"value": null` (set the key to JsonNull).
+        if (!data.containsKey("value")) {
             state.dataModel.delete(path)
+            return
         }
+        state.dataModel.update(path, data["value"] ?: JsonNull)
     }
 
     private fun handleDeleteSurface(data: JsonObject) {
-        val surfaceId = (data["surfaceId"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return
+        val surfaceId = data["surfaceId"]?.asStringOrNull() ?: return
         surfaces.remove(surfaceId)
     }
 
-    /**
-     * Returns a map of all active surfaces.
-     */
-    fun getSurfaces(): Map<String, UiDefinition> {
-        return surfaces.mapValues { it.value.toUiDefinition() }
-    }
+    /** Returns a snapshot map of all active surfaces. */
+    fun getSurfaces(): Map<String, UiDefinition> =
+        surfaces.mapValues { it.value.toUiDefinition() }
+
+    /** Returns the data model for a specific surface, or `null` if not present. */
+    fun getDataModel(surfaceId: String): DataModel? = surfaces[surfaceId]?.dataModel
+
+    /** Returns a specific surface definition, or `null` if not present. */
+    fun getSurface(surfaceId: String): UiDefinition? =
+        surfaces[surfaceId]?.toUiDefinition()
 
     /**
-     * Returns the data model for a specific surface.
+     * Returns the `a2uiClientDataModel` envelope as defined by v0.9, or `null`
+     * if no surface has `sendDataModel = true`. Callers may attach this object
+     * to any outbound message metadata their transport supports.
      */
-    fun getDataModel(surfaceId: String): DataModel? {
-        return surfaces[surfaceId]?.dataModel
+    fun buildClientDataModel(): JsonObject? {
+        val active = surfaces.values.filter { it.sendDataModel }
+        if (active.isEmpty()) return null
+        return buildJsonObject {
+            put("version", JsonPrimitive(PROTOCOL_VERSION))
+            put("surfaces", JsonObject(active.associate { it.surfaceId to it.dataModel.currentData }))
+        }
     }
 
-    /**
-     * Returns a specific surface definition.
-     */
-    fun getSurface(surfaceId: String): UiDefinition? {
-        return surfaces[surfaceId]?.toUiDefinition()
-    }
-
-    /**
-     * Clears all surfaces.
-     */
+    /** Clears all surfaces. */
     fun clear() {
         surfaces.clear()
     }
 
-    /**
-     * Returns the number of active surfaces.
-     */
+    /** Number of active surfaces. */
     val surfaceCount: Int
         get() = surfaces.size
+
+    companion object {
+        const val PROTOCOL_VERSION: String = "v0.9"
+    }
 }
+
+private fun kotlinx.serialization.json.JsonElement.asStringOrNull(): String? =
+    (this as? JsonPrimitive)?.takeIf { it.isString }?.content
+
+private val JsonPrimitive.contentOrNullSafe: String?
+    get() = if (this is JsonNull) null else content

@@ -33,6 +33,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.SubcomposeAsyncImage
+import com.contextable.a2ui4k.model.Accessibility
 import com.contextable.a2ui4k.model.CatalogItem
 import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
@@ -44,17 +45,18 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Image widget that displays an image from a URL.
  *
- * A2UI Protocol Properties (v0.9):
- * - url (required): Image source as string or path
- * - fit (optional): How image resizes - contain, cover, fill, none, scale-down
- * - variant (optional): Suggests intended size - icon, avatar, smallFeature, mediumFeature, largeFeature, header
+ * A2UI v0.9 Image properties:
+ * - `url`: DynamicString image source
+ * - `fit`: `"contain"` | `"cover"` | `"fill"` | `"none"` | `"scaleDown"`
+ * - `variant`: `"thumbnail"` | `"avatar"` (size/shape hint)
+ * - `accessibility`: Optional accessibility metadata (label used as contentDescription)
  *
- * JSON Schema:
  * ```json
  * {
- *   "url": "https://example.com/image.jpg" | {"path": "/item/imageUrl"},
- *   "fit": "cover" | "contain" | "fill" | "none" | "scale-down" (optional),
- *   "variant": "icon" | "avatar" | "smallFeature" | "mediumFeature" | "largeFeature" | "header" (optional)
+ *   "component": "Image",
+ *   "url": "https://example.com/image.jpg",
+ *   "fit": "cover",
+ *   "variant": "thumbnail"
  * }
  * ```
  */
@@ -64,7 +66,7 @@ val ImageWidget = CatalogItem(
     ImageWidgetContent(data = data, dataContext = dataContext)
 }
 
-private val EXPECTED_PROPERTIES = setOf("url", "fit", "variant")
+private val EXPECTED_PROPERTIES = setOf("url", "fit", "variant", "accessibility")
 
 @Composable
 private fun ImageWidgetContent(
@@ -95,31 +97,33 @@ private fun ImageWidgetContent(
         else -> null
     }
 
-    // Map fit to ContentScale (A2UI spec values map to CSS object-fit)
-    val contentScale = when (fit?.lowercase()) {
+    // v0.9 `fit` uses camelCase `scaleDown` (maps to CSS object-fit: scale-down).
+    val contentScale = when (fit) {
         "contain" -> ContentScale.Fit
         "cover" -> ContentScale.Crop
         "fill" -> ContentScale.FillBounds
         "none" -> ContentScale.None
-        "scale-down" -> ContentScale.Fit // Closest approximation
-        else -> ContentScale.Crop // Default to cover behavior
+        "scaleDown" -> ContentScale.Fit
+        else -> ContentScale.Crop
     }
 
-    // Map variant to appropriate dimensions and shape
     val (height, fillWidth, shape) = getImageDimensions(variant)
+
+    val accessibility = Accessibility.fromJson(data["accessibility"])
+    val contentDescription = accessibility?.resolveLabel(dataContext)
 
     if (url != null) {
         val sizeModifier = when {
             fillWidth && height != null -> Modifier.fillMaxWidth().height(height)
             fillWidth -> Modifier.fillMaxWidth()
-            height != null -> Modifier.size(height) // Square image for non-fullWidth
-            else -> Modifier.size(100.dp) // Sensible default square
+            height != null -> Modifier.size(height)
+            else -> Modifier.size(100.dp)
         }
         val modifier = if (shape != null) sizeModifier.clip(shape) else sizeModifier
 
         SubcomposeAsyncImage(
             model = url,
-            contentDescription = null,
+            contentDescription = contentDescription,
             modifier = modifier,
             contentScale = contentScale,
             loading = {
@@ -145,18 +149,16 @@ private fun ImageWidgetContent(
 private val ImageCornerRadius = RoundedCornerShape(12.dp)
 
 /**
- * Maps A2UI variant to appropriate image dimensions and shape.
+ * Maps A2UI v0.9 `variant` to dimensions + shape.
  *
- * @return Triple of (height in dp or null, fillWidth boolean, shape or null)
+ * - `thumbnail`: small rounded square
+ * - `avatar`: circular
+ * - (absent): default rounded-corner 100dp square
  */
 private fun getImageDimensions(variant: String?): Triple<Dp?, Boolean, Shape?> {
-    return when (variant?.lowercase()) {
-        "icon" -> Triple(24.dp, false, null) // Icons: no rounded corners
-        "avatar" -> Triple(48.dp, false, CircleShape) // Avatars: circular
-        "smallfeature" -> Triple(80.dp, true, ImageCornerRadius)
-        "mediumfeature" -> Triple(150.dp, true, ImageCornerRadius)
-        "largefeature" -> Triple(220.dp, true, ImageCornerRadius)
-        "header" -> Triple(200.dp, true, ImageCornerRadius)
-        else -> Triple(100.dp, false, ImageCornerRadius) // Default: rounded corners
+    return when (variant) {
+        "thumbnail" -> Triple(80.dp, false, ImageCornerRadius)
+        "avatar" -> Triple(48.dp, false, CircleShape)
+        else -> Triple(100.dp, false, ImageCornerRadius)
     }
 }

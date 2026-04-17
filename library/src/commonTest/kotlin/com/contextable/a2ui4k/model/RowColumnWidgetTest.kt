@@ -26,10 +26,8 @@ import kotlin.test.assertNotNull
  * Tests for Row and Column widget property parsing.
  *
  * A2UI Spec v0.9 supported values:
- * - Row justify: "start", "center", "end", "spaceBetween", "spaceAround", "spaceEvenly", "stretch"
- * - Row align: "start", "center", "end", "stretch"
- * - Column justify: "start", "center", "end", "spaceBetween", "spaceAround", "spaceEvenly", "stretch"
- * - Column align: "start", "center", "end", "stretch"
+ * - Row/Column justify: "start", "center", "end", "spaceBetween", "spaceAround"
+ * - Row/Column align: "start", "center", "end", "stretch"
  * - children: plain array of component IDs (v0.9 format)
  */
 class RowColumnWidgetTest {
@@ -57,8 +55,7 @@ class RowColumnWidgetTest {
     fun `parseString extracts justify value`() {
         val justifyValues = listOf(
             "start", "center", "end",
-            "spaceBetween", "spaceAround", "spaceEvenly",
-            "stretch"
+            "spaceBetween", "spaceAround"
         )
 
         justifyValues.forEach { justify ->
@@ -116,7 +113,7 @@ class RowColumnWidgetTest {
         val jsonStr = """
             {
                 "children": ["header", "content", "footer"],
-                "justify": "spaceEvenly",
+                "justify": "spaceAround",
                 "align": "center"
             }
         """.trimIndent()
@@ -128,7 +125,7 @@ class RowColumnWidgetTest {
         assertEquals(3, (childrenRef as ChildrenReference.ExplicitList).componentIds.size)
 
         val justifyRef = DataReferenceParser.parseString(data["justify"])
-        assertEquals("spaceEvenly", (justifyRef as LiteralString).value)
+        assertEquals("spaceAround", (justifyRef as LiteralString).value)
 
         val alignRef = DataReferenceParser.parseString(data["align"])
         assertEquals("center", (alignRef as LiteralString).value)

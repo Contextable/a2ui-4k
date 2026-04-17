@@ -18,52 +18,47 @@ package com.contextable.a2ui4k.model
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 
 /**
- * Represents a user interaction event from an A2UI surface.
+ * Client→server events that a surface can emit.
  *
- * Events are generated when users interact with UI components
- * (button clicks, form submissions, etc.) and can be sent back
- * to the AI agent for processing.
+ * The A2UI v0.9 protocol defines exactly two wire messages:
  *
- * In A2UI v0.9, client-to-server messages include:
- * - [ActionEvent] maps to the `action` message type
- * - [DataChangeEvent] is an internal event for two-way data binding
- * - [ValidationError] maps to the `error` message type with VALIDATION_FAILED code
+ * - `action` — user interaction ([ActionEvent])
+ * - `error`  — client-side error with two variants:
+ *   [ValidationError] (code == `VALIDATION_FAILED`) and [ClientError] (any other code)
  *
- * @see ActionEvent
- * @see DataChangeEvent
- * @see ValidationError
+ * [DataChangeEvent] is **local only** — v0.9 does not define an upstream
+ * message for individual data mutations. It exists so input widgets can
+ * mutate the client-side data model through the standard event bus.
+ *
+ * Use [toClientMessage] on the wire-emitting events to obtain the full
+ * `{"version":"v0.9","<key>":{...}}` envelope ready for any transport.
  */
 sealed class UiEvent {
-    /**
-     * The surface ID where the event originated.
-     */
+    /** The surface ID where the event originated. */
     abstract val surfaceId: String
 }
 
+/** Current A2UI protocol version. */
+const val A2UI_PROTOCOL_VERSION: String = "v0.9"
+
 /**
- * An action event triggered by user interaction (e.g., button click).
- *
- * In v0.9, the client-to-server format wraps this in an `action` envelope:
+ * User interaction event. Serialized on the wire as:
  * ```json
  * {
  *   "version": "v0.9",
  *   "action": {
- *     "name": "action_name",
+ *     "name": "submit",
  *     "surfaceId": "default",
- *     "sourceComponentId": "component-id",
+ *     "sourceComponentId": "submit-button",
  *     "timestamp": "2025-12-17T02:00:23.936Z",
  *     "context": { "key": "value" }
  *   }
  * }
  * ```
- *
- * @property name The action identifier
- * @property surfaceId The surface where the action occurred
- * @property sourceComponentId The component ID with optional template item suffix
- * @property timestamp ISO8601 timestamp of when the event occurred
- * @property context Resolved context data from action.event.context
  */
 @Serializable
 data class ActionEvent(
@@ -75,15 +70,8 @@ data class ActionEvent(
 ) : UiEvent()
 
 /**
- * A data change event when the user modifies a bound value.
- *
- * This is an internal client-side event used for two-way data binding.
- * Input widgets emit this when the user changes a form value, allowing
- * the application to update the data model accordingly.
- *
- * @property surfaceId The surface where the change occurred
- * @property path The data model path that was modified
- * @property value The new value
+ * Client-side data change. **Not** a wire message — input widgets emit this
+ * so the application can mirror changes into the local [com.contextable.a2ui4k.data.DataModel].
  */
 @Serializable
 data class DataChangeEvent(
@@ -93,30 +81,89 @@ data class DataChangeEvent(
 ) : UiEvent()
 
 /**
- * A validation error sent from client to server.
- *
- * In v0.9, validation errors follow a structured format:
+ * Validation failure (`code == "VALIDATION_FAILED"`). Serialized as:
  * ```json
  * {
  *   "version": "v0.9",
  *   "error": {
  *     "code": "VALIDATION_FAILED",
- *     "surfaceId": "surface-1",
+ *     "surfaceId": "s1",
  *     "path": "/components/0/text",
- *     "message": "Required field missing"
+ *     "message": "Expected string, got integer"
  *   }
  * }
  * ```
- *
- * @property code Error code (e.g., "VALIDATION_FAILED")
- * @property surfaceId The surface where the error occurred
- * @property path JSON Pointer to the problematic field
- * @property message Human-readable error description
  */
 @Serializable
 data class ValidationError(
-    val code: String = "VALIDATION_FAILED",
     override val surfaceId: String,
     val path: String,
     val message: String
-) : UiEvent()
+) : UiEvent() {
+    val code: String get() = VALIDATION_FAILED
+
+    companion object {
+        const val VALIDATION_FAILED: String = "VALIDATION_FAILED"
+    }
+}
+
+/**
+ * Generic client error (any code other than `VALIDATION_FAILED`). Serialized as:
+ * ```json
+ * {
+ *   "version": "v0.9",
+ *   "error": {
+ *     "code": "CUSTOM_CODE",
+ *     "surfaceId": "s1",
+ *     "message": "Human-readable explanation"
+ *   }
+ * }
+ * ```
+ */
+@Serializable
+data class ClientError(
+    val code: String,
+    override val surfaceId: String,
+    val message: String
+) : UiEvent() {
+    init {
+        require(code != ValidationError.VALIDATION_FAILED) {
+            "Use ValidationError for VALIDATION_FAILED; ClientError is for other codes."
+        }
+    }
+}
+
+/**
+ * Returns the wire-ready v0.9 envelope for this event, or `null` if the event
+ * is not a wire message (e.g. [DataChangeEvent]).
+ */
+fun UiEvent.toClientMessage(): JsonObject? = when (this) {
+    is ActionEvent -> buildJsonObject {
+        put("version", JsonPrimitive(A2UI_PROTOCOL_VERSION))
+        put("action", buildJsonObject {
+            put("name", JsonPrimitive(name))
+            put("surfaceId", JsonPrimitive(surfaceId))
+            put("sourceComponentId", JsonPrimitive(sourceComponentId))
+            put("timestamp", JsonPrimitive(timestamp))
+            put("context", context ?: JsonObject(emptyMap()))
+        })
+    }
+    is ValidationError -> buildJsonObject {
+        put("version", JsonPrimitive(A2UI_PROTOCOL_VERSION))
+        put("error", buildJsonObject {
+            put("code", JsonPrimitive(code))
+            put("surfaceId", JsonPrimitive(surfaceId))
+            put("path", JsonPrimitive(path))
+            put("message", JsonPrimitive(message))
+        })
+    }
+    is ClientError -> buildJsonObject {
+        put("version", JsonPrimitive(A2UI_PROTOCOL_VERSION))
+        put("error", buildJsonObject {
+            put("code", JsonPrimitive(code))
+            put("surfaceId", JsonPrimitive(surfaceId))
+            put("message", JsonPrimitive(message))
+        })
+    }
+    is DataChangeEvent -> null
+}

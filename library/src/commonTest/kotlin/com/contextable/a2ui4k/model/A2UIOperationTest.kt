@@ -172,25 +172,4 @@ class A2UIOperationTest {
         assertEquals("temp-surface", op.surfaceId)
     }
 
-    // ========== A2UIActivityContent tests ==========
-
-    @Test
-    fun `A2UIActivityContent with empty operations`() {
-        val content = A2UIActivityContent()
-
-        assertTrue(content.operations.isEmpty())
-    }
-
-    @Test
-    fun `A2UIActivityContent with operations`() {
-        val op = JsonObject(mapOf(
-            "type" to JsonPrimitive("createSurface"),
-            "surfaceId" to JsonPrimitive("main"),
-            "catalogId" to JsonPrimitive("standard")
-        ))
-
-        val content = A2UIActivityContent(operations = listOf(op))
-
-        assertEquals(1, content.operations.size)
-    }
 }

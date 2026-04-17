@@ -27,9 +27,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Tests for UiEvent types - ActionEvent and DataChangeEvent.
+ * Tests for UiEvent types: [ActionEvent], [DataChangeEvent], [ValidationError], [ClientError].
  *
- * These tests verify A2UI v0.9 ClientEvent format compliance.
+ * Verifies A2UI v0.9 ClientMessage format compliance.
  */
 class UiEventTest {
 
@@ -190,5 +190,66 @@ class UiEventTest {
         )
 
         assertEquals("/items/0/name", event.path)
+    }
+
+    // ========== Envelope (toClientMessage) ==========
+
+    @Test
+    fun `ActionEvent toClientMessage wraps in v09 envelope`() {
+        val event = ActionEvent(
+            name = "submit",
+            surfaceId = "main",
+            sourceComponentId = "btn",
+            timestamp = "2026-01-01T00:00:00Z"
+        )
+        val envelope = event.toClientMessage()!!
+        assertEquals("v0.9", (envelope["version"] as JsonPrimitive).content)
+        val action = envelope["action"] as JsonObject
+        assertEquals("submit", (action["name"] as JsonPrimitive).content)
+        assertEquals("main", (action["surfaceId"] as JsonPrimitive).content)
+        assertEquals("btn", (action["sourceComponentId"] as JsonPrimitive).content)
+        assertTrue(action.containsKey("context"))
+    }
+
+    @Test
+    fun `ValidationError toClientMessage has code VALIDATION_FAILED and path`() {
+        val event = ValidationError(
+            surfaceId = "s",
+            path = "/components/0/text",
+            message = "must be a string"
+        )
+        val envelope = event.toClientMessage()!!
+        val error = envelope["error"] as JsonObject
+        assertEquals("VALIDATION_FAILED", (error["code"] as JsonPrimitive).content)
+        assertEquals("/components/0/text", (error["path"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `ClientError toClientMessage has custom code and no path`() {
+        val event = ClientError(
+            code = "NETWORK_UNAVAILABLE",
+            surfaceId = "s",
+            message = "no connection"
+        )
+        val envelope = event.toClientMessage()!!
+        val error = envelope["error"] as JsonObject
+        assertEquals("NETWORK_UNAVAILABLE", (error["code"] as JsonPrimitive).content)
+        assertTrue(!error.containsKey("path"))
+    }
+
+    @Test
+    fun `DataChangeEvent toClientMessage returns null`() {
+        val event = DataChangeEvent(surfaceId = "s", path = "/x", value = "v")
+        assertNull(event.toClientMessage())
+    }
+
+    @Test
+    fun `ClientError rejects VALIDATION_FAILED code`() {
+        try {
+            ClientError(code = "VALIDATION_FAILED", surfaceId = "s", message = "m")
+            assertTrue(false, "expected IllegalArgumentException")
+        } catch (_: IllegalArgumentException) {
+            // expected
+        }
     }
 }
