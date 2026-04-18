@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-04-18
+
+### Fixed
+- **`A2UISurface` now renders v0.8 surfaces whose root component has an id
+  other than `"root"`.** Previously the renderer invoked `ComponentBuilder`
+  with a hardcoded `componentId = "root"`, ignoring `rootComponentId` even
+  though `UiDefinition.rootComponent` resolved it correctly. Any v0.8 agent
+  whose `beginRendering.root` named a custom id (e.g., `"header"`) rendered
+  as "Missing component: root" instead of the actual UI tree. The renderer
+  now uses `rootComponent.id`, which respects `rootComponentId` for v0.8
+  compat and falls back to the `"root"` convention for v0.9.
+  ([library/src/commonMain/kotlin/com/contextable/a2ui4k/render/A2UiSurface.kt](library/src/commonMain/kotlin/com/contextable/a2ui4k/render/A2UiSurface.kt))
+
+### Tests
+- Regression test
+  `v0_8 beginRendering with non-default root id preserves rootComponentId
+  and resolves rootComponent` — every existing v0.8 transcoder test used
+  `"root":"root"`, which is why this bug slipped through.
+
+### Documentation
+- New `skills/migrate-0.8-to-0.9.md` — agent-agnostic migration skill for
+  client apps upgrading from `0.8.x` to `0.9.x`. Covers dependency bump
+  (with Maven Central version resolution), API renames
+  (`processSnapshot`/`processDelta` → `processMessage`,
+  `UserActionEvent` → `ActionEvent`, `Component` shape change,
+  `DataEntry` removal, etc.), transport-bridge integration (with an ag-ui
+  example), outbound event serialization via `toClientMessage(version)`,
+  capability helpers, and a runtime diagnostic checklist for "builds
+  pass but A2UI content doesn't render".
+
 ## [0.9.1] - 2026-04-18
 
 ### Added — A2UI v0.9 spec alignment
@@ -188,7 +218,8 @@ Initial implementation of the A2UI v0.8 rendering engine.
 - Event system: UserActionEvent, DataChangeEvent
 - Kotlin Multiplatform support: Android, iOS, JVM/Desktop
 
-[Unreleased]: https://github.com/Contextable/a2ui-4k/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/Contextable/a2ui-4k/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/Contextable/a2ui-4k/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/Contextable/a2ui-4k/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/Contextable/a2ui-4k/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/Contextable/a2ui-4k/compare/v0.8.1...v0.8.2

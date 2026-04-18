@@ -79,11 +79,14 @@ fun A2UISurface(
 
     CompositionLocalProvider(LocalUiDefinition provides definition) {
         Box(modifier = modifier) {
-            // v0.9: root component is identified by convention (id = "root")
+            // v0.9: root is the component with id = "root".
+            // v0.8 compat: if rootComponentId is set (preserved by the
+            // transcoder from beginRendering.root), it points at the root
+            // even when its id isn't literally "root".
             val rootComponent = definition.rootComponent
             if (rootComponent != null) {
                 ComponentBuilder(
-                    componentId = "root",
+                    componentId = rootComponent.id,
                     definition = definition,
                     catalog = catalog,
                     dataContext = dataContext,
