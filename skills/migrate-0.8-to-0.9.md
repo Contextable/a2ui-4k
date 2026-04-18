@@ -1,9 +1,27 @@
-# Skill: Migrate an a2ui-4k client app from 0.8.x to 0.9.1
+# Skill: Migrate an a2ui-4k client app to the 0.9.x library (from 0.8.x)
 
-Upgrade a Kotlin/Compose app that depends on `com.contextable:a2ui-4k:0.8.x`
-to `0.9.1`. The protocol-level v0.8 hybrid transcoder still runs inside
-0.9.1 — this document is about the **Kotlin API changes** a client app must
-make to compile and run.
+Upgrade a Kotlin/Compose app's **dependency on the `com.contextable:a2ui-4k`
+library** from `0.8.x` to `0.9.x` (authored against `0.9.1`). The 0.9 line
+broke Kotlin API compatibility in ways a compiler/runtime can't paper over,
+so client code has to change.
+
+### Library version vs. A2UI protocol version — read this first
+
+This skill is **about the library dependency only**. It does *not* change
+which A2UI wire-protocol version the client speaks to servers. Those are
+two independent axes:
+
+| Axis | What it means | Changed by this skill? |
+|---|---|---|
+| **Library version** (`a2ui-4k` 0.8.x → 0.9.x) | The Kotlin/Compose API the app compiles against — class names, method signatures, event types. | **Yes — this is the entire point.** |
+| **A2UI protocol version** (v0.8 / v0.9 wire format) | What the server sends over the wire and the client parses back. Selected at runtime via capability negotiation with the agent. | **No.** 0.9.x of the library ships with a hybrid transcoder that accepts both v0.8 and v0.9 wire envelopes. |
+
+Concretely: after this migration the app still talks to existing v0.8 A2UI
+agents. The transcoder in the 0.9.x library converts v0.8 messages to v0.9
+shape internally, and outbound events serialize back to whichever wire
+version each surface was created under. Protocol-version selection happens
+via the capability helpers in Step 11 — unrelated to which library version
+is on the classpath.
 
 This file is a plain Markdown skill. It is intended to be usable by any
 coding agent (Aider, Cline, Cursor, Copilot Workspace, Claude Code, …) and
@@ -17,9 +35,11 @@ Apply this skill when **all** of the following are true for the target app:
 
 - Its build file declares a dependency on `com.contextable:a2ui-4k:0.8.*`
   (or the `-android` / `-jvm` / `-ios*` platform variants).
-- The goal is to upgrade that dependency to `0.9.1` (or any 0.9.x).
+- The goal is to upgrade that **library dependency** to `0.9.1` (or any
+  later 0.9.x).
 
-Strong signals the app is on the v0.8 API (grep these patterns):
+Strong signals the app is compiled against the 0.8.x library API (grep
+these patterns):
 
 | Pattern | File types |
 |---|---|
@@ -37,7 +57,11 @@ Do **not** apply this skill when:
 
 - The app is the server/agent side (a2ui-4k is a **client** rendering
   library; server migration is out of scope).
-- The app already uses `processMessage`, `ActionEvent`, `URI_V09`.
+- The app already uses the 0.9.x library API (`processMessage`,
+  `ActionEvent`, `URI_V09`).
+- The ask is "make the client speak the v0.9 **wire protocol** to an
+  agent" — that's a runtime/negotiation choice, not a library upgrade.
+  See Step 11 for the capability helpers that control it.
 
 ---
 
@@ -144,10 +168,10 @@ Notes:
 **Detect:** `\.processSnapshot\(` or `\.processDelta\(` on a
 `SurfaceStateManager` instance.
 
-The v0.8 API had two entry points, one per activity-event type:
+The 0.8.x library exposed two entry points, one per activity-event type:
 
 ```kotlin
-// v0.8
+// 0.8.x library API
 manager.processSnapshot(messageId, activityContent)   // ACTIVITY_SNAPSHOT
 manager.processDelta(messageId, jsonPatch)            // ACTIVITY_DELTA
 ```
@@ -336,11 +360,11 @@ The property set is identical: `name`, `surfaceId`, `sourceComponentId`,
 
 ### Step 5 — Action `context` is already a `JsonObject`
 
-This step applies only if the v0.8 app had **its own wrapper types** that
-converted `context` into a `List<Pair<String, ...>>` / `Map` / `List<Entry>`
-before consuming it.
+This step applies only if, when built against the 0.8.x library, the app
+had **its own wrapper types** that converted `context` into a
+`List<Pair<String, ...>>` / `Map` / `List<Entry>` before consuming it.
 
-**Before (hand-rolled v0.8 wrapping):**
+**Before (hand-rolled 0.8.x-era wrapping):**
 
 ```kotlin
 val entries: List<Pair<String, String>> = event.context
@@ -421,15 +445,15 @@ keys remain in the app's outbound serialization paths.
 
 ### Step 7 — Update `Component` construction sites
 
-**Detect:** `Component(` constructor calls with the v0.8 named argument
-`componentProperties = …`, or references to `Component.componentProperties`
-/ the old `widgetType` / `widgetData` computed getters (which were backed by
-a map).
+**Detect:** `Component(` constructor calls with the 0.8.x-era named
+argument `componentProperties = …`, or references to
+`Component.componentProperties` / the old `widgetType` / `widgetData`
+computed getters (which were backed by a map).
 
-The v0.8 `Component` put widget type and props into one map:
+The 0.8.x `Component` put widget type and props into one map:
 
 ```kotlin
-// v0.8
+// 0.8.x library
 @Serializable
 data class Component(
     val id: String,
@@ -438,10 +462,10 @@ data class Component(
 )
 ```
 
-The v0.9 `Component` has them as separate, non-nullable fields:
+The 0.9.x `Component` has them as separate, non-nullable fields:
 
 ```kotlin
-// v0.9
+// 0.9.x library
 @Serializable
 data class Component(
     val id: String,
@@ -654,8 +678,8 @@ version(s).
 **Detect:** `when (event)` expressions on `UiEvent` that previously only
 needed two branches (`UserActionEvent`, `DataChangeEvent`).
 
-v0.9 adds two more `UiEvent` subtypes. Exhaustive `when` expressions will
-fail to compile without branches for them.
+The 0.9.x library adds two more `UiEvent` subtypes. Exhaustive `when`
+expressions will fail to compile without branches for them.
 
 **Before:**
 
@@ -800,10 +824,10 @@ Avoid over-migrating. These patterns are **still correct in 0.9.1**:
 
 ## 6. Reference map
 
-Quick v0.8 → v0.9 symbol lookup. "Removed" means the symbol no longer
-exists in `com.contextable.a2ui4k.*` as of 0.9.1.
+Quick 0.8.x library → 0.9.x library symbol lookup. "Removed" means the
+symbol no longer exists in `com.contextable.a2ui4k.*` as of 0.9.1.
 
-| v0.8 symbol | v0.9 replacement |
+| 0.8.x library symbol | 0.9.x library replacement |
 |---|---|
 | `SurfaceStateManager.processSnapshot(messageId, content)` | `SurfaceStateManager.processMessage(envelope)` |
 | `SurfaceStateManager.processDelta(messageId, patch)` | `SurfaceStateManager.processMessage(envelope)` |
