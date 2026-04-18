@@ -2,9 +2,9 @@
 
 Arranges child components vertically.
 
-> **A2UI Spec:** See `Column` in the [Standard Component Catalog v0.8](https://github.com/google/A2UI/blob/main/specification/0.8/json/standard_catalog_definition.json).
+> **A2UI Spec:** See `Column` in the [A2UI v0.9 Standard Component Catalog](https://github.com/google/A2UI/tree/main/specification/0.9).
 >
-> *a2ui-4k currently implements the v0.8 specification. The A2UI protocol is under active development.*
+> *a2ui-4k implements A2UI **v0.9** with backwards-compatible support for v0.8 (see [Deprecated Protocol Versions](../protocol/deprecated-versions.md)).*
 
 ## Properties
 
@@ -87,6 +87,6 @@ With distribution:
 
 ## See Also
 
-- [A2UI Standard Catalog](https://github.com/google/A2UI/blob/main/specification/0.8/json/standard_catalog_definition.json) - `Column` component
+- [A2UI v0.9 Standard Catalog](https://github.com/google/A2UI/tree/main/specification/0.9) - `Column` component
 - [Row](row.md) - Horizontal equivalent
 - [List](list.md) - Scrollable alternative

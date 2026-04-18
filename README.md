@@ -2,14 +2,20 @@
 
 A Kotlin Multiplatform rendering engine for the [A2UI protocol](https://github.com/google/A2UI), enabling AI agents to generate dynamic user interfaces that render natively across platforms.
 
-> *a2ui-4k currently implements the A2UI v0.8 specification. The A2UI protocol is under active development.*
+> *a2ui-4k implements the A2UI v0.9 specification natively, with transparent
+> backwards-compatible support for v0.8 surfaces (transcoded internally to the
+> v0.9 shape — see [Deprecated Protocol Versions](docs/protocol/deprecated-versions.md)).
+> The A2UI protocol is under active development.*
 
 ## Features
 
-- **Multiplatform** - Android, iOS, and JVM/Desktop support via Compose Multiplatform
-- **Standard Catalog** - All 18 A2UI v0.8 standard widgets implemented
+- **Multiplatform** - Android, iOS, and JVM/Desktop via Compose Multiplatform
+- **Standard Catalog** - Full A2UI v0.9 standard widget set, plus legacy aliases for v0.8 properties
+- **Bidirectional Protocol** - Server→client UI streaming and client→server `action` / `error` events with the v0.9 wire envelope (`{"version":"v0.9", …}`)
 - **Reactive Data Binding** - JSON Pointer path-based data binding with automatic UI updates
-- **Event Handling** - Full support for user actions and data change events
+- **Validation** - First-class `CheckRule` evaluation backed by the function evaluator
+- **Accessibility** - Common `Accessibility` props (label, description) honored across input widgets
+- **Backwards-Compatible** - v0.8 `ACTIVITY_SNAPSHOT` / `ACTIVITY_DELTA` envelopes accepted on the same code path; per-surface protocol version drives outbound serialization
 
 ## Quick Start
 

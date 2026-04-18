@@ -2,7 +2,10 @@
 
 **a2ui-4k** is a Kotlin Multiplatform rendering engine for the [A2UI protocol](https://github.com/google/A2UI), enabling AI agents to generate dynamic user interfaces that render natively on Android, iOS, and JVM/Desktop platforms.
 
-> *a2ui-4k currently implements the A2UI v0.8 specification. The A2UI protocol is under active development and subject to change.*
+> *a2ui-4k implements the A2UI **v0.9** specification natively, with transparent
+> backwards-compatible support for v0.8 surfaces (transcoded internally — see
+> [Deprecated Protocol Versions](protocol/deprecated-versions.md)). The A2UI
+> protocol is under active development and subject to change.*
 
 ## Quick Links
 
@@ -18,7 +21,7 @@
 
 ## Widget Reference
 
-a2ui-4k implements the [A2UI v0.8 Standard Component Catalog](https://github.com/google/A2UI/blob/main/specification/0.8/json/standard_catalog_definition.json):
+a2ui-4k implements the [A2UI v0.9 Standard Component Catalog](https://github.com/google/A2UI/tree/main/specification/0.9):
 
 ### Basic Content
 - [Text](widgets/text.md) - Text display with markdown support
@@ -37,11 +40,11 @@ a2ui-4k implements the [A2UI v0.8 Standard Component Catalog](https://github.com
 - [Modal](widgets/modal.md) - Dialog overlays
 
 ### Interactive & Input
-- [Button](widgets/button.md) - Action triggers
+- [Button](widgets/button.md) - Action triggers (variants: `default`, `primary`, `borderless`)
 - [TextField](widgets/text-field.md) - Text input
 - [CheckBox](widgets/checkbox.md) - Boolean toggles
 - [Slider](widgets/slider.md) - Numeric ranges
-- [MultipleChoice](widgets/multiple-choice.md) - Selection lists
+- [MultipleChoice](widgets/multiple-choice.md) - `ChoicePicker` (variants: `multipleSelection`, `mutuallyExclusive`)
 - [DateTimeInput](widgets/date-time-input.md) - Date/time pickers
 
 ## API Reference
@@ -55,7 +58,7 @@ a2ui-4k implements the [A2UI v0.8 Standard Component Catalog](https://github.com
 
 ## Protocol
 
-- [v0.8 Compliance](protocol/v0.8-compliance.md) - Spec implementation status
+- [Deprecated Protocol Versions](protocol/deprecated-versions.md) - v0.8 backwards-compatibility notes
 
 ## Examples
 

@@ -2,7 +2,9 @@
 
 This guide covers installing a2ui-4k and rendering your first A2UI surface.
 
-> *a2ui-4k currently implements the A2UI v0.8 specification. For protocol details, see the [A2UI specification](https://github.com/google/A2UI).*
+> *a2ui-4k implements the A2UI v0.9 specification natively, with transparent
+> backwards-compatible support for v0.8 surfaces. For protocol details, see the
+> [A2UI specification](https://github.com/google/A2UI).*
 
 ## Installation
 
@@ -56,12 +58,13 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
+// In A2UI v0.9 the root is identified by convention: the component with id "root".
+// (For v0.8 surfaces the explicit `rootComponentId` field is used instead.)
 val uiDefinition = UiDefinition(
     surfaceId = "default",
-    root = "main-column",
     components = mapOf(
-        "main-column" to Component.create(
-            id = "main-column",
+        "root" to Component.create(
+            id = "root",
             widgetType = "Column",
             data = buildJsonObject {
                 putJsonObject("children") {
@@ -75,9 +78,7 @@ val uiDefinition = UiDefinition(
             id = "greeting",
             widgetType = "Text",
             data = buildJsonObject {
-                putJsonObject("text") {
-                    put("literalString", "Hello from A2UI!")
-                }
+                put("text", "Hello from A2UI!")
             }
         )
     )
@@ -111,25 +112,46 @@ fun MyScreen() {
 The `onEvent` callback receives `UiEvent` instances when users interact with the UI:
 
 ```kotlin
-import com.contextable.a2ui4k.model.UserActionEvent
+import com.contextable.a2ui4k.model.ActionEvent
+import com.contextable.a2ui4k.model.ClientError
 import com.contextable.a2ui4k.model.DataChangeEvent
+import com.contextable.a2ui4k.model.ValidationError
 
 A2UISurface(
     definition = uiDefinition,
     catalog = CoreCatalog,
     onEvent = { event ->
         when (event) {
-            is UserActionEvent -> {
+            is ActionEvent -> {
                 // Button clicks, form submissions, etc.
                 println("Action: ${event.name} from ${event.sourceComponentId}")
             }
             is DataChangeEvent -> {
                 // Text field changes, slider moves, etc.
+                // (Local-only event; v0.9 has no upstream data-change wire message.)
                 println("Data changed: ${event.path} = ${event.value}")
+            }
+            is ValidationError -> {
+                // Client-side validation failure (CheckRule or schema)
+                println("Validation: ${event.path} — ${event.message}")
+            }
+            is ClientError -> {
+                // Any other client-side error code
+                println("Error ${event.code}: ${event.message}")
             }
         }
     }
 )
+```
+
+To send any of these events upstream as a wire-ready A2UI envelope, use
+`event.toClientMessage()` (defaults to v0.9; pass `ProtocolVersion.V0_8` to
+serialize for a v0.8 surface):
+
+```kotlin
+import com.contextable.a2ui4k.model.toClientMessage
+
+val envelope = event.toClientMessage()  // JsonObject? — null when no wire shape applies
 ```
 
 ## Using with DataModel
@@ -168,22 +190,36 @@ fun DynamicScreen() {
 
 ## Processing Agent Responses
 
-Use `SurfaceStateManager` to process streaming A2UI operations from agents:
+Use `SurfaceStateManager` to process streaming A2UI operations from agents.
+v0.9 sends one operation per JSON object (`createSurface`, `updateComponents`,
+`updateDataModel`, `deleteSurface`), each wrapped in a `version` envelope:
 
 ```kotlin
 import com.contextable.a2ui4k.state.SurfaceStateManager
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 val stateManager = SurfaceStateManager()
 
-// Process ACTIVITY_SNAPSHOT from agent (contains operations array)
-stateManager.processSnapshot(messageId, activityContent)
-
-// Process ACTIVITY_DELTA for incremental updates
-stateManager.processDelta(messageId, jsonPatch)
+// One v0.9 message — exactly one op key alongside "version"
+val message = buildJsonObject {
+    put("version", "v0.9")
+    putJsonObject("createSurface") {
+        put("surfaceId", "default")
+        // …operation payload…
+    }
+}
+stateManager.processMessage(message)
 
 // Get current UI definition for a surface
-val currentDefinition = stateManager.getSurface("surface-id")
+val currentDefinition = stateManager.getSurface("default")
 ```
+
+The same `processMessage` call also accepts v0.8 `ACTIVITY_SNAPSHOT` and
+`ACTIVITY_DELTA` envelopes — they are transcoded to the v0.9 shape internally
+and surfaces created this way are tagged so outbound events serialize in the
+matching wire format.
 
 ## Next Steps
 

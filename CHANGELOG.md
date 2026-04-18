@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-04-18
+
+### Added — A2UI v0.9 spec alignment
+- **Wire envelope**: incoming server messages are recognized by the `version`
+  tag (`"v0.9"`) plus exactly one operation key (`createSurface`,
+  `updateComponents`, `updateDataModel`, `deleteSurface`). Outbound client
+  events are emitted as `{"version":"v0.9","action":{…}}` /
+  `{"version":"v0.9","error":{…}}` envelopes.
+- **`SurfaceStateManager.processMessage(JsonObject)`** — single dispatch entry
+  point that handles both v0.9 native messages and v0.8 envelopes (transcoded
+  internally). Replaces the old `processSnapshot` / `processDelta` API.
+- **`CheckRule`** — first-class validation: `condition` + `message`, evaluated
+  through `FunctionEvaluator`. Wired into all input widgets (`Button`,
+  `TextField`, `CheckBox`, `Slider`, `ChoicePicker`, `DateTimeInput`).
+- **`Accessibility`** — common a11y props (`label`, `description` as
+  `DataReference<String>?`) honored across input widgets.
+- **Error event split**: `UiEvent` now distinguishes `ValidationError`
+  (`code == "VALIDATION_FAILED"`) from generic `ClientError` (any other code),
+  matching the v0.9 wire shape. Exposes `toClientMessage(version)` to obtain
+  the protocol-correct envelope.
+- **`a2uiClientDataModel`** metadata produced from v0.9 surfaces with
+  `sendDataModel = true`.
+
+### Added — v0.8 backwards compatibility (hybrid)
+- **`ProtocolVersion`** enum (`V0_8`, `V0_9`) tracked per surface; outbound
+  events serialize in the matching wire shape.
+- **`protocol/v08/` package**:
+  - `JsonPatch` — full RFC 6902 implementation (add/remove/replace/move/copy/test)
+    with a strict RFC 6901 JSON Pointer parser (handles `~0` / `~1` escapes).
+  - `V08ComponentFlattener` — unwraps nested `{Button:{…}}` to flat
+    `"component":"Button"`, hoists props, unwraps `literalString` /
+    `literalNumber` / `literalBoolean` / `dataBinding` / `explicitList` /
+    `template`, and rewrites `MultipleChoice` → `ChoicePicker +
+    multipleSelection`, `SingleChoice` → `ChoicePicker + mutuallyExclusive`.
+  - `V08MessageTranscoder` — stateful per-`messageId` transcoder. Recognises
+    `ACTIVITY_SNAPSHOT` / `ACTIVITY_DELTA` envelopes and emits zero-or-more
+    v0.9-shape op messages; deltas replay the JSON Patch against the cached
+    snapshot and emit only newly-added ops.
+- Widget legacy aliases for v0.8 props (Row/Column `distribution`∥`justify`,
+  `alignment`∥`align`, `spaceEvenly`; Button `label` fallback,
+  `usageHint`∥`variant`; Image `usageHint`∥`variant`, `scale-down`∥`scaleDown`,
+  v0.8 size keywords; TextField `text`∥`value`, `textFieldType`∥`variant`,
+  `date` variant).
+- `A2UIClientCapabilities.inlineCatalogs` and helpers
+  `a2uiBothVersionsClientCapabilities()` /
+  `a2uiV08StandardClientCapabilities()` for capability negotiation that lets a
+  client accept either protocol.
+- v0.8 outbound serialization: `ActionEvent` →
+  `{"userAction":{…}}` (no version envelope); `DataChangeEvent` becomes a real
+  `{"dataChange":{…}}` wire message; `ValidationError`/`ClientError` swallow
+  silently (v0.8 has no formal error wire shape).
+
+### Tests
+- `JsonPatchTest` (22), `V08ComponentFlattenerTest` (13),
+  `V08MessageTranscoderTest` (12) covering RFC 6902, flattening rules, and
+  end-to-end transcoding behavior.
+- `SurfaceStateManagerTest` cross-version: SNAPSHOT/DELTA dispatch, mixed
+  v0.8/v0.9 surfaces coexisting with distinct `protocolVersion` tags, v0.8
+  surfaces correctly skipping the `a2uiClientDataModel` envelope.
+- `UiEventTest` v0.8 envelope serialization for `ActionEvent` / `DataChangeEvent`.
+- Bring `GettingStartedExamplesTest` up to v0.9 API and add envelope assertions.
+
+### Documentation
+- README, docs/index, getting-started, events, agent-extension and widget docs
+  rewritten for v0.9 (with a "v0.8 backwards compatibility" callout where it
+  matters).
+- `protocol/v0.8-compliance.md` superseded by
+  `protocol/deprecated-versions.md`.
+
 ### Chores
 - Fix `formatNumber` to apply thousands separators on the integer fast-path and `formatCurrency` to round cents instead of truncating, fixing Kotlin/Native test failures
 - Expand test coverage for v0.9.0 features:
@@ -119,7 +188,8 @@ Initial implementation of the A2UI v0.8 rendering engine.
 - Event system: UserActionEvent, DataChangeEvent
 - Kotlin Multiplatform support: Android, iOS, JVM/Desktop
 
-[Unreleased]: https://github.com/Contextable/a2ui-4k/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/Contextable/a2ui-4k/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/Contextable/a2ui-4k/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/Contextable/a2ui-4k/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/Contextable/a2ui-4k/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/Contextable/a2ui-4k/compare/v0.8.0...v0.8.1
