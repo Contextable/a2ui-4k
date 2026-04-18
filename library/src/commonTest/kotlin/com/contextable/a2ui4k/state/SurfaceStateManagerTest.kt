@@ -233,7 +233,7 @@ class SurfaceStateManagerTest {
     }
 
     @Test
-    fun `updateDataModel with explicit null value stores JsonNull, not delete`() {
+    fun `updateDataModel with explicit null value stores JsonNull rather than delete`() {
         val manager = SurfaceStateManager()
         manager.processMessage(envelope("createSurface", """{"surfaceId":"s1","catalogId":"c"}"""))
         manager.processMessage(
