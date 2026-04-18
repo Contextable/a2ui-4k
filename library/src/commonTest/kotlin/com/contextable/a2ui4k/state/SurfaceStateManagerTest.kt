@@ -433,6 +433,41 @@ class SurfaceStateManagerTest {
     }
 
     @Test
+    fun `v0_8 beginRendering with non-default root id preserves rootComponentId and resolves rootComponent`() {
+        // Regression: A2UISurface previously hardcoded "root" as the component
+        // id to render. When a v0.8 server sets beginRendering.root to a
+        // different id (e.g. "header"), rootComponent resolved correctly via
+        // rootComponentId but the renderer still looked up components["root"]
+        // and displayed "Missing component: root".
+        val manager = SurfaceStateManager()
+        val v08Msg: JsonObject = json.decodeFromString(
+            """
+            {
+                "kind":"ACTIVITY_SNAPSHOT",
+                "messageId":"m1",
+                "content":{"operations":[
+                    {"beginRendering":{"surfaceId":"s1","root":"header"}},
+                    {"surfaceUpdate":{"surfaceId":"s1","components":[
+                        {"id":"header","component":{"Column":{"children":{"explicitList":["t"]}}}},
+                        {"id":"t","component":{"Text":{"text":{"literalString":"Hi"}}}}
+                    ]}}
+                ]}
+            }
+            """.trimIndent()
+        )
+        assertTrue(manager.processMessage(v08Msg))
+        val surface = manager.getSurface("s1")
+        assertNotNull(surface)
+        assertEquals("header", surface.rootComponentId)
+        // rootComponent resolves via rootComponentId (not "root") — this is
+        // the id A2UISurface must pass to ComponentBuilder.
+        val root = surface.rootComponent
+        assertNotNull(root)
+        assertEquals("header", root.id)
+        assertEquals("Column", root.widgetType)
+    }
+
+    @Test
     fun `v0_8 and v0_9 surfaces coexist and carry different protocolVersion`() {
         val manager = SurfaceStateManager()
         // v0.9 surface
