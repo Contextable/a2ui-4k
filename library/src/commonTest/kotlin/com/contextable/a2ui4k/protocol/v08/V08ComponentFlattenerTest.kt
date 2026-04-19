@@ -141,10 +141,38 @@ class V08ComponentFlattenerTest {
         assertEquals("mutuallyExclusive", (out["variant"] as JsonPrimitive).content)
     }
 
-    // --- nested unwrapping (e.g. action.context) ---
+    // --- Button action rewrites (v0.8 shape → v0.9 event/functionCall wrapper) ---
 
     @Test
-    fun `nested action context is recursively unwrapped`() {
+    fun `v0_8 Button action with array context is wrapped in event and flattened`() {
+        val out = V08ComponentFlattener.flatten(
+            obj("""
+                {
+                    "id":"btn",
+                    "component":{"Button":{
+                        "action":{
+                            "name":"book_restaurant",
+                            "context":[
+                                {"key":"restaurantName","value":{"path":"name"}},
+                                {"key":"address","value":{"path":"address"}}
+                            ]
+                        }
+                    }}
+                }
+            """.trimIndent())
+        )
+        val action = out["action"] as JsonObject
+        val event = action["event"] as JsonObject
+        assertEquals("book_restaurant", (event["name"] as JsonPrimitive).content)
+        val context = event["context"] as JsonObject
+        val name = context["restaurantName"] as JsonObject
+        assertEquals("name", (name["path"] as JsonPrimitive).content)
+        val address = context["address"] as JsonObject
+        assertEquals("address", (address["path"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `v0_8 Button action with object context is wrapped in event without reshaping context`() {
         val out = V08ComponentFlattener.flatten(
             obj("""
                 {
@@ -162,8 +190,60 @@ class V08ComponentFlattenerTest {
             """.trimIndent())
         )
         val action = out["action"] as JsonObject
-        val context = action["context"] as JsonObject
+        val event = action["event"] as JsonObject
+        assertEquals("submit", (event["name"] as JsonPrimitive).content)
+        val context = event["context"] as JsonObject
         assertEquals("123", (context["orderId"] as JsonPrimitive).content)
         assertEquals(JsonPrimitive(42), context["amount"])
+    }
+
+    @Test
+    fun `v0_9 Button action with existing event wrapper is left alone`() {
+        val out = V08ComponentFlattener.flatten(
+            obj("""
+                {
+                    "id":"btn",
+                    "component":{"Button":{
+                        "action":{"event":{"name":"go","context":{"k":"v"}}}
+                    }}
+                }
+            """.trimIndent())
+        )
+        val action = out["action"] as JsonObject
+        val event = action["event"] as JsonObject
+        assertEquals("go", (event["name"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `v0_9 Button action with functionCall is left alone`() {
+        val out = V08ComponentFlattener.flatten(
+            obj("""
+                {
+                    "id":"btn",
+                    "component":{"Button":{
+                        "action":{"functionCall":{"call":"openUrl","args":{"u":"x"}}}
+                    }}
+                }
+            """.trimIndent())
+        )
+        val action = out["action"] as JsonObject
+        assertEquals(true, action.containsKey("functionCall"))
+        assertEquals(false, action.containsKey("event"))
+    }
+
+    @Test
+    fun `v0_8 Button primary boolean becomes variant primary`() {
+        val out = V08ComponentFlattener.flatten(
+            obj("""{"id":"b","component":{"Button":{"primary":{"literalBoolean":true}}}}""")
+        )
+        assertEquals("primary", (out["variant"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `Button explicit variant wins over primary boolean`() {
+        val out = V08ComponentFlattener.flatten(
+            obj("""{"id":"b","component":{"Button":{"variant":{"literalString":"borderless"},"primary":{"literalBoolean":true}}}}""")
+        )
+        assertEquals("borderless", (out["variant"] as JsonPrimitive).content)
     }
 }

@@ -61,7 +61,11 @@ class V08MessageTranscoder {
     fun isV08Envelope(envelope: JsonObject): Boolean {
         if ((envelope["kind"] as? JsonPrimitive)?.contentOrNull in V08_ENVELOPE_KINDS) return true
         if ((envelope["type"] as? JsonPrimitive)?.contentOrNull in V08_ENVELOPE_KINDS) return true
-        if ((envelope["version"] as? JsonPrimitive)?.contentOrNull == A2UIExtension.PROTOCOL_VERSION_V08) return true
+        // Bare v0.8 envelope (no ACTIVITY_* wrapper) — accepted only if it
+        // also carries the snapshot-style `operations` array. A version tag
+        // alone on a v0.9-shaped op is a version mismatch, not a v0.8 msg.
+        if ((envelope["version"] as? JsonPrimitive)?.contentOrNull == A2UIExtension.PROTOCOL_VERSION_V08
+            && envelope.containsKey("operations")) return true
         return false
     }
 

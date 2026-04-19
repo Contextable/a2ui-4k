@@ -49,9 +49,18 @@ class V08MessageTranscoderTest {
     }
 
     @Test
-    fun `version v08 recognized as v08`() {
+    fun `bare version v08 envelope with operations list is recognized as v08`() {
         val t = V08MessageTranscoder()
-        assertTrue(t.isV08Envelope(obj("""{"version":"v0.8","createSurface":{}}""")))
+        assertTrue(t.isV08Envelope(obj("""{"version":"v0.8","operations":[]}""")))
+    }
+
+    @Test
+    fun `version v08 without operations is NOT recognized as v08`() {
+        // A v0.9-shaped op mis-tagged with version "v0.8" must not be treated
+        // as a v0.8 message. The op-key shape (createSurface etc.) belongs to
+        // v0.9; let processMessage fall through and reject on version mismatch.
+        val t = V08MessageTranscoder()
+        assertFalse(t.isV08Envelope(obj("""{"version":"v0.8","createSurface":{}}""")))
     }
 
     @Test
