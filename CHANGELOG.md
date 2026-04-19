@@ -7,9 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.3] - 2026-04-19
+## [0.9.2] - 2026-04-19
 
 ### Fixed
+- **`A2UISurface` now renders v0.8 surfaces whose root component has an id
+  other than `"root"`.** Previously the renderer invoked `ComponentBuilder`
+  with a hardcoded `componentId = "root"`, ignoring `rootComponentId` even
+  though `UiDefinition.rootComponent` resolved it correctly. Any v0.8 agent
+  whose `beginRendering.root` named a custom id (e.g., `"header"`) rendered
+  as "Missing component: root" instead of the actual UI tree. The renderer
+  now uses `rootComponent.id`, which respects `rootComponentId` for v0.8
+  compat and falls back to the `"root"` convention for v0.9.
+  ([library/src/commonMain/kotlin/com/contextable/a2ui4k/render/A2UiSurface.kt](library/src/commonMain/kotlin/com/contextable/a2ui4k/render/A2UiSurface.kt))
 - **v0.8 Button action shape is now transcoded to v0.9.** The v0.8 wire
   format put the action payload directly on `action` as
   `{"name": "...", "context": [{"key": "...", "value": ...}]}`; v0.9
@@ -49,6 +58,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dispatch, which rejects on version mismatch.
 
 ### Tests
+- Regression test
+  `v0_8 beginRendering with non-default root id preserves rootComponentId
+  and resolves rootComponent` — every existing v0.8 transcoder test used
+  `"root":"root"`, which is why the renderer bug slipped through.
 - New `V08ComponentFlattenerTest` cases: v0.8 Button action with array
   context → v0.9 event-wrapped with flat context object; v0.8 object
   context → wrapped unchanged; already-wrapped `event` / `functionCall`
@@ -60,25 +73,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `V08MessageTranscoderTest`: "bare version v0.8 envelope with
   operations list is recognized", "version v0.8 without operations is
   NOT recognized".
-
-## [0.9.2] - 2026-04-18
-
-### Fixed
-- **`A2UISurface` now renders v0.8 surfaces whose root component has an id
-  other than `"root"`.** Previously the renderer invoked `ComponentBuilder`
-  with a hardcoded `componentId = "root"`, ignoring `rootComponentId` even
-  though `UiDefinition.rootComponent` resolved it correctly. Any v0.8 agent
-  whose `beginRendering.root` named a custom id (e.g., `"header"`) rendered
-  as "Missing component: root" instead of the actual UI tree. The renderer
-  now uses `rootComponent.id`, which respects `rootComponentId` for v0.8
-  compat and falls back to the `"root"` convention for v0.9.
-  ([library/src/commonMain/kotlin/com/contextable/a2ui4k/render/A2UiSurface.kt](library/src/commonMain/kotlin/com/contextable/a2ui4k/render/A2UiSurface.kt))
-
-### Tests
-- Regression test
-  `v0_8 beginRendering with non-default root id preserves rootComponentId
-  and resolves rootComponent` — every existing v0.8 transcoder test used
-  `"root":"root"`, which is why this bug slipped through.
 
 ### Documentation
 - New `skills/migrate-0.8-to-0.9.md` — agent-agnostic migration skill for
@@ -272,8 +266,7 @@ Initial implementation of the A2UI v0.8 rendering engine.
 - Event system: UserActionEvent, DataChangeEvent
 - Kotlin Multiplatform support: Android, iOS, JVM/Desktop
 
-[Unreleased]: https://github.com/Contextable/a2ui-4k/compare/v0.9.3...HEAD
-[0.9.3]: https://github.com/Contextable/a2ui-4k/compare/v0.9.2...v0.9.3
+[Unreleased]: https://github.com/Contextable/a2ui-4k/compare/v0.9.2...HEAD
 [0.9.2]: https://github.com/Contextable/a2ui-4k/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/Contextable/a2ui-4k/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/Contextable/a2ui-4k/compare/v0.8.2...v0.9.0
