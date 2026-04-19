@@ -105,7 +105,72 @@ object V08ComponentFlattener {
         for ((key, value) in extraProps) {
             result[key] = value
         }
+
+        // Widget-specific post-passes that rewrite v0.8 prop shapes which
+        // cannot be expressed as pure value unwrapping.
+        applyWidgetSpecificRewrites(widgetType, result)
+
         return JsonObject(result)
+    }
+
+    /**
+     * In-place rewrites for widgets whose v0.8 → v0.9 delta touches property
+     * structure (not just value wrapping). Kept here rather than in
+     * `unwrapValue` because the shape change is widget-aware.
+     */
+    private fun applyWidgetSpecificRewrites(
+        widgetType: String,
+        props: MutableMap<String, JsonElement>
+    ) {
+        when (widgetType) {
+            "Button" -> rewriteButton(props)
+        }
+    }
+
+    /**
+     * v0.8 Button.action:
+     *   { "name": "submit", "context": [{"key":"k","value":{"path":"/p"}}] }
+     * v0.9 Button.action:
+     *   { "event": { "name": "submit", "context": {"k": {"path":"/p"}} } }
+     *
+     * v0.8 also used `primary: true` for button emphasis; v0.9 uses
+     * `variant: "primary"`. Do not overwrite an explicit `variant`.
+     */
+    private fun rewriteButton(props: MutableMap<String, JsonElement>) {
+        // action: rewrap as event + convert context array-of-pairs to object.
+        val action = props["action"] as? JsonObject
+        if (action != null && !action.containsKey("event") && !action.containsKey("functionCall")) {
+            val name = action["name"]
+            val contextElement = action["context"]
+            if (name != null) {
+                val contextObj: JsonElement? = when (contextElement) {
+                    is JsonArray -> {
+                        // v0.8: array of {key, value} pairs
+                        val map = mutableMapOf<String, JsonElement>()
+                        for (entry in contextElement) {
+                            val e = entry as? JsonObject ?: continue
+                            val k = (e["key"] as? JsonPrimitive)?.contentOrNull ?: continue
+                            val v = e["value"] ?: continue
+                            map[k] = v
+                        }
+                        JsonObject(map)
+                    }
+                    is JsonObject -> contextElement
+                    else -> null
+                }
+                val eventBody = buildMap<String, JsonElement> {
+                    put("name", name)
+                    if (contextObj != null) put("context", contextObj)
+                }
+                props["action"] = JsonObject(mapOf("event" to JsonObject(eventBody)))
+            }
+        }
+
+        // primary: true → variant: "primary" (unless variant is already set).
+        val primary = props["primary"] as? JsonPrimitive
+        if (primary != null && primary.contentOrNull == "true" && !props.containsKey("variant")) {
+            props["variant"] = JsonPrimitive("primary")
+        }
     }
 
     /**

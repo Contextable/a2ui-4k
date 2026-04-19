@@ -468,6 +468,32 @@ class SurfaceStateManagerTest {
     }
 
     @Test
+    fun `empty v0_8 ACTIVITY_SNAPSHOT returns true and caches the baseline for deltas`() {
+        // Regression: processMessage used to return false on a legal-but-empty
+        // v0.8 snapshot, tricking callers into logging "envelope rejected".
+        // Empty snapshots are valid — they just establish the per-messageId
+        // baseline for subsequent deltas.
+        val manager = SurfaceStateManager()
+        val emptySnapshot: JsonObject = json.decodeFromString(
+            """{"type":"ACTIVITY_SNAPSHOT","messageId":"m1","content":{"operations":[]}}"""
+        )
+        assertTrue(manager.processMessage(emptySnapshot))
+
+        // The subsequent delta adds a real beginRendering op and must succeed.
+        val delta: JsonObject = json.decodeFromString(
+            """
+            {"type":"ACTIVITY_DELTA","messageId":"m1","patch":[
+                {"op":"add","path":"/operations/-","value":
+                    {"beginRendering":{"surfaceId":"s1","root":"root"}}
+                }
+            ]}
+            """.trimIndent()
+        )
+        assertTrue(manager.processMessage(delta))
+        assertNotNull(manager.getSurface("s1"))
+    }
+
+    @Test
     fun `v0_8 and v0_9 surfaces coexist and carry different protocolVersion`() {
         val manager = SurfaceStateManager()
         // v0.9 surface

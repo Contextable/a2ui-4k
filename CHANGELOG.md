@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.2] - 2026-04-18
+## [0.9.2] - 2026-04-19
 
 ### Fixed
 - **`A2UISurface` now renders v0.8 surfaces whose root component has an id
@@ -19,12 +19,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now uses `rootComponent.id`, which respects `rootComponentId` for v0.8
   compat and falls back to the `"root"` convention for v0.9.
   ([library/src/commonMain/kotlin/com/contextable/a2ui4k/render/A2UiSurface.kt](library/src/commonMain/kotlin/com/contextable/a2ui4k/render/A2UiSurface.kt))
+- **v0.8 Button action shape is now transcoded to v0.9.** The v0.8 wire
+  format put the action payload directly on `action` as
+  `{"name": "...", "context": [{"key": "...", "value": ...}]}`; v0.9
+  wraps it in an `event` discriminator and uses a flat `context` object.
+  Because `V08ComponentFlattener` previously only unwrapped values and
+  didn't rewrite property structure, any v0.8 Button click dispatched an
+  `ActionEvent` with `name = "click"` and `context = null` — the action
+  name and bindings were silently dropped. The flattener now rewrites
+  `action` to `{"event": {"name": ..., "context": {...}}}` and converts
+  the v0.8 array-of-pairs context into a flat JSON object. Honors
+  `event` / `functionCall` when already set so native v0.9 actions pass
+  through untouched.
+  ([library/src/commonMain/kotlin/com/contextable/a2ui4k/protocol/v08/V08ComponentFlattener.kt](library/src/commonMain/kotlin/com/contextable/a2ui4k/protocol/v08/V08ComponentFlattener.kt))
+- **v0.8 Button `primary: true` → v0.9 `variant: "primary"`.** Added to
+  the flattener's Button-specific rewrites. An explicit `variant` takes
+  precedence over the legacy boolean.
+- **`Button.sourceComponentId` no longer double-prefixes template keys.**
+  The widget unconditionally prepended `"item"` to the template key, so
+  clicking a button inside a data map keyed `{item1: …, item5: …}`
+  produced `"btn:itemitem5"` instead of `"btn:item5"`. Now uses the key
+  verbatim.
+  ([library/src/commonMain/kotlin/com/contextable/a2ui4k/catalog/widgets/ButtonWidget.kt](library/src/commonMain/kotlin/com/contextable/a2ui4k/catalog/widgets/ButtonWidget.kt))
+- **Empty v0.8 `ACTIVITY_SNAPSHOT` envelopes now return `true` from
+  `SurfaceStateManager.processMessage`.** A snapshot with
+  `"operations": []` is a legal baseline for subsequent deltas and still
+  updates the transcoder's per-`messageId` cache; returning `false`
+  earlier mistakenly triggered "envelope rejected" diagnostics in
+  callers. `processMessage` now returns `false` only when the envelope
+  itself is unrecognized.
+  ([library/src/commonMain/kotlin/com/contextable/a2ui4k/state/SurfaceStateManager.kt](library/src/commonMain/kotlin/com/contextable/a2ui4k/state/SurfaceStateManager.kt))
+- **`isV08Envelope` is stricter about bare version tags.** Previously any
+  envelope with `version: "v0.8"` was treated as v0.8 even when the rest
+  of the object was a v0.9 op (`createSurface`, etc.). A version tag
+  alone no longer suffices — the envelope must carry a `type` / `kind`
+  of `ACTIVITY_SNAPSHOT` / `ACTIVITY_DELTA`, or a bare `operations`
+  array. Mis-tagged v0.9 ops now correctly fall through to v0.9
+  dispatch, which rejects on version mismatch.
 
 ### Tests
 - Regression test
   `v0_8 beginRendering with non-default root id preserves rootComponentId
   and resolves rootComponent` — every existing v0.8 transcoder test used
-  `"root":"root"`, which is why this bug slipped through.
+  `"root":"root"`, which is why the renderer bug slipped through.
+- New `V08ComponentFlattenerTest` cases: v0.8 Button action with array
+  context → v0.9 event-wrapped with flat context object; v0.8 object
+  context → wrapped unchanged; already-wrapped `event` / `functionCall`
+  actions pass through; `primary: true` → `variant: "primary"`;
+  explicit `variant` beats `primary`.
+- New `SurfaceStateManagerTest` case: empty v0.8 `ACTIVITY_SNAPSHOT`
+  returns `true` and caches the baseline; a follow-up `ACTIVITY_DELTA`
+  dispatches the newly-added `beginRendering` op.
+- Updated `V08MessageTranscoderTest`: "bare version v0.8 envelope with
+  operations list is recognized", "version v0.8 without operations is
+  NOT recognized".
 
 ### Documentation
 - New `skills/migrate-0.8-to-0.9.md` — agent-agnostic migration skill for

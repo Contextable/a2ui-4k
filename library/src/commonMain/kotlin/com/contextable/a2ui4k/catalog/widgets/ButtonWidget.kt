@@ -140,8 +140,12 @@ private fun ButtonWidgetContent(
         val contextObject = eventData?.get("context") as? JsonObject
         val resolvedContext = resolveContext(contextObject, dataContext)
 
+        // Use the template key verbatim; the List widget already supplies
+        // it as the array index ("0", "1") or the object key ("item5"), so
+        // prepending "item" double-prefixes when the data map is keyed like
+        // {"item1": {...}, "item2": {...}}.
         val sourceComponentId = if (templateItemKey != null) {
-            "$componentId:item$templateItemKey"
+            "$componentId:$templateItemKey"
         } else {
             componentId
         }

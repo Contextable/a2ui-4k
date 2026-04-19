@@ -95,21 +95,23 @@ class SurfaceStateManager {
      * - v0.8 `ACTIVITY_SNAPSHOT` / `ACTIVITY_DELTA` envelope (transcoded
      *   internally to v0.9)
      *
-     * Returns `true` if the message was recognized and dispatched, `false`
-     * if it was ignored (wrong version, unknown op, etc.). A single v0.8
-     * envelope may dispatch multiple underlying operations — in that case
-     * returns `true` if any of them were recognized.
+     * Returns `true` if the message was recognized (and dispatched, when
+     * applicable); `false` only when the envelope was not a shape this
+     * manager understands. A legal-but-empty v0.8 envelope — an
+     * `ACTIVITY_SNAPSHOT` with `operations: []` or an `ACTIVITY_DELTA`
+     * whose patch produces no new operations — still returns `true`: the
+     * transcoder's per-`messageId` cache is updated so later deltas can
+     * replay against it. Callers should treat `false` as a genuine
+     * unrecognized-envelope signal, not as "nothing happened".
      */
     fun processMessage(message: JsonObject): Boolean {
         // v0.8 dispatch: transcode to v0.9 shape, then recurse per transcoded op.
         if (v08Transcoder.isV08Envelope(message)) {
             val transcoded = v08Transcoder.transcode(message)
-            if (transcoded.isEmpty()) return false
-            var any = false
             for (sub in transcoded) {
-                if (processV09Message(sub, ProtocolVersion.V0_8)) any = true
+                processV09Message(sub, ProtocolVersion.V0_8)
             }
-            return any
+            return true
         }
         return processV09Message(message, ProtocolVersion.V0_9)
     }
