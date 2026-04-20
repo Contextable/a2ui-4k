@@ -88,6 +88,10 @@ class SurfaceStateManager {
     /**
      * Processes a single server→client message.
      *
+     * Inputs are A2UI protocol JSON, typically extracted by the caller from an
+     * A2A message Part of MIME type `application/json+a2ui`. The library does
+     * not perform A2A Part decoding itself.
+     *
      * Recognized shapes:
      * - v0.9 envelope `{"version":"v0.9", "<op>":{…}}`
      * - v0.9 envelope with no version field (operation key presence is
@@ -237,8 +241,9 @@ class SurfaceStateManager {
 
     /**
      * Returns the `a2uiClientDataModel` envelope as defined by v0.9, or `null`
-     * if no surface has `sendDataModel = true`. Callers may attach this object
-     * to any outbound message metadata their transport supports.
+     * if no surface has `sendDataModel = true`. Callers attach the returned
+     * object under the key `"a2uiClientDataModel"` in outbound A2A message
+     * metadata.
      *
      * Not emitted for v0.8 surfaces — v0.8 has no equivalent envelope.
      */
