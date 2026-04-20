@@ -1,51 +1,66 @@
 # Data Binding
 
-a2ui-4k provides reactive data binding using JSON Pointer paths, allowing UI components to automatically update when underlying data changes.
+a2ui-4k provides reactive data binding using JSON Pointer paths, allowing UI
+components to automatically update when underlying data changes.
 
-> *For complete data binding specification, see [A2UI Data Binding and State Management](https://deepwiki.com/google/A2UI#3.3).*
+> *For the canonical data-binding specification, see the
+> [A2UI v0.9 documentation](https://github.com/google/A2UI/tree/main/specification/0.9).*
 
 ## Overview
 
-Data binding in a2ui-4k connects component properties to data values using two mechanisms:
+A2UI v0.9 collapsed the v0.8 boxed-literal types (`literalString` /
+`literalNumber` / `literalBoolean`) into plain JSON values. Component
+properties now resolve through three forms:
 
-1. **Literal Values** - Static values defined directly in the component
-2. **Path Bindings** - Dynamic values resolved from a `DataModel` at runtime
+1. **Literal values** — JSON primitives are the values themselves.
+2. **Path bindings** — `{"path": "/json/pointer"}` resolved from the surface's `DataModel`.
+3. **Function calls** — `{"call": "fn", "args": {…}}` evaluated by the function evaluator.
 
-## BoundValue Types
-
-Component properties use "BoundValue" types that can be either literals or paths:
+## DataReference forms
 
 ```json
-// Literal string
-{ "literalString": "Hello World" }
+// Literal — the JSON value IS the value
+"text": "Hello World"
+"count": 42
+"enabled": true
 
-// Path binding - resolves from DataModel
-{ "path": "/user/name" }
+// Path binding — resolves from DataModel at render time
+"text": { "path": "/user/name" }
 
-// Literal number
-{ "literalNumber": 42 }
-
-// Literal boolean
-{ "literalBoolean": true }
+// Function call — computed value (validation, formatting, logic)
+"text": {
+  "call": "formatCurrency",
+  "args": {
+    "value": { "path": "/total" },
+    "spec": { "currency": "USD" }
+  }
+}
 ```
 
 ## DataModel
 
-The `DataModel` class provides a reactive data store accessed via JSON Pointer paths:
+The `DataModel` class provides a reactive data store accessed via JSON Pointer
+paths:
 
 ```kotlin
 import com.contextable.a2ui4k.data.rememberDataModel
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 
 @Composable
 fun MyScreen() {
     val dataModel = rememberDataModel(
-        initialData = mapOf(
-            "user" to mapOf(
-                "name" to "Alice",
-                "age" to 30
-            ),
-            "items" to listOf("Apple", "Banana", "Cherry")
-        )
+        initialData = buildJsonObject {
+            putJsonObject("user") {
+                put("name", "Alice")
+                put("age", 30)
+            }
+            putJsonArray("items") {
+                add("Apple"); add("Banana"); add("Cherry")
+            }
+        }
     )
 
     A2UISurface(
@@ -59,22 +74,21 @@ fun MyScreen() {
 ### Reading Data
 
 ```kotlin
-// Get string value
-val name = dataModel.getString("/user/name") // "Alice"
-
-// Get number value
-val age = dataModel.getNumber("/user/age") // 30.0
-
-// Get array size
-val count = dataModel.getArraySize("/items") // 3
+val name  = dataModel.getString("/user/name")  // "Alice"
+val age   = dataModel.getNumber("/user/age")   // 30.0
+val count = dataModel.getArraySize("/items")   // 3
 ```
 
 ### Updating Data
 
 ```kotlin
-// Update a value - UI automatically refreshes
-dataModel.update("/user/name", "Bob")
+dataModel.update("/user/name", "Bob")  // UI recomposes automatically
+
+dataModel.delete("/user/name")          // v0.9: removing a key is first-class
 ```
+
+The agent's equivalent is `updateDataModel` — passing a `value` sets the path,
+omitting `value` deletes the key. See [State Management](state-management.md).
 
 ## Path Syntax
 
@@ -88,17 +102,17 @@ Paths follow JSON Pointer (RFC 6901) syntax:
 
 ## Template Data Binding
 
-For `List` widgets with templates, data binding automatically scopes to the current item:
+For `List` widgets with templates, data binding automatically scopes to the
+current item:
 
 ```json
 {
+  "id": "products-list",
   "component": "List",
-  "properties": {
-    "children": {
-      "template": {
-        "dataPath": "/items",
-        "componentId": "item-template"
-      }
+  "children": {
+    "template": {
+      "path": "/items",
+      "componentId": "item-template"
     }
   }
 }
@@ -110,32 +124,36 @@ Within the template, paths are relative to each item:
 {
   "id": "item-template",
   "component": "Text",
-  "properties": {
-    "text": { "path": "/name" }
-  }
+  "text": { "path": "/name" }
 }
 ```
 
-If `/items` contains `[{"name": "Apple"}, {"name": "Banana"}]`, the template renders twice with scoped data access.
+If `/items` contains `[{"name": "Apple"}, {"name": "Banana"}]`, the template
+renders twice with scoped data access.
 
 ## Two-Way Binding
 
-Input components like `TextField` support two-way binding:
+Input components like `TextField` support two-way binding — the user's input
+updates the `DataModel`, and any other component bound to the same path
+refreshes:
 
 ```json
 {
+  "id": "name-field",
   "component": "TextField",
-  "properties": {
-    "label": { "literalString": "Name" },
-    "text": { "path": "/user/name" }
-  }
+  "label": "Name",
+  "value": { "path": "/user/name" }
 }
 ```
 
-When the user types, the `DataModel` updates automatically, and any other components bound to the same path refresh.
+The widget emits a local `DataChangeEvent` for the change. Note that v0.9 has
+no upstream wire shape for individual data mutations — if the agent needs the
+full data model, set `createSurface.sendDataModel = true` and the
+`a2uiClientDataModel` envelope rides along on the next `action`.
 
 ## See Also
 
-- [A2UI Spec: Data Binding](https://deepwiki.com/google/A2UI#3.3)
+- [A2UI v0.9 specification](https://github.com/google/A2UI/tree/main/specification/0.9)
 - [DataModel API Reference](../api-reference/data-model.md)
-- [Events](events.md) - Handling data change events
+- [Events](events.md) — Handling data change events
+- [State Management](state-management.md) — `updateDataModel` operation

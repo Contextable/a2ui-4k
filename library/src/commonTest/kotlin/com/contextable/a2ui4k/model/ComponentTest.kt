@@ -16,6 +16,7 @@
 
 package com.contextable.a2ui4k.model
 
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.Test
@@ -24,36 +25,28 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 /**
- * Tests for Component class - represents a UI component in A2UI v0.8 format.
+ * Tests for Component class - represents a UI component in A2UI v0.9 format.
  */
 class ComponentTest {
 
     @Test
-    fun `widgetType returns first key from componentProperties`() {
+    fun `widgetType returns componentType`() {
         val component = Component(
             id = "test",
-            componentProperties = mapOf("Text" to JsonObject(emptyMap()))
+            componentType = "Text",
+            properties = JsonObject(emptyMap())
         )
 
         assertEquals("Text", component.widgetType)
     }
 
     @Test
-    fun `widgetType returns null when componentProperties empty`() {
-        val component = Component(
-            id = "test",
-            componentProperties = emptyMap()
-        )
-
-        assertNull(component.widgetType)
-    }
-
-    @Test
-    fun `widgetData returns first value from componentProperties`() {
+    fun `widgetData returns properties`() {
         val data = JsonObject(mapOf("text" to JsonPrimitive("Hello")))
         val component = Component(
             id = "test",
-            componentProperties = mapOf("Text" to data)
+            componentType = "Text",
+            properties = data
         )
 
         assertNotNull(component.widgetData)
@@ -61,13 +54,13 @@ class ComponentTest {
     }
 
     @Test
-    fun `widgetData returns null when componentProperties empty`() {
+    fun `widgetData returns empty JsonObject when no properties`() {
         val component = Component(
             id = "test",
-            componentProperties = emptyMap()
+            componentType = "Text"
         )
 
-        assertNull(component.widgetData)
+        assertEquals(JsonObject(emptyMap()), component.widgetData)
     }
 
     @Test
@@ -97,7 +90,7 @@ class ComponentTest {
             id = "img1",
             component = "Image",
             properties = JsonObject(mapOf(
-                "url" to JsonObject(mapOf("literalString" to JsonPrimitive("https://example.com/img.jpg")))
+                "url" to JsonPrimitive("https://example.com/img.jpg")
             )),
             weight = 1
         )
@@ -113,8 +106,8 @@ class ComponentTest {
     @Test
     fun `fromComponentDef preserves all properties`() {
         val props = JsonObject(mapOf(
-            "text" to JsonObject(mapOf("literalString" to JsonPrimitive("Hello"))),
-            "usageHint" to JsonObject(mapOf("literalString" to JsonPrimitive("h1")))
+            "text" to JsonPrimitive("Hello"),
+            "variant" to JsonPrimitive("h1")
         ))
 
         val def = ComponentDef(
@@ -146,10 +139,8 @@ class ComponentTest {
     fun `Component preserves complex widget data`() {
         val complexData = JsonObject(mapOf(
             "children" to JsonObject(mapOf(
-                "template" to JsonObject(mapOf(
-                    "componentId" to JsonPrimitive("item-template"),
-                    "dataBinding" to JsonPrimitive("/items")
-                ))
+                "componentId" to JsonPrimitive("item-template"),
+                "path" to JsonPrimitive("/items")
             )),
             "direction" to JsonPrimitive("vertical")
         ))

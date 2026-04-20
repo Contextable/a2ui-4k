@@ -16,10 +16,12 @@
 
 package com.contextable.a2ui4k.catalog.widgets
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.contextable.a2ui4k.model.CatalogItem
+import com.contextable.a2ui4k.model.CheckRule
 import com.contextable.a2ui4k.model.DataChangeEvent
 import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
@@ -45,15 +48,15 @@ import kotlinx.serialization.json.JsonObject
 /**
  * CheckBox widget for boolean input.
  *
- * A2UI Protocol Properties (v0.8):
+ * A2UI Protocol Properties (v0.9):
  * - label (required): Display label for the checkbox
  * - value (optional): Boolean value, supports path binding for two-way data binding
  *
- * JSON Schema:
+ * JSON Schema (v0.9):
  * ```json
  * {
- *   "label": {"literalString": "Accept terms"},
- *   "value": {"path": "/form/accepted"}
+ *   "label": "Accept terms" | {"path": "/labels/terms"},
+ *   "value": {"path": "/form/accepted"} | true
  * }
  * ```
  */
@@ -68,7 +71,7 @@ val CheckBoxWidget = CatalogItem(
     )
 }
 
-private val EXPECTED_PROPERTIES = setOf("label", "value")
+private val EXPECTED_PROPERTIES = setOf("label", "value", "checks", "accessibility")
 
 @Composable
 private fun CheckBoxWidgetContent(
@@ -82,7 +85,6 @@ private fun CheckBoxWidgetContent(
     val labelRef = DataReferenceParser.parseString(data["label"])
     val valueRef = DataReferenceParser.parseBoolean(data["value"])
 
-    // Get surfaceId from UiDefinition
     val uiDefinition = LocalUiDefinition.current
     val surfaceId = uiDefinition?.surfaceId ?: "default"
 
@@ -100,24 +102,36 @@ private fun CheckBoxWidgetContent(
 
     var checked by remember(initialValue) { mutableStateOf(initialValue) }
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(
-            checked = checked,
-            onCheckedChange = { newValue ->
-                checked = newValue
-                if (valueRef is PathBoolean) {
-                    dataContext.update(valueRef.path, newValue)
-                    onEvent(
-                        DataChangeEvent(
-                            surfaceId = surfaceId,
-                            path = valueRef.path,
-                            value = newValue.toString()
+    val rules = CheckRule.fromJsonArray(data["checks"])
+    val checkFailures = CheckRule.evaluateAll(rules, dataContext)
+
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = { newValue ->
+                    checked = newValue
+                    if (valueRef is PathBoolean) {
+                        dataContext.update(valueRef.path, newValue)
+                        onEvent(
+                            DataChangeEvent(
+                                surfaceId = surfaceId,
+                                path = valueRef.path,
+                                value = newValue.toString()
+                            )
                         )
-                    )
+                    }
                 }
-            }
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = label)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = label)
+        }
+        checkFailures.firstOrNull()?.let { failure ->
+            Text(
+                text = failure,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
     }
 }

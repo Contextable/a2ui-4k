@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,9 +36,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.contextable.a2ui4k.model.CatalogItem
+import com.contextable.a2ui4k.model.CheckRule
 import com.contextable.a2ui4k.model.DataChangeEvent
 import com.contextable.a2ui4k.model.DataContext
+import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.EventDispatcher
+import com.contextable.a2ui4k.model.LiteralString
+import com.contextable.a2ui4k.model.PathString
 import com.contextable.a2ui4k.render.LocalUiDefinition
 import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonArray
@@ -48,29 +53,34 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * MultipleChoice widget for selecting one or more options.
+ * ChoicePicker widget for selecting one or more options.
  *
- * A2UI Protocol Properties (v0.8):
- * - selections (required): Path for data binding to selected values
+ * A2UI Protocol Properties (v0.9):
+ * - value (required): Path for data binding to selected values (DynamicStringList)
  * - options (required): Array of {label, value} objects
- * - maxAllowedSelections (optional): Number of selections allowed (1 = single, >1 = multiple)
+ * - variant (optional): "multipleSelection" | "mutuallyExclusive"
+ * - displayStyle (optional): "checkbox" | "chips"
+ * - filterable (optional): Boolean indicating whether options can be filtered
  *
  * JSON Schema:
  * ```json
  * {
- *   "selections": {"path": "/form/selections"},
+ *   "component": "ChoicePicker",
+ *   "value": {"path": "/form/selections"},
  *   "options": [
  *     {"label": "Option 1", "value": "opt1"},
  *     {"label": "Option 2", "value": "opt2"}
  *   ],
- *   "maxAllowedSelections": {"literalNumber": 3}
+ *   "variant": "multipleSelection",
+ *   "displayStyle": "checkbox",
+ *   "filterable": true
  * }
  * ```
  */
-val MultipleChoiceWidget = CatalogItem(
-    name = "MultipleChoice"
+val ChoicePickerWidget = CatalogItem(
+    name = "ChoicePicker"
 ) { componentId, data, buildChild, dataContext, onEvent ->
-    MultipleChoiceWidgetContent(
+    ChoicePickerWidgetContent(
         componentId = componentId,
         data = data,
         dataContext = dataContext,
@@ -78,42 +88,67 @@ val MultipleChoiceWidget = CatalogItem(
     )
 }
 
-private val EXPECTED_PROPERTIES = setOf("selections", "options", "maxAllowedSelections")
+private val EXPECTED_PROPERTIES = setOf(
+    "label", "value", "options", "variant", "displayStyle", "filterable", "checks", "accessibility"
+)
 
 @Composable
-private fun MultipleChoiceWidgetContent(
+private fun ChoicePickerWidgetContent(
     componentId: String,
     data: JsonObject,
     dataContext: DataContext,
     onEvent: EventDispatcher
 ) {
-    PropertyValidation.warnUnexpectedProperties("MultipleChoice", data, EXPECTED_PROPERTIES)
+    PropertyValidation.warnUnexpectedProperties("ChoicePicker", data, EXPECTED_PROPERTIES)
 
     // Get surfaceId from UiDefinition
     val uiDefinition = LocalUiDefinition.current
     val surfaceId = uiDefinition?.surfaceId ?: "default"
 
-    val maxAllowedSelections = data["maxAllowedSelections"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
-    val multipleSelection = maxAllowedSelections != 1
+    val labelRef = DataReferenceParser.parseString(data["label"])
+    val groupLabel = when (labelRef) {
+        is LiteralString -> labelRef.value
+        is PathString -> dataContext.getString(labelRef.path)
+        else -> null
+    }
+
+    val variant = data["variant"]?.jsonPrimitive?.contentOrNull
+    val multipleSelection = variant != "mutuallyExclusive"
 
     val options = (data["options"]?.jsonArray ?: JsonArray(emptyList())).mapNotNull { optElement ->
         val optObj = optElement.jsonObject
-        val optLabel = optObj["label"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-        val optValue = optObj["value"]?.jsonPrimitive?.contentOrNull ?: optLabel
-        optLabel to optValue
+        // Option label is a DynamicString per v0.9: literal, {path}, or FunctionCall.
+        val labelResolved = when (val ref = DataReferenceParser.parseString(optObj["label"])) {
+            is LiteralString -> ref.value
+            is PathString -> dataContext.getString(ref.path)
+            else -> null
+        }
+        if (labelResolved == null) return@mapNotNull null
+        val optValue = optObj["value"]?.jsonPrimitive?.contentOrNull ?: labelResolved
+        labelResolved to optValue
     }
 
-    val selectionsElement = data["selections"]
-    val selectionsPath = (selectionsElement as? JsonObject)?.get("path")?.jsonPrimitive?.contentOrNull
+    val valueElement = data["value"]
+    val valuePath = (valueElement as? JsonObject)?.get("path")?.jsonPrimitive?.contentOrNull
     val selections = when {
-        selectionsPath != null -> dataContext.getStringList(selectionsPath) ?: emptyList()
-        selectionsElement is JsonArray -> selectionsElement.mapNotNull { it.jsonPrimitive.contentOrNull }
+        valuePath != null -> dataContext.getStringList(valuePath) ?: emptyList()
+        valueElement is JsonArray -> valueElement.mapNotNull { it.jsonPrimitive.contentOrNull }
         else -> emptyList()
     }
 
     var selectedValues by remember(selections) { mutableStateOf(selections.toSet()) }
 
+    val rules = CheckRule.fromJsonArray(data["checks"])
+    val checkFailures = CheckRule.evaluateAll(rules, dataContext)
+
     Column(modifier = Modifier.fillMaxWidth()) {
+        if (!groupLabel.isNullOrEmpty()) {
+            Text(
+                text = groupLabel,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+        }
         options.forEach { (optLabel, optValue) ->
             val isSelected = optValue in selectedValues
 
@@ -128,12 +163,12 @@ private fun MultipleChoiceWidgetContent(
                             setOf(optValue)
                         }
 
-                        if (selectionsPath != null) {
-                            dataContext.update(selectionsPath, selectedValues.toList())
+                        if (valuePath != null) {
+                            dataContext.update(valuePath, selectedValues.toList())
                             onEvent(
                                 DataChangeEvent(
                                     surfaceId = surfaceId,
-                                    path = selectionsPath,
+                                    path = valuePath,
                                     value = selectedValues.joinToString(",")
                                 )
                             )
@@ -155,6 +190,13 @@ private fun MultipleChoiceWidgetContent(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = optLabel)
             }
+        }
+        checkFailures.firstOrNull()?.let { failure ->
+            Text(
+                text = failure,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
         }
     }
 }

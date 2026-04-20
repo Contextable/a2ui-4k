@@ -2,7 +2,8 @@
 
 Reactive data store for path-based data binding.
 
-> *a2ui-4k currently implements the A2UI v0.8 specification. The A2UI protocol is under active development.*
+> *a2ui-4k implements A2UI **v0.9** with backwards-compatible support for v0.8
+> (see [Deprecated Protocol Versions](../protocol/deprecated-versions.md)).*
 
 ## Definition
 

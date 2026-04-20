@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.contextable.a2ui4k.model.CatalogItem
 import com.contextable.a2ui4k.model.ChildBuilder
+import com.contextable.a2ui4k.model.ChildrenReference
 import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.LiteralString
@@ -37,17 +38,17 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Column widget that arranges children vertically.
  *
- * A2UI Protocol Properties (v0.8):
+ * A2UI Protocol Properties (v0.9):
  * - children (required): List of child component IDs
- * - distribution (optional): start, center, end, spaceBetween, spaceAround, spaceEvenly
- * - alignment (optional): start, center, end, stretch
+ * - justify (optional): start, center, end, spaceBetween, spaceAround
+ * - align (optional): start, center, end, stretch
  *
  * JSON Schema:
  * ```json
  * {
- *   "children": {"explicitList": ["child1", "child2"]},
- *   "distribution": {"literalString": "spaceBetween"},
- *   "alignment": {"literalString": "center"}
+ *   "children": ["child1", "child2"],
+ *   "justify": "spaceBetween",
+ *   "align": "center"
  * }
  * ```
  */
@@ -57,7 +58,8 @@ val ColumnWidget = CatalogItem(
     ColumnWidgetContent(data = data, buildChild = buildChild, dataContext = dataContext)
 }
 
-private val EXPECTED_PROPERTIES = setOf("children", "distribution", "alignment")
+// Accept both v0.9 and v0.8 property names. v0.8 used `distribution`/`alignment`.
+private val EXPECTED_PROPERTIES = setOf("children", "justify", "align", "distribution", "alignment")
 
 @Composable
 private fun ColumnWidgetContent(
@@ -67,37 +69,39 @@ private fun ColumnWidgetContent(
 ) {
     PropertyValidation.warnUnexpectedProperties("Column", data, EXPECTED_PROPERTIES)
 
-    val childrenRef = DataReferenceParser.parseComponentArray(data["children"])
-    val children = childrenRef?.componentIds ?: emptyList()
+    val childrenRef = DataReferenceParser.parseChildren(data["children"])
+    val children = (childrenRef as? ChildrenReference.ExplicitList)?.componentIds ?: emptyList()
 
-    val distributionRef = DataReferenceParser.parseString(data["distribution"])
-    val distribution = when (distributionRef) {
-        is LiteralString -> distributionRef.value
-        is PathString -> dataContext.getString(distributionRef.path)
+    // Prefer the v0.9 keys; fall back to the v0.8 aliases when absent.
+    val justifyRef = DataReferenceParser.parseString(data["justify"])
+        ?: DataReferenceParser.parseString(data["distribution"])
+    val justify = when (justifyRef) {
+        is LiteralString -> justifyRef.value
+        is PathString -> dataContext.getString(justifyRef.path)
         else -> null
     }
 
-    val alignmentRef = DataReferenceParser.parseString(data["alignment"])
-    val alignment = when (alignmentRef) {
-        is LiteralString -> alignmentRef.value
-        is PathString -> dataContext.getString(alignmentRef.path)
+    val alignRef = DataReferenceParser.parseString(data["align"])
+        ?: DataReferenceParser.parseString(data["alignment"])
+    val align = when (alignRef) {
+        is LiteralString -> alignRef.value
+        is PathString -> dataContext.getString(alignRef.path)
         else -> null
     }
 
     val definition = LocalUiDefinition.current
 
-    // Apply fillMaxWidth only for distributions that need space to distribute.
-    // Alignment works within the Column's natural width.
-    // This prevents Columns inside Rows from each trying to fill full width.
-    val needsFullWidth = distribution?.lowercase() in listOf(
+    // Apply fillMaxWidth only for justify values that need space to distribute.
+    // `spaceEvenly` is v0.8-only but cheap to honor unconditionally for forward compat.
+    val needsFullWidth = justify?.lowercase() in listOf(
         "spacebetween", "spacearound", "spaceevenly"
     )
     val modifier = if (needsFullWidth) Modifier.fillMaxWidth() else Modifier
 
     Column(
         modifier = modifier,
-        verticalArrangement = parseVerticalArrangement(distribution),
-        horizontalAlignment = parseHorizontalAlignment(alignment)
+        verticalArrangement = parseVerticalArrangement(justify),
+        horizontalAlignment = parseHorizontalAlignment(align)
     ) {
         children.forEach { childId ->
             val weight = definition?.components?.get(childId)?.weight
@@ -126,16 +130,17 @@ private fun ColumnScope.BuildWeightedChild(
 }
 
 /**
- * Parse vertical arrangement from A2UI distribution values.
+ * Parse vertical arrangement from A2UI justify values.
  *
- * Valid distribution values per A2UI v0.8 spec:
- * start, center, end, spaceBetween, spaceAround, spaceEvenly
+ * Valid justify values per A2UI v0.9 spec:
+ * start, center, end, spaceBetween, spaceAround. `spaceEvenly` (v0.8-only)
+ * is also honored.
  */
-private fun parseVerticalArrangement(distribution: String?): Arrangement.Vertical {
-    return when (distribution?.lowercase()) {
-        "start", "top" -> Arrangement.Top
+private fun parseVerticalArrangement(justify: String?): Arrangement.Vertical {
+    return when (justify?.lowercase()) {
+        "start" -> Arrangement.Top
         "center" -> Arrangement.Center
-        "end", "bottom" -> Arrangement.Bottom
+        "end" -> Arrangement.Bottom
         "spacebetween" -> Arrangement.SpaceBetween
         "spacearound" -> Arrangement.SpaceAround
         "spaceevenly" -> Arrangement.SpaceEvenly
@@ -144,16 +149,16 @@ private fun parseVerticalArrangement(distribution: String?): Arrangement.Vertica
 }
 
 /**
- * Parse horizontal alignment from A2UI alignment values.
+ * Parse horizontal alignment from A2UI align values.
  *
- * Valid alignment values per A2UI v0.8 spec:
+ * Valid align values per A2UI v0.9 spec:
  * start, center, end, stretch
  */
 private fun parseHorizontalAlignment(alignment: String?): Alignment.Horizontal {
     return when (alignment?.lowercase()) {
-        "start", "left" -> Alignment.Start
+        "start" -> Alignment.Start
         "center" -> Alignment.CenterHorizontally
-        "end", "right" -> Alignment.End
+        "end" -> Alignment.End
         // "stretch" - Compose doesn't have a direct equivalent for horizontal alignment
         // Using CenterHorizontally as fallback. True stretch would need fillMaxWidth on children.
         "stretch" -> Alignment.CenterHorizontally

@@ -17,236 +17,263 @@
 package com.contextable.a2ui4k.state
 
 import com.contextable.a2ui4k.data.DataModel
-import com.contextable.a2ui4k.model.A2UIActivityContent
-import com.contextable.a2ui4k.model.A2UIOperation
-import com.contextable.a2ui4k.model.BeginRendering
+import com.contextable.a2ui4k.extension.A2UIExtension
 import com.contextable.a2ui4k.model.Component
 import com.contextable.a2ui4k.model.ComponentDef
-import com.contextable.a2ui4k.model.DataEntry
-import com.contextable.a2ui4k.model.DataModelUpdate
-import com.contextable.a2ui4k.model.DeleteSurface
-import com.contextable.a2ui4k.model.SurfaceUpdate
+import com.contextable.a2ui4k.model.ProtocolVersion
 import com.contextable.a2ui4k.model.UiDefinition
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
+import com.contextable.a2ui4k.protocol.v08.V08MessageTranscoder
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Manages the state of A2UI surfaces.
+ * Manages A2UI surface state for both v0.9 and v0.8 wire protocols.
  *
- * Receives A2UI operations from ACTIVITY_SNAPSHOT/DELTA events and builds
- * [UiDefinition] instances that can be rendered by A2UISurface.
+ * ## v0.9 (native)
  *
- * In the A2UI v0.8 protocol, the manager handles four operation types:
- * - `beginRendering`: Initializes a surface with root and optional styles
- * - `surfaceUpdate`: Adds or updates component definitions
- * - `dataModelUpdate`: Updates data at specified paths
- * - `deleteSurface`: Removes a surface
+ * The server streams individual JSON objects each carrying a `version` tag
+ * and exactly one operation key:
  *
- * **Note:** This class processes parsed JSON operations. JSONL stream parsing
- * is left to the application's transport layer.
+ * - `createSurface`
+ * - `updateComponents`
+ * - `updateDataModel`
+ * - `deleteSurface`
  *
- * ## Usage
+ * ## v0.8 (transcoded)
  *
- * ```kotlin
- * val manager = SurfaceStateManager()
+ * The server sends `ACTIVITY_SNAPSHOT` / `ACTIVITY_DELTA` envelopes. Each
+ * incoming v0.8 envelope is transcoded through [V08MessageTranscoder] into
+ * zero-or-more v0.9-shape messages and processed identically to native v0.9.
+ * A surface created this way is tagged with [ProtocolVersion.V0_8] so
+ * outbound client events can be serialized in the matching wire shape.
  *
- * // Process operations from activity events
- * manager.processSnapshot(messageId, activityContent)
- * manager.processDelta(messageId, jsonPatch)
- *
- * // Get current surfaces for rendering
- * val surfaces = manager.getSurfaces()
- * val dataModel = manager.getDataModel(surfaceId)
- * ```
- *
- * @see UiDefinition
- * @see com.contextable.a2ui4k.data.DataModel
- * @see com.contextable.a2ui4k.render.A2UISurface
+ * Pass each decoded message to [processMessage]. This class does no I/O
+ * and has no knowledge of any specific transport.
  */
 class SurfaceStateManager {
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
+    /** Protocol version string this manager speaks natively (v0.9). */
+    val protocolVersion: String = PROTOCOL_VERSION
 
-    /**
-     * Internal state for a single surface.
-     */
+    private val v08Transcoder = V08MessageTranscoder()
+
     private data class SurfaceState(
         val surfaceId: String,
-        var root: String? = null,
-        var styles: JsonObject? = null,
+        var catalogId: String? = null,
+        var theme: JsonObject? = null,
+        var sendDataModel: Boolean = false,
+        var rootComponentId: String? = null,
+        var protocolVersion: ProtocolVersion = ProtocolVersion.V0_9,
         val components: MutableMap<String, Component> = mutableMapOf(),
         val dataModel: DataModel = DataModel()
     ) {
         fun toUiDefinition(): UiDefinition = UiDefinition(
             surfaceId = surfaceId,
             components = components.toMap(),
-            root = root
+            catalogId = catalogId,
+            theme = theme,
+            sendDataModel = sendDataModel,
+            rootComponentId = rootComponentId,
+            protocolVersion = protocolVersion
         )
     }
 
     private val surfaces = mutableMapOf<String, SurfaceState>()
 
     /**
-     * Processes an ACTIVITY_SNAPSHOT event for a2ui-surface.
+     * Processes a single server→client message.
      *
-     * @param messageId The message ID associated with this activity
-     * @param content The activity content containing operations
+     * Inputs are A2UI protocol JSON, typically extracted by the caller from an
+     * A2A message Part of MIME type `application/json+a2ui`. The library does
+     * not perform A2A Part decoding itself.
+     *
+     * Recognized shapes:
+     * - v0.9 envelope `{"version":"v0.9", "<op>":{…}}`
+     * - v0.9 envelope with no version field (operation key presence is
+     *   sufficient)
+     * - v0.8 `ACTIVITY_SNAPSHOT` / `ACTIVITY_DELTA` envelope (transcoded
+     *   internally to v0.9)
+     *
+     * Returns `true` if the message was recognized (and dispatched, when
+     * applicable); `false` only when the envelope was not a shape this
+     * manager understands. A legal-but-empty v0.8 envelope — an
+     * `ACTIVITY_SNAPSHOT` with `operations: []` or an `ACTIVITY_DELTA`
+     * whose patch produces no new operations — still returns `true`: the
+     * transcoder's per-`messageId` cache is updated so later deltas can
+     * replay against it. Callers should treat `false` as a genuine
+     * unrecognized-envelope signal, not as "nothing happened".
      */
-    fun processSnapshot(messageId: String, content: JsonElement) {
-        val contentObj = content.jsonObject
-        val operationsArray = contentObj["operations"]?.jsonArray ?: return
-
-        for (opElement in operationsArray) {
-            val opObj = opElement.jsonObject
-            processOperationObject(opObj)
+    fun processMessage(message: JsonObject): Boolean {
+        // v0.8 dispatch: transcode to v0.9 shape, then recurse per transcoded op.
+        if (v08Transcoder.isV08Envelope(message)) {
+            val transcoded = v08Transcoder.transcode(message)
+            for (sub in transcoded) {
+                processV09Message(sub, ProtocolVersion.V0_8)
+            }
+            return true
         }
+        return processV09Message(message, ProtocolVersion.V0_9)
     }
 
     /**
-     * Processes an ACTIVITY_DELTA event for a2ui-surface.
-     *
-     * The patch contains JSON Patch operations that may add new operations
-     * to the surface state.
-     *
-     * @param messageId The message ID associated with this activity
-     * @param patch The JSON Patch array
+     * Processes a v0.9-shape envelope. [sourceVersion] is the wire version
+     * that actually produced this message — v0.9 for native, v0.8 for
+     * transcoded. Used to tag each surface so outbound events get the right
+     * wire shape.
      */
-    fun processDelta(messageId: String, patch: JsonArray) {
-        for (patchOp in patch) {
-            val patchObj = patchOp.jsonObject
-            val op = (patchObj["op"] as? kotlinx.serialization.json.JsonPrimitive)?.content
-            val path = (patchObj["path"] as? kotlinx.serialization.json.JsonPrimitive)?.content
-            val value = patchObj["value"]
-
-            // Handle add operations to /operations/-
-            if (op == "add" && path?.startsWith("/operations/") == true && value != null) {
-                val opObj = value.jsonObject
-                processOperationObject(opObj)
+    private fun processV09Message(
+        message: JsonObject,
+        sourceVersion: ProtocolVersion
+    ): Boolean {
+        val version = (message["version"] as? JsonPrimitive)?.contentOrNullSafe
+        if (version != null && version != PROTOCOL_VERSION) {
+            return false
+        }
+        return when {
+            message.containsKey("createSurface") -> {
+                handleCreateSurface(message["createSurface"]!!.jsonObject, sourceVersion)
+                true
             }
+            message.containsKey("updateComponents") -> {
+                handleUpdateComponents(message["updateComponents"]!!.jsonObject, sourceVersion)
+                true
+            }
+            message.containsKey("updateDataModel") -> {
+                handleUpdateDataModel(message["updateDataModel"]!!.jsonObject, sourceVersion)
+                true
+            }
+            message.containsKey("deleteSurface") -> {
+                handleDeleteSurface(message["deleteSurface"]!!.jsonObject)
+                true
+            }
+            else -> false
         }
     }
 
-    /**
-     * Processes a raw operation JSON object.
-     */
-    private fun processOperationObject(opObj: JsonObject) {
-        when {
-            opObj.containsKey("beginRendering") -> {
-                val data = opObj["beginRendering"]!!.jsonObject
-                handleBeginRendering(data)
-            }
-            opObj.containsKey("surfaceUpdate") -> {
-                val data = opObj["surfaceUpdate"]!!.jsonObject
-                handleSurfaceUpdate(data)
-            }
-            opObj.containsKey("dataModelUpdate") -> {
-                val data = opObj["dataModelUpdate"]!!.jsonObject
-                handleDataModelUpdate(data)
-            }
-            opObj.containsKey("deleteSurface") -> {
-                val data = opObj["deleteSurface"]!!.jsonObject
-                handleDeleteSurface(data)
-            }
-        }
-    }
+    private fun handleCreateSurface(data: JsonObject, sourceVersion: ProtocolVersion) {
+        val surfaceId = data["surfaceId"]?.asStringOrNull() ?: return
+        val catalogId = data["catalogId"]?.asStringOrNull()
+        val theme = data["theme"] as? JsonObject
+        val sendDataModel = (data["sendDataModel"] as? JsonPrimitive)
+            ?.contentOrNullSafe?.toBooleanStrictOrNull() ?: false
+        val rootComponentId = data["rootComponentId"]?.asStringOrNull()
 
-    private fun handleBeginRendering(data: JsonObject) {
-        val surfaceId = (data["surfaceId"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return
-        val root = (data["root"] as? kotlinx.serialization.json.JsonPrimitive)?.content
-        val styles = data["styles"]?.jsonObject
+        // If the catalog URI is the v0.8 one, that overrides the source
+        // version — but normally they agree.
+        val version = when (catalogId) {
+            A2UIExtension.STANDARD_CATALOG_URI_V08 -> ProtocolVersion.V0_8
+            A2UIExtension.STANDARD_CATALOG_URI -> ProtocolVersion.V0_9
+            else -> sourceVersion
+        }
 
         val state = surfaces.getOrPut(surfaceId) { SurfaceState(surfaceId) }
-        state.root = root
-        state.styles = styles
+        state.catalogId = catalogId
+        state.theme = theme
+        state.sendDataModel = sendDataModel
+        state.rootComponentId = rootComponentId
+        state.protocolVersion = version
     }
 
-    private fun handleSurfaceUpdate(data: JsonObject) {
-        val surfaceId = (data["surfaceId"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return
+    private fun handleUpdateComponents(data: JsonObject, sourceVersion: ProtocolVersion) {
+        val surfaceId = data["surfaceId"]?.asStringOrNull() ?: return
         val componentsArray = data["components"]?.jsonArray ?: return
 
         val state = surfaces.getOrPut(surfaceId) { SurfaceState(surfaceId) }
+        if (state.protocolVersion == ProtocolVersion.V0_9 && sourceVersion == ProtocolVersion.V0_8) {
+            state.protocolVersion = ProtocolVersion.V0_8
+        }
 
         for (compElement in componentsArray) {
             val compObj = compElement.jsonObject
             val componentDef = ComponentDef.fromJson(compObj)
-
-            // Convert ComponentDef (v0.9) to Component for rendering
             val component = Component.fromComponentDef(componentDef)
             state.components[component.id] = component
         }
     }
 
-    private fun handleDataModelUpdate(data: JsonObject) {
-        val surfaceId = (data["surfaceId"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return
-        val path = (data["path"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return
-        val contentsArray = data["contents"]?.jsonArray ?: return
-
-        println("Debug: (SurfaceStateManager) handleDataModelUpdate surfaceId=$surfaceId path=$path contents=${contentsArray.size} items")
+    private fun handleUpdateDataModel(data: JsonObject, sourceVersion: ProtocolVersion) {
+        val surfaceId = data["surfaceId"]?.asStringOrNull() ?: return
+        val path = data["path"]?.asStringOrNull() ?: "/"
 
         val state = surfaces.getOrPut(surfaceId) { SurfaceState(surfaceId) }
-
-        for (entryElement in contentsArray) {
-            val entryObj = entryElement.jsonObject
-            println("Debug: (SurfaceStateManager) Parsing entry: $entryObj")
-            try {
-                val entry = json.decodeFromJsonElement(DataEntry.serializer(), entryObj)
-                val fullPath = if (path.endsWith("/")) "$path${entry.key}" else "$path/${entry.key}"
-                val jsonValue = entry.toJsonElement()
-                println("Debug: (SurfaceStateManager) Setting $fullPath = $jsonValue")
-                state.dataModel.update(fullPath, jsonValue)
-            } catch (e: Exception) {
-                println("Debug: (SurfaceStateManager) Error parsing entry: ${e.message}")
-                e.printStackTrace()
-            }
+        if (state.protocolVersion == ProtocolVersion.V0_9 && sourceVersion == ProtocolVersion.V0_8) {
+            state.protocolVersion = ProtocolVersion.V0_8
         }
 
-        // Debug: print current data model state
-        println("Debug: (SurfaceStateManager) Data model after update: ${state.dataModel.currentData}")
+        // Spec distinguishes absent `value` (delete the key) from explicit
+        // `"value": null` (set the key to JsonNull). v0.8 never sent an
+        // absent-value update, so both paths behave identically there.
+        if (!data.containsKey("value")) {
+            state.dataModel.delete(path)
+            return
+        }
+        state.dataModel.update(path, data["value"] ?: JsonNull)
     }
 
     private fun handleDeleteSurface(data: JsonObject) {
-        val surfaceId = (data["surfaceId"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return
+        val surfaceId = data["surfaceId"]?.asStringOrNull() ?: return
         surfaces.remove(surfaceId)
     }
 
-    /**
-     * Returns a map of all active surfaces.
-     */
-    fun getSurfaces(): Map<String, UiDefinition> {
-        return surfaces.mapValues { it.value.toUiDefinition() }
-    }
+    /** Returns a snapshot map of all active surfaces. */
+    fun getSurfaces(): Map<String, UiDefinition> =
+        surfaces.mapValues { it.value.toUiDefinition() }
+
+    /** Returns the data model for a specific surface, or `null` if not present. */
+    fun getDataModel(surfaceId: String): DataModel? = surfaces[surfaceId]?.dataModel
+
+    /** Returns a specific surface definition, or `null` if not present. */
+    fun getSurface(surfaceId: String): UiDefinition? =
+        surfaces[surfaceId]?.toUiDefinition()
 
     /**
-     * Returns the data model for a specific surface.
+     * Returns the [ProtocolVersion] a given surface is speaking, or `null` if
+     * the surface is not registered. Callers that serialize client events
+     * (`ActionEvent.toClientMessage`) use this to pick the right wire shape.
      */
-    fun getDataModel(surfaceId: String): DataModel? {
-        return surfaces[surfaceId]?.dataModel
-    }
+    fun getSurfaceProtocolVersion(surfaceId: String): ProtocolVersion? =
+        surfaces[surfaceId]?.protocolVersion
 
     /**
-     * Returns a specific surface definition.
+     * Returns the `a2uiClientDataModel` envelope as defined by v0.9, or `null`
+     * if no surface has `sendDataModel = true`. Callers attach the returned
+     * object under the key `"a2uiClientDataModel"` in outbound A2A message
+     * metadata.
+     *
+     * Not emitted for v0.8 surfaces — v0.8 has no equivalent envelope.
      */
-    fun getSurface(surfaceId: String): UiDefinition? {
-        return surfaces[surfaceId]?.toUiDefinition()
+    fun buildClientDataModel(): JsonObject? {
+        val active = surfaces.values.filter {
+            it.sendDataModel && it.protocolVersion == ProtocolVersion.V0_9
+        }
+        if (active.isEmpty()) return null
+        return buildJsonObject {
+            put("version", JsonPrimitive(PROTOCOL_VERSION))
+            put("surfaces", JsonObject(active.associate { it.surfaceId to it.dataModel.currentData }))
+        }
     }
 
-    /**
-     * Clears all surfaces.
-     */
+    /** Clears all surfaces. */
     fun clear() {
         surfaces.clear()
     }
 
-    /**
-     * Returns the number of active surfaces.
-     */
+    /** Number of active surfaces. */
     val surfaceCount: Int
         get() = surfaces.size
+
+    companion object {
+        const val PROTOCOL_VERSION: String = "v0.9"
+    }
 }
+
+private fun kotlinx.serialization.json.JsonElement.asStringOrNull(): String? =
+    (this as? JsonPrimitive)?.takeIf { it.isString }?.content
+
+private val JsonPrimitive.contentOrNullSafe: String?
+    get() = if (this is JsonNull) null else content

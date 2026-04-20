@@ -42,18 +42,18 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Modal widget for displaying dialog overlays.
  *
- * A2UI Protocol Properties (v0.8):
- * - entryPointChild (required): Component ID of the trigger element (e.g., a Button)
- * - contentChild (required): Component ID of the content to display in the modal
+ * A2UI Protocol Properties (v0.9):
+ * - trigger (required): Component ID of the trigger element (e.g., a Button)
+ * - content (required): Component ID of the content to display in the modal
  *
- * The modal opens when the entryPointChild is clicked.
+ * The modal opens when the trigger is clicked.
  *
  * JSON Schema:
  * ```json
  * {
  *   "component": "Modal",
- *   "entryPointChild": "open-modal-button",
- *   "contentChild": "modal-content"
+ *   "trigger": "open-modal-button",
+ *   "content": "modal-content"
  * }
  * ```
  */
@@ -68,7 +68,7 @@ val ModalWidget = CatalogItem(
     )
 }
 
-private val EXPECTED_PROPERTIES = setOf("entryPointChild", "contentChild")
+private val EXPECTED_PROPERTIES = setOf("trigger", "content")
 
 @Composable
 private fun ModalWidgetContent(
@@ -79,20 +79,20 @@ private fun ModalWidgetContent(
 ) {
     PropertyValidation.warnUnexpectedProperties("Modal", data, EXPECTED_PROPERTIES)
 
-    val entryPointRef = DataReferenceParser.parseComponentRef(data["entryPointChild"])
-    val contentRef = DataReferenceParser.parseComponentRef(data["contentChild"])
+    val triggerRef = DataReferenceParser.parseComponentRef(data["trigger"])
+    val contentRef = DataReferenceParser.parseComponentRef(data["content"])
 
-    val entryPointChildId = entryPointRef?.componentId
+    val triggerChildId = triggerRef?.componentId
     val contentChildId = contentRef?.componentId
 
     var showDialog by remember { mutableStateOf(false) }
 
-    // Render the entry point (trigger element)
-    if (entryPointChildId != null) {
+    // Render the trigger element
+    if (triggerChildId != null) {
         Box(
             modifier = Modifier.clickable { showDialog = true }
         ) {
-            buildChild(entryPointChildId)
+            buildChild(triggerChildId)
         }
     }
 

@@ -26,19 +26,19 @@ import kotlin.test.assertNull
 /**
  * Tests for AudioPlayer widget JSON parsing.
  *
- * A2UI Spec properties (v0.8):
- * - url (optional): URL of the audio source
- * - description (optional): Accessibility description / title
+ * A2UI Spec properties (v0.9):
+ * - url (optional): URL of the audio source as plain string or path binding
+ * - description (optional): Accessibility description / title as plain string or path binding
  */
 class AudioPlayerWidgetTest {
 
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
-    fun `parseString extracts url literalString`() {
+    fun `parseString extracts url literal`() {
         val jsonStr = """
             {
-                "url": {"literalString": "https://example.com/audio.mp3"}
+                "url": "https://example.com/audio.mp3"
             }
         """.trimIndent()
 
@@ -65,11 +65,11 @@ class AudioPlayerWidgetTest {
     }
 
     @Test
-    fun `parseString extracts description literalString`() {
+    fun `parseString extracts description literal`() {
         val jsonStr = """
             {
-                "url": {"literalString": "https://example.com/episode.mp3"},
-                "description": {"literalString": "Episode 42: Introduction to A2UI"}
+                "url": "https://example.com/episode.mp3",
+                "description": "Episode 42: Introduction to A2UI"
             }
         """.trimIndent()
 
@@ -100,8 +100,8 @@ class AudioPlayerWidgetTest {
     fun `complete AudioPlayer with url and description`() {
         val jsonStr = """
             {
-                "url": {"literalString": "https://cdn.example.com/podcast/ep1.mp3"},
-                "description": {"literalString": "Welcome to Our Podcast"}
+                "url": "https://cdn.example.com/podcast/ep1.mp3",
+                "description": "Welcome to Our Podcast"
             }
         """.trimIndent()
 
@@ -128,7 +128,7 @@ class AudioPlayerWidgetTest {
         val extensions = listOf("mp3", "wav", "ogg", "m4a", "aac", "flac")
 
         extensions.forEach { ext ->
-            val jsonStr = """{"url": {"literalString": "https://example.com/audio.$ext"}}"""
+            val jsonStr = """{"url": "https://example.com/audio.$ext"}"""
             val data = json.decodeFromString<JsonObject>(jsonStr)
             val urlRef = DataReferenceParser.parseString(data["url"])
 
@@ -141,7 +141,7 @@ class AudioPlayerWidgetTest {
     fun `AudioPlayer with only description`() {
         val jsonStr = """
             {
-                "description": {"literalString": "Background Music"}
+                "description": "Background Music"
             }
         """.trimIndent()
 

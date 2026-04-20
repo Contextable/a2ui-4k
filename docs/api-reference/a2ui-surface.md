@@ -2,7 +2,8 @@
 
 The main composable for rendering A2UI definitions.
 
-> *a2ui-4k currently implements the A2UI v0.8 specification. The A2UI protocol is under active development.*
+> *a2ui-4k implements A2UI **v0.9** with backwards-compatible support for v0.8
+> (see [Deprecated Protocol Versions](../protocol/deprecated-versions.md)).*
 
 ## Signature
 
@@ -51,13 +52,21 @@ fun MyScreen(uiDefinition: UiDefinition) {
 
 ```kotlin
 import com.contextable.a2ui4k.data.rememberDataModel
+import com.contextable.a2ui4k.model.ActionEvent
+import com.contextable.a2ui4k.model.ClientError
+import com.contextable.a2ui4k.model.DataChangeEvent
+import com.contextable.a2ui4k.model.ValidationError
+import com.contextable.a2ui4k.model.toClientMessage
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 @Composable
 fun DynamicScreen(uiDefinition: UiDefinition) {
     val dataModel = rememberDataModel(
-        initialData = mapOf(
-            "user" to mapOf("name" to "Alice")
-        )
+        initialData = buildJsonObject {
+            putJsonObject("user") { put("name", "Alice") }
+        }
     )
 
     A2UISurface(
@@ -66,7 +75,9 @@ fun DynamicScreen(uiDefinition: UiDefinition) {
         dataModel = dataModel,
         onEvent = { event ->
             when (event) {
-                is UserActionEvent -> sendToAgent(event)
+                is ActionEvent -> event.toClientMessage()?.let(::sendToAgent)
+                is ValidationError -> showInlineValidation(event)
+                is ClientError -> reportError(event)
                 is DataChangeEvent -> { /* auto-handled by DataModel */ }
             }
         }
@@ -91,10 +102,14 @@ A2UISurface(
 
 ## Behavior
 
-1. **Rendering:** Starts from `definition.root` and recursively renders the component tree
-2. **Data Binding:** Resolves path-bound properties using the `dataModel`
-3. **Events:** Bubbles `UiEvent` instances up via `onEvent` callback
-4. **Recomposition:** Automatically recomposes when `definition` or `dataModel` changes
+1. **Rendering:** Starts from `definition.rootComponent` (the component with id
+   `"root"` in v0.9; `definition.rootComponentId` for v0.8 surfaces) and
+   recursively renders the component tree.
+2. **Data Binding:** Resolves path-bound properties using the `dataModel`.
+3. **Events:** Bubbles `UiEvent` instances up via `onEvent` callback.
+   `ActionEvent`, `ValidationError`, and `ClientError` are wire events;
+   `DataChangeEvent` is local-only.
+4. **Recomposition:** Automatically recomposes when `definition` or `dataModel` changes.
 
 ## Related
 

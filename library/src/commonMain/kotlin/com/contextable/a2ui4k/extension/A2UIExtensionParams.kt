@@ -29,8 +29,8 @@ import kotlinx.serialization.Serializable
  * ```json
  * {
  *   "supportedCatalogIds": [
- *     "https://github.com/google/A2UI/blob/main/specification/0.8/json/standard_catalog_definition.json",
- *     "https://my-company.com/a2ui/v0.8/my_custom_catalog.json"
+ *     "https://github.com/google/A2UI/blob/main/specification/v0_9/json/standard_catalog.json",
+ *     "https://my-company.com/a2ui/v0.9/my_custom_catalog.json"
  *   ],
  *   "acceptsInlineCatalogs": true
  * }
@@ -41,8 +41,9 @@ import kotlinx.serialization.Serializable
  * @property acceptsInlineCatalogs Whether the agent can accept inline catalog definitions
  *                                 from the client's `a2uiClientCapabilities`. Defaults to false.
  *
- * @see AgentExtension
- * @see a2uiAgentExtension
+ * The library does not ship an `AgentExtension` builder — assemble the wrapper
+ * with your A2A SDK. See `docs/api-reference/agent-extension.md` in the repo
+ * for the integration pattern.
  */
 @Serializable
 data class A2UIExtensionParams(

@@ -38,7 +38,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.material3.MaterialTheme
 import com.contextable.a2ui4k.model.CatalogItem
+import com.contextable.a2ui4k.model.CheckRule
 import com.contextable.a2ui4k.model.DataChangeEvent
 import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
@@ -54,17 +56,17 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * DateTimeInput widget for date and/or time input.
  *
- * A2UI Protocol Properties (v0.8):
+ * A2UI Protocol Properties (v0.9):
  * - value (required): Date/time value, supports path binding for two-way data binding
  * - enableDate (optional): Enable date picker (default true)
  * - enableTime (optional): Enable time picker (default false)
  *
- * JSON Schema:
+ * JSON Schema (v0.9):
  * ```json
  * {
  *   "value": {"path": "/form/date"},
- *   "enableDate": {"literalBoolean": true},
- *   "enableTime": {"literalBoolean": true}
+ *   "enableDate": true,
+ *   "enableTime": true
  * }
  * ```
  */
@@ -79,7 +81,9 @@ val DateTimeInputWidget = CatalogItem(
     )
 }
 
-private val EXPECTED_PROPERTIES = setOf("value", "enableDate", "enableTime")
+private val EXPECTED_PROPERTIES = setOf(
+    "label", "value", "enableDate", "enableTime", "min", "max", "checks", "accessibility"
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,7 +95,13 @@ private fun DateTimeInputWidgetContent(
 ) {
     PropertyValidation.warnUnexpectedProperties("DateTimeInput", data, EXPECTED_PROPERTIES)
 
+    val labelRef = DataReferenceParser.parseString(data["label"])
     val valueRef = DataReferenceParser.parseString(data["value"])
+    val labelText = when (labelRef) {
+        is LiteralString -> labelRef.value
+        is PathString -> dataContext.getString(labelRef.path)
+        else -> null
+    }
 
     // Get surfaceId from UiDefinition
     val uiDefinition = LocalUiDefinition.current
@@ -167,13 +177,18 @@ private fun DateTimeInputWidgetContent(
         }
     }
 
+    val rules = CheckRule.fromJsonArray(data["checks"])
+    val checkFailures = CheckRule.evaluateAll(rules, dataContext)
+
     Column(modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = dateTimeValue,
             onValueChange = { newValue ->
                 updateValue(newValue)
             },
+            label = if (labelText != null) { { Text(labelText) } } else null,
             placeholder = { Text(placeholder) },
+            isError = checkFailures.isNotEmpty(),
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             trailingIcon = {
@@ -194,6 +209,13 @@ private fun DateTimeInputWidgetContent(
                 }
             }
         )
+        checkFailures.firstOrNull()?.let { failure ->
+            Text(
+                text = failure,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
     }
 
     // Date Picker Dialog

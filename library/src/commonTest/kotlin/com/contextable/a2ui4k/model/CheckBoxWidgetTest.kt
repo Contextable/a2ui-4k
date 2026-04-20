@@ -25,9 +25,9 @@ import kotlin.test.assertNotNull
 /**
  * Tests for CheckBox widget JSON parsing.
  *
- * A2UI Spec properties (v0.8):
+ * A2UI Spec properties (v0.9):
  * - value (required): Path binding for boolean state
- * - label (optional): Label text as literalString or path
+ * - label (optional): Label text as plain string or path binding
  */
 class CheckBoxWidgetTest {
 
@@ -49,11 +49,11 @@ class CheckBoxWidgetTest {
     }
 
     @Test
-    fun `parseString extracts label literalString`() {
+    fun `parseString extracts label literal`() {
         val jsonStr = """
             {
                 "value": {"path": "/agreed"},
-                "label": {"literalString": "I agree to the terms"}
+                "label": "I agree to the terms"
             }
         """.trimIndent()
 
@@ -85,7 +85,7 @@ class CheckBoxWidgetTest {
         val jsonStr = """
             {
                 "value": {"path": "/form/newsletter"},
-                "label": {"literalString": "Subscribe to newsletter"}
+                "label": "Subscribe to newsletter"
             }
         """.trimIndent()
 

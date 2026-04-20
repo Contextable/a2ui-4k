@@ -36,6 +36,8 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Divider widget that displays a thin line to separate content.
  *
+ * A2UI Protocol Properties (v0.9):
+ *
  * JSON Schema:
  * ```json
  * {

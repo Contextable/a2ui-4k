@@ -26,10 +26,10 @@ import kotlin.test.assertNull
 /**
  * Tests for Slider widget JSON parsing.
  *
- * A2UI Spec properties (v0.8):
+ * A2UI Spec properties (v0.9):
  * - value (required): Path binding for numeric value
- * - minValue (optional): Minimum value
- * - maxValue (optional): Maximum value
+ * - min (optional): Minimum value (renamed from minValue)
+ * - max (optional): Maximum value (renamed from maxValue)
  */
 class SliderWidgetTest {
 
@@ -51,32 +51,32 @@ class SliderWidgetTest {
     }
 
     @Test
-    fun `parseNumber extracts minValue`() {
+    fun `parseNumber extracts min`() {
         val jsonStr = """
             {
                 "value": {"path": "/volume"},
-                "minValue": 0
+                "min": 0
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val minRef = DataReferenceParser.parseNumber(data["minValue"])
+        val minRef = DataReferenceParser.parseNumber(data["min"])
 
         assertNotNull(minRef)
         assertEquals(0.0, (minRef as LiteralNumber).value)
     }
 
     @Test
-    fun `parseNumber extracts maxValue`() {
+    fun `parseNumber extracts max`() {
         val jsonStr = """
             {
                 "value": {"path": "/volume"},
-                "maxValue": 100
+                "max": 100
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val maxRef = DataReferenceParser.parseNumber(data["maxValue"])
+        val maxRef = DataReferenceParser.parseNumber(data["max"])
 
         assertNotNull(maxRef)
         assertEquals(100.0, (maxRef as LiteralNumber).value)
@@ -86,17 +86,17 @@ class SliderWidgetTest {
     fun `parseNumber handles decimal values`() {
         val jsonStr = """
             {
-                "minValue": 0.5,
-                "maxValue": 1.5
+                "min": 0.5,
+                "max": 1.5
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
 
-        val minRef = DataReferenceParser.parseNumber(data["minValue"])
+        val minRef = DataReferenceParser.parseNumber(data["min"])
         assertEquals(0.5, (minRef as LiteralNumber).value)
 
-        val maxRef = DataReferenceParser.parseNumber(data["maxValue"])
+        val maxRef = DataReferenceParser.parseNumber(data["max"])
         assertEquals(1.5, (maxRef as LiteralNumber).value)
     }
 
@@ -105,8 +105,8 @@ class SliderWidgetTest {
         val jsonStr = """
             {
                 "value": {"path": "/brightness"},
-                "minValue": 0,
-                "maxValue": 100
+                "min": 0,
+                "max": 100
             }
         """.trimIndent()
 
@@ -115,10 +115,10 @@ class SliderWidgetTest {
         val valueRef = DataReferenceParser.parseString(data["value"])
         assertEquals("/brightness", (valueRef as PathString).path)
 
-        val minRef = DataReferenceParser.parseNumber(data["minValue"])
+        val minRef = DataReferenceParser.parseNumber(data["min"])
         assertEquals(0.0, (minRef as LiteralNumber).value)
 
-        val maxRef = DataReferenceParser.parseNumber(data["maxValue"])
+        val maxRef = DataReferenceParser.parseNumber(data["max"])
         assertEquals(100.0, (maxRef as LiteralNumber).value)
     }
 
@@ -132,23 +132,23 @@ class SliderWidgetTest {
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
 
-        assertNull(DataReferenceParser.parseNumber(data["minValue"]))
-        assertNull(DataReferenceParser.parseNumber(data["maxValue"]))
+        assertNull(DataReferenceParser.parseNumber(data["min"]))
+        assertNull(DataReferenceParser.parseNumber(data["max"]))
     }
 
     @Test
-    fun `negative minValue is valid`() {
+    fun `negative min is valid`() {
         val jsonStr = """
             {
                 "value": {"path": "/temperature"},
-                "minValue": -50,
-                "maxValue": 50
+                "min": -50,
+                "max": 50
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
 
-        val minRef = DataReferenceParser.parseNumber(data["minValue"])
+        val minRef = DataReferenceParser.parseNumber(data["min"])
         assertEquals(-50.0, (minRef as LiteralNumber).value)
     }
 }

@@ -20,26 +20,28 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Tests for UiEvent types - UserActionEvent and DataChangeEvent.
+ * Tests for UiEvent types: [ActionEvent], [DataChangeEvent], [ValidationError], [ClientError].
  *
- * These tests verify A2UI ClientEvent format compliance.
+ * Verifies A2UI v0.9 ClientMessage format compliance.
  */
 class UiEventTest {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    // ========== UserActionEvent tests ==========
+    // ========== ActionEvent tests ==========
 
     @Test
-    fun `UserActionEvent has correct properties`() {
-        val event = UserActionEvent(
+    fun `ActionEvent has correct properties`() {
+        val event = ActionEvent(
             name = "submit",
             surfaceId = "main",
             sourceComponentId = "submit-button",
@@ -54,13 +56,13 @@ class UiEventTest {
     }
 
     @Test
-    fun `UserActionEvent with context`() {
+    fun `ActionEvent with context`() {
         val context = JsonObject(mapOf(
             "itemId" to JsonPrimitive("item-123"),
             "quantity" to JsonPrimitive(2)
         ))
 
-        val event = UserActionEvent(
+        val event = ActionEvent(
             name = "add-to-cart",
             surfaceId = "product-page",
             sourceComponentId = "add-button:item-123",
@@ -73,8 +75,8 @@ class UiEventTest {
     }
 
     @Test
-    fun `UserActionEvent serializes to JSON`() {
-        val event = UserActionEvent(
+    fun `ActionEvent serializes to JSON`() {
+        val event = ActionEvent(
             name = "click",
             surfaceId = "default",
             sourceComponentId = "btn1",
@@ -91,7 +93,7 @@ class UiEventTest {
     }
 
     @Test
-    fun `UserActionEvent deserializes from JSON`() {
+    fun `ActionEvent deserializes from JSON`() {
         val jsonStr = """
             {
                 "name": "action_name",
@@ -102,7 +104,7 @@ class UiEventTest {
             }
         """.trimIndent()
 
-        val event = json.decodeFromString<UserActionEvent>(jsonStr)
+        val event = json.decodeFromString<ActionEvent>(jsonStr)
 
         assertEquals("action_name", event.name)
         assertEquals("default", event.surfaceId)
@@ -112,8 +114,8 @@ class UiEventTest {
     }
 
     @Test
-    fun `UserActionEvent with template item suffix`() {
-        val event = UserActionEvent(
+    fun `ActionEvent with template item suffix`() {
+        val event = ActionEvent(
             name = "select",
             surfaceId = "list",
             sourceComponentId = "item-template:3",
@@ -190,5 +192,111 @@ class UiEventTest {
         )
 
         assertEquals("/items/0/name", event.path)
+    }
+
+    // ========== Envelope (toClientMessage) ==========
+
+    @Test
+    fun `ActionEvent toClientMessage wraps in v09 envelope`() {
+        val event = ActionEvent(
+            name = "submit",
+            surfaceId = "main",
+            sourceComponentId = "btn",
+            timestamp = "2026-01-01T00:00:00Z"
+        )
+        val envelope = event.toClientMessage()!!
+        assertEquals("v0.9", (envelope["version"] as JsonPrimitive).content)
+        val action = envelope["action"] as JsonObject
+        assertEquals("submit", (action["name"] as JsonPrimitive).content)
+        assertEquals("main", (action["surfaceId"] as JsonPrimitive).content)
+        assertEquals("btn", (action["sourceComponentId"] as JsonPrimitive).content)
+        assertTrue(action.containsKey("context"))
+    }
+
+    @Test
+    fun `ValidationError toClientMessage has code VALIDATION_FAILED and path`() {
+        val event = ValidationError(
+            surfaceId = "s",
+            path = "/components/0/text",
+            message = "must be a string"
+        )
+        val envelope = event.toClientMessage()!!
+        val error = envelope["error"] as JsonObject
+        assertEquals("VALIDATION_FAILED", (error["code"] as JsonPrimitive).content)
+        assertEquals("/components/0/text", (error["path"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `ClientError toClientMessage has custom code and no path`() {
+        val event = ClientError(
+            code = "NETWORK_UNAVAILABLE",
+            surfaceId = "s",
+            message = "no connection"
+        )
+        val envelope = event.toClientMessage()!!
+        val error = envelope["error"] as JsonObject
+        assertEquals("NETWORK_UNAVAILABLE", (error["code"] as JsonPrimitive).content)
+        assertTrue(!error.containsKey("path"))
+    }
+
+    @Test
+    fun `DataChangeEvent toClientMessage returns null`() {
+        val event = DataChangeEvent(surfaceId = "s", path = "/x", value = "v")
+        assertNull(event.toClientMessage())
+    }
+
+    @Test
+    fun `ClientError rejects VALIDATION_FAILED code`() {
+        try {
+            ClientError(code = "VALIDATION_FAILED", surfaceId = "s", message = "m")
+            assertTrue(false, "expected IllegalArgumentException")
+        } catch (_: IllegalArgumentException) {
+            // expected
+        }
+    }
+
+    // ========== v0.8 envelopes ==========
+
+    @Test
+    fun `ActionEvent toClientMessage with V0_8 emits userAction without version`() {
+        val event = ActionEvent(
+            name = "submit",
+            surfaceId = "main",
+            sourceComponentId = "btn",
+            timestamp = "2026-01-01T00:00:00Z",
+            context = buildJsonObject { put("k", JsonPrimitive("v")) }
+        )
+        val envelope = event.toClientMessage(ProtocolVersion.V0_8)!!
+        assertFalse(envelope.containsKey("version"))
+        val userAction = envelope["userAction"] as JsonObject
+        assertEquals("submit", (userAction["name"] as JsonPrimitive).content)
+        assertEquals("main", (userAction["surfaceId"] as JsonPrimitive).content)
+        assertEquals("btn", (userAction["sourceComponentId"] as JsonPrimitive).content)
+        val ctx = userAction["context"] as JsonObject
+        assertEquals("v", (ctx["k"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `DataChangeEvent toClientMessage with V0_8 emits dataChange wire message`() {
+        val event = DataChangeEvent(surfaceId = "s", path = "/x", value = "new")
+        val envelope = event.toClientMessage(ProtocolVersion.V0_8)!!
+        assertFalse(envelope.containsKey("version"))
+        val dc = envelope["dataChange"] as JsonObject
+        assertEquals("s", (dc["surfaceId"] as JsonPrimitive).content)
+        assertEquals("/x", (dc["path"] as JsonPrimitive).content)
+        assertEquals("new", (dc["value"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `ValidationError toClientMessage with V0_8 returns null`() {
+        // v0.8 has no client-error wire message shape; swallowed intentionally.
+        val event = ValidationError(surfaceId = "s", path = "/x", message = "m")
+        assertNull(event.toClientMessage(ProtocolVersion.V0_8))
+    }
+
+    @Test
+    fun `ClientError toClientMessage with V0_8 returns null`() {
+        val event = ClientError(code = "FOO", surfaceId = "s", message = "m")
+        assertNull(event.toClientMessage(ProtocolVersion.V0_8))
     }
 }

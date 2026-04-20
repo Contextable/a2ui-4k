@@ -26,7 +26,7 @@ import kotlin.test.assertNull
 /**
  * Tests for Divider widget JSON parsing.
  *
- * A2UI Spec properties (v0.8):
+ * A2UI Spec properties (v0.9):
  * - axis (optional): "horizontal" or "vertical" (default: horizontal)
  */
 class DividerWidgetTest {

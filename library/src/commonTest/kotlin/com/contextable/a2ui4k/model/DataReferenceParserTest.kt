@@ -30,7 +30,7 @@ import kotlin.test.assertTrue
 /**
  * Comprehensive tests for DataReferenceParser.
  *
- * These tests cover all parsing methods and edge cases for A2UI v0.8 protocol compliance.
+ * These tests cover all parsing methods and edge cases for A2UI v0.9 protocol compliance.
  */
 class DataReferenceParserTest {
 
@@ -39,8 +39,8 @@ class DataReferenceParserTest {
     // ========== parseString tests ==========
 
     @Test
-    fun `parseString with literalString object`() {
-        val element = json.parseToJsonElement("""{"literalString": "Hello World"}""")
+    fun `parseString with plain string primitive`() {
+        val element = JsonPrimitive("Hello World")
         val ref = DataReferenceParser.parseString(element)
 
         assertNotNull(ref)
@@ -59,7 +59,7 @@ class DataReferenceParserTest {
     }
 
     @Test
-    fun `parseString with plain string primitive`() {
+    fun `parseString with another plain string`() {
         val element = JsonPrimitive("plain text")
         val ref = DataReferenceParser.parseString(element)
 
@@ -74,8 +74,8 @@ class DataReferenceParserTest {
     }
 
     @Test
-    fun `parseString with empty literalString`() {
-        val element = json.parseToJsonElement("""{"literalString": ""}""")
+    fun `parseString with empty string`() {
+        val element = JsonPrimitive("")
         val ref = DataReferenceParser.parseString(element)
 
         assertNotNull(ref)
@@ -91,8 +91,8 @@ class DataReferenceParserTest {
     // ========== parseNumber tests ==========
 
     @Test
-    fun `parseNumber with literalNumber object`() {
-        val element = json.parseToJsonElement("""{"literalNumber": 42.5}""")
+    fun `parseNumber with plain number primitive`() {
+        val element = JsonPrimitive(42.5)
         val ref = DataReferenceParser.parseNumber(element)
 
         assertNotNull(ref)
@@ -111,7 +111,7 @@ class DataReferenceParserTest {
     }
 
     @Test
-    fun `parseNumber with plain number primitive`() {
+    fun `parseNumber with integer primitive`() {
         val element = JsonPrimitive(100)
         val ref = DataReferenceParser.parseNumber(element)
 
@@ -131,7 +131,7 @@ class DataReferenceParserTest {
 
     @Test
     fun `parseNumber with decimal`() {
-        val element = json.parseToJsonElement("""{"literalNumber": 3.14159}""")
+        val element = JsonPrimitive(3.14159)
         val ref = DataReferenceParser.parseNumber(element)
 
         assertNotNull(ref)
@@ -152,8 +152,8 @@ class DataReferenceParserTest {
     // ========== parseBoolean tests ==========
 
     @Test
-    fun `parseBoolean with literalBoolean true`() {
-        val element = json.parseToJsonElement("""{"literalBoolean": true}""")
+    fun `parseBoolean with plain boolean true`() {
+        val element = JsonPrimitive(true)
         val ref = DataReferenceParser.parseBoolean(element)
 
         assertNotNull(ref)
@@ -162,8 +162,8 @@ class DataReferenceParserTest {
     }
 
     @Test
-    fun `parseBoolean with literalBoolean false`() {
-        val element = json.parseToJsonElement("""{"literalBoolean": false}""")
+    fun `parseBoolean with plain boolean false`() {
+        val element = JsonPrimitive(false)
         val ref = DataReferenceParser.parseBoolean(element)
 
         assertNotNull(ref)
@@ -181,7 +181,7 @@ class DataReferenceParserTest {
     }
 
     @Test
-    fun `parseBoolean with plain boolean primitive`() {
+    fun `parseBoolean with another plain boolean`() {
         val element = JsonPrimitive(true)
         val ref = DataReferenceParser.parseBoolean(element)
 
@@ -231,53 +231,32 @@ class DataReferenceParserTest {
         assertNull(DataReferenceParser.parseComponentRef(element))
     }
 
-    // ========== parseComponentArray tests ==========
-
-    @Test
-    fun `parseComponentArray with explicitList`() {
-        val element = json.parseToJsonElement("""{"explicitList": ["child1", "child2", "child3"]}""")
-        val ref = DataReferenceParser.parseComponentArray(element)
-
-        assertNotNull(ref)
-        assertEquals(listOf("child1", "child2", "child3"), ref.componentIds)
-    }
-
-    @Test
-    fun `parseComponentArray with empty list`() {
-        val element = json.parseToJsonElement("""{"explicitList": []}""")
-        val ref = DataReferenceParser.parseComponentArray(element)
-
-        assertNotNull(ref)
-        assertTrue(ref.componentIds.isEmpty())
-    }
-
-    @Test
-    fun `parseComponentArray with null returns null`() {
-        assertNull(DataReferenceParser.parseComponentArray(null))
-    }
-
-    @Test
-    fun `parseComponentArray with primitive returns null`() {
-        val element = JsonPrimitive("not-an-array")
-        assertNull(DataReferenceParser.parseComponentArray(element))
-    }
-
     // ========== parseChildren tests ==========
 
     @Test
-    fun `parseChildren with explicitList`() {
-        val element = json.parseToJsonElement("""{"explicitList": ["a", "b", "c"]}""")
+    fun `parseChildren with plain array`() {
+        val element = json.parseToJsonElement("""["child1", "child2", "child3"]""")
         val ref = DataReferenceParser.parseChildren(element)
 
         assertNotNull(ref)
         assertTrue(ref is ChildrenReference.ExplicitList)
-        assertEquals(listOf("a", "b", "c"), (ref as ChildrenReference.ExplicitList).componentIds)
+        assertEquals(listOf("child1", "child2", "child3"), (ref as ChildrenReference.ExplicitList).componentIds)
+    }
+
+    @Test
+    fun `parseChildren with empty array`() {
+        val element = json.parseToJsonElement("""[]""")
+        val ref = DataReferenceParser.parseChildren(element)
+
+        assertNotNull(ref)
+        assertTrue(ref is ChildrenReference.ExplicitList)
+        assertTrue((ref as ChildrenReference.ExplicitList).componentIds.isEmpty())
     }
 
     @Test
     fun `parseChildren with template`() {
         val element = json.parseToJsonElement("""
-            {"template": {"componentId": "item-template", "dataBinding": "/items"}}
+            {"componentId": "item-template", "path": "/items"}
         """.trimIndent())
         val ref = DataReferenceParser.parseChildren(element)
 
@@ -285,7 +264,7 @@ class DataReferenceParserTest {
         assertTrue(ref is ChildrenReference.Template)
         val template = ref as ChildrenReference.Template
         assertEquals("item-template", template.componentId)
-        assertEquals("/items", template.dataBinding)
+        assertEquals("/items", template.path)
     }
 
     @Test
@@ -301,8 +280,8 @@ class DataReferenceParserTest {
 
     @Test
     fun `parseChildren with incomplete template returns null`() {
-        // Missing dataBinding
-        val element = json.parseToJsonElement("""{"template": {"componentId": "item"}}""")
+        // Missing path
+        val element = json.parseToJsonElement("""{"componentId": "item"}""")
         assertNull(DataReferenceParser.parseChildren(element))
     }
 

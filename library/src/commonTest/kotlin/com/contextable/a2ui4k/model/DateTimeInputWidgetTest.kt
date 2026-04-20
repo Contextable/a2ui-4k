@@ -27,10 +27,10 @@ import kotlin.test.assertTrue
 /**
  * Tests for DateTimeInput widget JSON parsing.
  *
- * A2UI Spec properties (v0.8):
+ * A2UI Spec properties (v0.9):
  * - value (required): Path binding for the date/time value
- * - enableDate (optional): Boolean to enable date picker
- * - enableTime (optional): Boolean to enable time picker
+ * - enableDate (optional): Boolean to enable date picker (plain boolean in v0.9)
+ * - enableTime (optional): Boolean to enable time picker (plain boolean in v0.9)
  */
 class DateTimeInputWidgetTest {
 

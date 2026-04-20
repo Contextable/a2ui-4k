@@ -25,7 +25,7 @@ import kotlin.test.assertNotNull
 /**
  * Tests for CardWidget JSON parsing.
  *
- * The Card widget in A2UI:
+ * The Card widget in A2UI v0.9:
  * - Takes a `child` property referencing another component
  * - Applies internal padding (8dp) around the child (matching A2UI protocol)
  * - Uses surface color from the theme

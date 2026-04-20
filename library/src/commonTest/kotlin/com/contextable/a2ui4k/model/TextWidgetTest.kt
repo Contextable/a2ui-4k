@@ -26,19 +26,19 @@ import kotlin.test.assertNull
 /**
  * Tests for Text widget JSON parsing.
  *
- * A2UI Spec properties:
- * - text (required): String content as literalString or path
- * - usageHint (optional): h1, h2, h3, h4, h5, body, caption
+ * A2UI Spec properties (v0.9):
+ * - text (required): String content as plain string or path binding
+ * - variant (optional): h1, h2, h3, h4, h5, body, caption
  */
 class TextWidgetTest {
 
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
-    fun `parseString extracts literalString text`() {
+    fun `parseString extracts literal text`() {
         val jsonStr = """
             {
-                "text": {"literalString": "Hello World"}
+                "text": "Hello World"
             }
         """.trimIndent()
 
@@ -65,54 +65,54 @@ class TextWidgetTest {
     }
 
     @Test
-    fun `parseString extracts usageHint h1`() {
+    fun `parseString extracts variant h1`() {
         val jsonStr = """
             {
-                "text": {"literalString": "Title"},
-                "usageHint": "h1"
+                "text": "Title",
+                "variant": "h1"
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val usageRef = DataReferenceParser.parseString(data["usageHint"])
+        val variantRef = DataReferenceParser.parseString(data["variant"])
 
-        assertNotNull(usageRef)
-        assertEquals("h1", (usageRef as LiteralString).value)
+        assertNotNull(variantRef)
+        assertEquals("h1", (variantRef as LiteralString).value)
     }
 
     @Test
-    fun `all usageHint values are valid`() {
-        val usageHints = listOf("h1", "h2", "h3", "h4", "h5", "body", "caption")
+    fun `all variant values are valid`() {
+        val variants = listOf("h1", "h2", "h3", "h4", "h5", "body", "caption")
 
-        usageHints.forEach { hint ->
-            val jsonStr = """{"usageHint": "$hint"}"""
+        variants.forEach { variant ->
+            val jsonStr = """{"variant": "$variant"}"""
             val data = json.decodeFromString<JsonObject>(jsonStr)
-            val ref = DataReferenceParser.parseString(data["usageHint"])
+            val ref = DataReferenceParser.parseString(data["variant"])
 
-            assertNotNull(ref, "usageHint '$hint' should parse")
-            assertEquals(hint, (ref as LiteralString).value)
+            assertNotNull(ref, "variant '$variant' should parse")
+            assertEquals(variant, (ref as LiteralString).value)
         }
     }
 
     @Test
-    fun `missing usageHint returns null`() {
+    fun `missing variant returns null`() {
         val jsonStr = """
             {
-                "text": {"literalString": "No hint"}
+                "text": "No hint"
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val usageRef = DataReferenceParser.parseString(data["usageHint"])
+        val variantRef = DataReferenceParser.parseString(data["variant"])
 
-        assertNull(usageRef)
+        assertNull(variantRef)
     }
 
     @Test
     fun `text with markdown content parses correctly`() {
         val jsonStr = """
             {
-                "text": {"literalString": "This is **bold** and _italic_ text"}
+                "text": "This is **bold** and _italic_ text"
             }
         """.trimIndent()
 

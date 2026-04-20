@@ -43,7 +43,7 @@ import kotlinx.serialization.json.jsonPrimitive
  * reactive subscriptions for Compose to observe changes.
  * Data is accessed using JSON Pointer paths (RFC 6901) such as "/user/name".
  *
- * In the A2UI v0.8 protocol, data is populated via `dataModelUpdate` operations
+ * In the A2UI v0.9 protocol, data is populated via `updateDataModel` operations
  * and bound to components using path references (e.g., `{"path": "/user/name"}`).
  *
  * @see DataContext
@@ -110,6 +110,20 @@ class DataModel(
      */
     fun updateBoolean(path: String, value: Boolean) {
         update(path, JsonPrimitive(value))
+    }
+
+    /**
+     * Deletes a value at the specified path.
+     *
+     * In v0.9, omitting the value in an updateDataModel message deletes the key.
+     */
+    fun delete(path: String) {
+        val segments = parsePath(path)
+        if (segments.isEmpty()) {
+            _data.value = JsonObject(emptyMap())
+            return
+        }
+        _data.value = deleteAtPath(_data.value, segments)
     }
 
     /**
@@ -211,6 +225,25 @@ class DataModel(
         } ?: return null
 
         return getAtPath(current, segments.drop(1))
+    }
+
+    private fun deleteAtPath(obj: JsonObject, segments: List<String>): JsonObject {
+        if (segments.isEmpty()) return obj
+
+        val key = segments.first()
+        val remaining = segments.drop(1)
+
+        return if (remaining.isEmpty()) {
+            JsonObject(obj.toMutableMap().apply { remove(key) })
+        } else {
+            val existing = obj[key]
+            if (existing is JsonObject) {
+                val child = deleteAtPath(existing, remaining)
+                JsonObject(obj.toMutableMap().apply { put(key, child) })
+            } else {
+                obj
+            }
+        }
     }
 
     private fun setAtPath(obj: JsonObject, segments: List<String>, value: JsonElement): JsonObject {

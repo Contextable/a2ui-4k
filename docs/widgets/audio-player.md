@@ -2,9 +2,9 @@
 
 Renders an audio player.
 
-> **A2UI Spec:** See `AudioPlayer` in the [Standard Component Catalog v0.8](https://github.com/google/A2UI/blob/main/specification/0.8/json/standard_catalog_definition.json).
+> **A2UI Spec:** See `AudioPlayer` in the [A2UI v0.9 Standard Component Catalog](https://github.com/google/A2UI/tree/main/specification/0.9).
 >
-> *a2ui-4k currently implements the v0.8 specification. The A2UI protocol is under active development.*
+> *a2ui-4k implements A2UI **v0.9** with backwards-compatible support for v0.8 (see [Deprecated Protocol Versions](../protocol/deprecated-versions.md)).*
 
 ## Properties
 
@@ -27,8 +27,8 @@ Renders an audio player.
   "id": "podcast-player",
   "component": "AudioPlayer",
   "properties": {
-    "url": { "literalString": "https://example.com/episode.mp3" },
-    "description": { "literalString": "Episode 42: Introduction" }
+    "url": "https://example.com/episode.mp3",
+    "description": "Episode 42: Introduction"
   }
 }
 ```
@@ -53,6 +53,6 @@ With data binding:
 
 ## See Also
 
-- [A2UI Standard Catalog](https://github.com/google/A2UI/blob/main/specification/0.8/json/standard_catalog_definition.json) - `AudioPlayer` component
+- [A2UI v0.9 Standard Catalog](https://github.com/google/A2UI/tree/main/specification/0.9) - `AudioPlayer` component
 - [Video](video.md) - For video content
 - [Text](text.md) - For displaying track info

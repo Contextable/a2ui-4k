@@ -37,8 +37,8 @@ typealias EventDispatcher = (UiEvent) -> Unit
  * the widget's configuration data, functions to build children and
  * dispatch events, and a [DataContext] for resolving path bindings.
  *
- * The A2UI v0.8 specification defines 18 standard widgets in the
- * standard_catalog_definition.json. These are implemented in [CoreCatalog].
+ * The A2UI v0.9 specification defines 18 standard widgets in the
+ * standard_catalog.json. These are implemented in [CoreCatalog].
  *
  * @property name The widget type identifier (e.g., "Text", "Column", "Button")
  * @property compose The Composable function that renders this widget

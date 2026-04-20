@@ -60,7 +60,9 @@ Pre-built A2UI JSON examples for each widget type.
 
 ### JSON Format
 
-The editor expects A2UI surface update format:
+The editor expects A2UI v0.9 surface format. The component with id `"root"`
+is the surface root by convention; properties are hoisted onto the component
+object (no nested `properties` wrapper):
 
 ```json
 {
@@ -68,23 +70,14 @@ The editor expects A2UI surface update format:
     {
       "id": "root",
       "component": "Column",
-      "properties": {
-        "children": {
-          "explicitList": [
-            { "componentId": "greeting" }
-          ]
-        }
-      }
+      "children": ["greeting"]
     },
     {
       "id": "greeting",
       "component": "Text",
-      "properties": {
-        "text": { "literalString": "Hello!" }
-      }
+      "text": "Hello!"
     }
-  ],
-  "root": "root"
+  ]
 }
 ```
 
@@ -95,7 +88,6 @@ Include a `data` object for path bindings:
 ```json
 {
   "components": [...],
-  "root": "root",
   "data": {
     "user": {
       "name": "Alice"
@@ -110,9 +102,7 @@ Then reference in components:
 {
   "id": "name-display",
   "component": "Text",
-  "properties": {
-    "text": { "path": "/user/name" }
-  }
+  "text": { "path": "/user/name" }
 }
 ```
 

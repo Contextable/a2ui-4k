@@ -20,24 +20,26 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
 /**
- * Represents a UI component in the A2UI protocol v0.8 format.
+ * Represents a UI component in the A2UI v0.9 protocol format.
  *
- * In v0.8, components use a nested structure where the widget type is a key
- * containing the properties object:
+ * In v0.9, components use a flat discriminator where `component` is a string
+ * type name and all properties are at the top level:
  * ```json
  * {
  *   "id": "button_1",
- *   "component": {
- *     "Button": { "child": "text_1" }
- *   }
+ *   "component": "Button",
+ *   "child": "text_1",
+ *   "variant": "primary",
+ *   "action": {"event": {"name": "submit"}}
  * }
  * ```
  *
- * Components are typically created via [ComponentDef.fromJson] when processing
- * `surfaceUpdate` operations.
+ * Components are created via [ComponentDef.fromJson] when processing
+ * `updateComponents` operations.
  *
  * @property id Unique identifier for this component within its surface
- * @property componentProperties Map with widget type as key, properties as value
+ * @property componentType The widget type name (e.g., "Text", "Button", "Column")
+ * @property properties The widget-specific properties as a JsonObject
  * @property weight Optional flex weight for layout containers (Row/Column)
  *
  * @see ComponentDef
@@ -47,20 +49,21 @@ import kotlinx.serialization.json.JsonObject
 @Serializable
 data class Component(
     val id: String,
-    val componentProperties: Map<String, JsonObject> = emptyMap(),
+    val componentType: String,
+    val properties: JsonObject = JsonObject(emptyMap()),
     val weight: Int? = null
 ) {
     /**
      * Returns the widget type name (e.g., "Text", "Button", "Column").
      */
-    val widgetType: String?
-        get() = componentProperties.keys.firstOrNull()
+    val widgetType: String
+        get() = componentType
 
     /**
      * Returns the widget configuration data.
      */
-    val widgetData: JsonObject?
-        get() = componentProperties.values.firstOrNull()
+    val widgetData: JsonObject
+        get() = properties
 
     companion object {
         /**
@@ -69,7 +72,8 @@ data class Component(
         fun fromComponentDef(def: ComponentDef): Component {
             return Component(
                 id = def.id,
-                componentProperties = mapOf(def.component to def.properties),
+                componentType = def.component,
+                properties = def.properties,
                 weight = def.weight
             )
         }
@@ -80,7 +84,8 @@ data class Component(
         fun create(id: String, widgetType: String, data: JsonObject, weight: Int? = null): Component {
             return Component(
                 id = id,
-                componentProperties = mapOf(widgetType to data),
+                componentType = widgetType,
+                properties = data,
                 weight = weight
             )
         }

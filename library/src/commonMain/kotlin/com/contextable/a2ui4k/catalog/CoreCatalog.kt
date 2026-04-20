@@ -20,7 +20,7 @@ import com.contextable.a2ui4k.catalog.widgets.AudioPlayerWidget
 import com.contextable.a2ui4k.catalog.widgets.ButtonWidget
 import com.contextable.a2ui4k.catalog.widgets.CardWidget
 import com.contextable.a2ui4k.catalog.widgets.CheckBoxWidget
-import com.contextable.a2ui4k.catalog.widgets.MultipleChoiceWidget
+import com.contextable.a2ui4k.catalog.widgets.ChoicePickerWidget
 import com.contextable.a2ui4k.catalog.widgets.ColumnWidget
 import com.contextable.a2ui4k.catalog.widgets.DateTimeInputWidget
 import com.contextable.a2ui4k.catalog.widgets.DividerWidget
@@ -40,7 +40,7 @@ import com.contextable.a2ui4k.model.Catalog
  * The core catalog of built-in A2UI widgets.
  *
  * This catalog provides the standard set of widgets defined in the
- * A2UI v0.8 protocol's standard_catalog_definition.json. Applications
+ * A2UI v0.9 protocol's standard_catalog.json. Applications
  * can use this catalog directly or combine it with custom catalogs
  * using the `+` operator.
  *
@@ -67,20 +67,8 @@ import com.contextable.a2ui4k.model.Catalog
  * - TextField: Text input field with label and data binding
  * - CheckBox: Boolean input with label
  * - Slider: Numeric range input
- * - MultipleChoice: Selection component
+ * - ChoicePicker: Selection component (single or multiple)
  * - DateTimeInput: Date/time picker
- *
- * ## Usage
- *
- * ```kotlin
- * A2UISurface(
- *     definition = uiDefinition,
- *     catalog = CoreCatalog
- * )
- *
- * // Or combine with custom catalog:
- * val combined = CoreCatalog + myCustomCatalog
- * ```
  *
  * @see com.contextable.a2ui4k.model.CatalogItem
  * @see com.contextable.a2ui4k.model.Catalog
@@ -100,7 +88,7 @@ val CoreCatalog: Catalog = Catalog.of(
     IconWidget,
     CheckBoxWidget,
     SliderWidget,
-    MultipleChoiceWidget,
+    ChoicePickerWidget,
     DateTimeInputWidget,
     TabsWidget,
     ModalWidget,
@@ -124,7 +112,7 @@ object CoreCatalogItems {
     val icon = IconWidget
     val checkBox = CheckBoxWidget
     val slider = SliderWidget
-    val multipleChoice = MultipleChoiceWidget
+    val choicePicker = ChoicePickerWidget
     val dateTimeInput = DateTimeInputWidget
     val tabs = TabsWidget
     val modal = ModalWidget

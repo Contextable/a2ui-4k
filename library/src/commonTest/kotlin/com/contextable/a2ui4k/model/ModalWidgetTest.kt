@@ -25,41 +25,41 @@ import kotlin.test.assertNotNull
 /**
  * Tests for Modal widget JSON parsing.
  *
- * A2UI Spec properties (v0.8):
- * - entryPointChild (required): Component ID of trigger element
- * - contentChild (required): Component ID of modal content
+ * A2UI Spec properties (v0.9):
+ * - trigger (required): Component ID of trigger element (renamed from entryPointChild)
+ * - content (required): Component ID of modal content (renamed from contentChild)
  */
 class ModalWidgetTest {
 
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
-    fun `parseComponentRef extracts entryPointChild`() {
+    fun `parseComponentRef extracts trigger`() {
         val jsonStr = """
             {
-                "entryPointChild": "open-button",
-                "contentChild": "modal-content"
+                "trigger": "open-button",
+                "content": "modal-content"
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val entryRef = DataReferenceParser.parseComponentRef(data["entryPointChild"])
+        val triggerRef = DataReferenceParser.parseComponentRef(data["trigger"])
 
-        assertNotNull(entryRef)
-        assertEquals("open-button", entryRef.componentId)
+        assertNotNull(triggerRef)
+        assertEquals("open-button", triggerRef.componentId)
     }
 
     @Test
-    fun `parseComponentRef extracts contentChild`() {
+    fun `parseComponentRef extracts content`() {
         val jsonStr = """
             {
-                "entryPointChild": "trigger",
-                "contentChild": "dialog-content"
+                "trigger": "trigger",
+                "content": "dialog-content"
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
-        val contentRef = DataReferenceParser.parseComponentRef(data["contentChild"])
+        val contentRef = DataReferenceParser.parseComponentRef(data["content"])
 
         assertNotNull(contentRef)
         assertEquals("dialog-content", contentRef.componentId)
@@ -69,17 +69,17 @@ class ModalWidgetTest {
     fun `complete Modal with both required properties`() {
         val jsonStr = """
             {
-                "entryPointChild": "settings-button",
-                "contentChild": "settings-panel"
+                "trigger": "settings-button",
+                "content": "settings-panel"
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
 
-        val entryRef = DataReferenceParser.parseComponentRef(data["entryPointChild"])
-        assertEquals("settings-button", entryRef?.componentId)
+        val triggerRef = DataReferenceParser.parseComponentRef(data["trigger"])
+        assertEquals("settings-button", triggerRef?.componentId)
 
-        val contentRef = DataReferenceParser.parseComponentRef(data["contentChild"])
+        val contentRef = DataReferenceParser.parseComponentRef(data["content"])
         assertEquals("settings-panel", contentRef?.componentId)
     }
 
@@ -87,17 +87,17 @@ class ModalWidgetTest {
     fun `Modal with nested component IDs containing hyphens`() {
         val jsonStr = """
             {
-                "entryPointChild": "my-custom-trigger-button",
-                "contentChild": "my-complex-modal-content-area"
+                "trigger": "my-custom-trigger-button",
+                "content": "my-complex-modal-content-area"
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
 
-        val entryRef = DataReferenceParser.parseComponentRef(data["entryPointChild"])
-        assertEquals("my-custom-trigger-button", entryRef?.componentId)
+        val triggerRef = DataReferenceParser.parseComponentRef(data["trigger"])
+        assertEquals("my-custom-trigger-button", triggerRef?.componentId)
 
-        val contentRef = DataReferenceParser.parseComponentRef(data["contentChild"])
+        val contentRef = DataReferenceParser.parseComponentRef(data["content"])
         assertEquals("my-complex-modal-content-area", contentRef?.componentId)
     }
 
@@ -106,18 +106,18 @@ class ModalWidgetTest {
         // Matches the pattern used in WidgetSamples
         val jsonStr = """
             {
-                "entryPointChild": "trigger",
-                "contentChild": "modal-content"
+                "trigger": "trigger",
+                "content": "modal-content"
             }
         """.trimIndent()
 
         val data = json.decodeFromString<JsonObject>(jsonStr)
 
-        val entryRef = DataReferenceParser.parseComponentRef(data["entryPointChild"])
-        assertNotNull(entryRef)
-        assertEquals("trigger", entryRef.componentId)
+        val triggerRef = DataReferenceParser.parseComponentRef(data["trigger"])
+        assertNotNull(triggerRef)
+        assertEquals("trigger", triggerRef.componentId)
 
-        val contentRef = DataReferenceParser.parseComponentRef(data["contentChild"])
+        val contentRef = DataReferenceParser.parseComponentRef(data["content"])
         assertNotNull(contentRef)
         assertEquals("modal-content", contentRef.componentId)
     }

@@ -26,18 +26,18 @@ import kotlin.test.assertNull
 /**
  * Tests for Video widget JSON parsing.
  *
- * A2UI Spec properties (v0.8):
- * - url (required): URL of the video source
+ * A2UI Spec properties (v0.9):
+ * - url (required): URL of the video source as plain string or path binding
  */
 class VideoWidgetTest {
 
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
-    fun `parseString extracts url literalString`() {
+    fun `parseString extracts url literal`() {
         val jsonStr = """
             {
-                "url": {"literalString": "https://example.com/video.mp4"}
+                "url": "https://example.com/video.mp4"
             }
         """.trimIndent()
 
@@ -67,7 +67,7 @@ class VideoWidgetTest {
     fun `video url with query parameters`() {
         val jsonStr = """
             {
-                "url": {"literalString": "https://cdn.example.com/video.mp4?token=abc123&quality=hd"}
+                "url": "https://cdn.example.com/video.mp4?token=abc123&quality=hd"
             }
         """.trimIndent()
 
@@ -83,7 +83,7 @@ class VideoWidgetTest {
         val extensions = listOf("mp4", "webm", "mov", "avi", "m3u8")
 
         extensions.forEach { ext ->
-            val jsonStr = """{"url": {"literalString": "https://example.com/video.$ext"}}"""
+            val jsonStr = """{"url": "https://example.com/video.$ext"}"""
             val data = json.decodeFromString<JsonObject>(jsonStr)
             val urlRef = DataReferenceParser.parseString(data["url"])
 
@@ -104,7 +104,7 @@ class VideoWidgetTest {
     fun `youtube embed url`() {
         val jsonStr = """
             {
-                "url": {"literalString": "https://www.youtube.com/embed/dQw4w9WgXcQ"}
+                "url": "https://www.youtube.com/embed/dQw4w9WgXcQ"
             }
         """.trimIndent()
 

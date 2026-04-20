@@ -20,48 +20,43 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import com.contextable.a2ui4k.function.FunctionEvaluator
+import com.contextable.a2ui4k.model.Accessibility
+import com.contextable.a2ui4k.model.ActionEvent
 import com.contextable.a2ui4k.model.CatalogItem
+import com.contextable.a2ui4k.model.CheckRule
 import com.contextable.a2ui4k.model.ChildBuilder
 import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.EventDispatcher
-import com.contextable.a2ui4k.model.LiteralBoolean
 import com.contextable.a2ui4k.model.LiteralString
-import com.contextable.a2ui4k.model.PathBoolean
 import com.contextable.a2ui4k.model.PathString
-import com.contextable.a2ui4k.model.UserActionEvent
 import com.contextable.a2ui4k.render.LocalUiDefinition
 import com.contextable.a2ui4k.util.PropertyValidation
 import kotlin.time.Clock
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Button widget for user actions.
  *
- * A2UI Protocol Button properties:
- * - `child`: Component ID reference (e.g., to a Text widget)
- * - `action`: Action object with "name" and "context"
- * - `usageHint`: "primary", "secondary", or "text" (v0.9)
+ * A2UI v0.9 Button properties:
+ * - `child`: ComponentId of the child (typically Text or Icon)
+ * - `variant`: `"default"` | `"primary"` | `"borderless"`
+ * - `action`: Action object — `{"event":{"name","context"}}` or `{"functionCall":{...}}`
+ * - `checks`: Array of [CheckRule]s; when any check fails, the button is disabled
+ * - `accessibility`: Optional accessibility metadata
  *
- * See A2UI protocol: standard_catalog_definition.json - Button component
- *
- * JSON Schema (v0.9):
  * ```json
  * {
  *   "component": "Button",
- *   "child": "button-text-id",
- *   "action": {"name": "submit", "context": {...}},
- *   "usageHint": "primary"
+ *   "child": "button-text",
+ *   "variant": "primary",
+ *   "action": {"event": {"name": "submit", "context": {"k": "v"}}}
  * }
  * ```
  */
@@ -77,7 +72,11 @@ val ButtonWidget = CatalogItem(
     )
 }
 
-private val EXPECTED_PROPERTIES = setOf("child", "action", "label", "primary", "usageHint")
+// `label` and `usageHint` are v0.8 aliases we still accept for compatibility.
+private val EXPECTED_PROPERTIES = setOf(
+    "child", "variant", "action", "checks", "accessibility",
+    "label", "usageHint"
+)
 
 @Composable
 private fun ButtonWidgetContent(
@@ -89,7 +88,6 @@ private fun ButtonWidgetContent(
 ) {
     PropertyValidation.warnUnexpectedProperties("Button", data, EXPECTED_PROPERTIES)
 
-    // Child component reference (A2UI Button.child property)
     val childRef = DataReferenceParser.parseString(data["child"])
     val childId = when (childRef) {
         is LiteralString -> childRef.value
@@ -97,175 +95,136 @@ private fun ButtonWidgetContent(
         else -> null
     }
 
-    // Fallback to label for backwards compatibility
+    // v0.8 legacy: `label` was a DynamicString rendered directly inside the
+    // button. When `child` isn't present, fall back to rendering this as the
+    // button's text content.
     val labelRef = DataReferenceParser.parseString(data["label"])
-    val label = when (labelRef) {
+    val labelText = when (labelRef) {
         is LiteralString -> labelRef.value
         is PathString -> dataContext.getString(labelRef.path)
         else -> null
     }
 
-    // Primary button styling
-    val primaryRef = DataReferenceParser.parseBoolean(data["primary"])
-    val isPrimary = when (primaryRef) {
-        is LiteralBoolean -> primaryRef.value
-        is PathBoolean -> dataContext.getBoolean(primaryRef.path) ?: false
-        else -> false
-    }
-
-    // Action can be a string (action name) or object {name, context, dataUpdates}
-    val actionElement = data["action"]
-    val actionData = when {
-        actionElement is JsonObject -> actionElement
-        else -> null
-    }
-    val actionNameDirect = when {
-        actionElement is JsonPrimitive -> actionElement.contentOrNull
+    // Accept v0.8 `usageHint` as an alias for v0.9 `variant`.
+    val variantRef = DataReferenceParser.parseString(data["variant"])
+        ?: DataReferenceParser.parseString(data["usageHint"])
+    val variant = when (variantRef) {
+        is LiteralString -> variantRef.value
+        is PathString -> dataContext.getString(variantRef.path)
         else -> null
     }
 
-    // Get surfaceId from UiDefinition (not from component data)
+    // Button.action variants:
+    //   { "event": { "name": "...", "context": {...} } }
+    //   { "functionCall": { "call": "...", "args": {...} } }
+    val actionElement = data["action"] as? JsonObject
+    val eventData = actionElement?.get("event") as? JsonObject
+    val functionCall = actionElement?.get("functionCall") as? JsonObject
+
+    val rules = CheckRule.fromJsonArray(data["checks"])
+    val enabled = CheckRule.evaluateAll(rules, dataContext).isEmpty()
+
     val uiDefinition = LocalUiDefinition.current
     val surfaceId = uiDefinition?.surfaceId ?: "default"
-
-    // Get template item key for sourceComponentId suffix
     val templateItemKey = LocalTemplateItemKey.current
 
-    val onClick: () -> Unit = {
-        val actionName = actionNameDirect
-            ?: actionData?.get("name")?.jsonPrimitive?.content
-            ?: "click"
-
-        // Process dataUpdates for internal data binding
-        val dataUpdates = actionData?.get("dataUpdates")?.jsonArray
-        dataUpdates?.forEach { update ->
-            val updateObj = update as? JsonObject ?: return@forEach
-            val path = updateObj["path"]?.jsonPrimitive?.content ?: return@forEach
-            val value = updateObj["value"]
-            when {
-                value is JsonPrimitive && value.booleanOrNull != null ->
-                    dataContext.update(path, value.booleanOrNull!!)
-                value is JsonPrimitive && value.doubleOrNull != null ->
-                    dataContext.update(path, value.doubleOrNull!!)
-                value is JsonPrimitive && value.contentOrNull != null ->
-                    dataContext.update(path, value.contentOrNull!!)
-            }
+    val onClick: () -> Unit = handler@{
+        if (functionCall != null) {
+            val call = functionCall["call"]?.jsonPrimitive?.content ?: return@handler
+            val args = functionCall["args"] as? JsonObject
+            FunctionEvaluator.evaluate(call, args, dataContext)
+            return@handler
         }
 
-        // Resolve action.context (A2UI Button.action.context property)
-        val contextArray = actionData?.get("context")?.jsonArray
-        val resolvedContext = resolveContext(contextArray, dataContext)
+        val actionName = eventData?.get("name")?.jsonPrimitive?.content ?: "click"
+        val contextObject = eventData?.get("context") as? JsonObject
+        val resolvedContext = resolveContext(contextObject, dataContext)
 
-        // Build sourceComponentId with item suffix (e.g., "template-book-button:item1")
+        // Use the template key verbatim; the List widget already supplies
+        // it as the array index ("0", "1") or the object key ("item5"), so
+        // prepending "item" double-prefixes when the data map is keyed like
+        // {"item1": {...}, "item2": {...}}.
         val sourceComponentId = if (templateItemKey != null) {
-            "$componentId:item$templateItemKey"
+            "$componentId:$templateItemKey"
         } else {
             componentId
         }
 
-        // Generate ISO8601 timestamp
-        val timestamp = getCurrentIso8601Timestamp()
-
         onEvent(
-            UserActionEvent(
+            ActionEvent(
                 name = actionName,
                 surfaceId = surfaceId,
                 sourceComponentId = sourceComponentId,
-                timestamp = timestamp,
+                timestamp = getCurrentIso8601Timestamp(),
                 context = resolvedContext
             )
         )
     }
 
-    // Button styling based on usageHint/primary
-    // primary/usageHint="primary": colorScheme.primary background
-    // secondary/usageHint="secondary": colorScheme.surface background
-    val colors = if (isPrimary) {
-        ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
-        )
-    } else {
-        ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface
-        )
-    }
+    val accessibility = Accessibility.fromJson(data["accessibility"])
+    val a11yLabel = accessibility?.resolveLabel(dataContext)
 
-    Button(
-        onClick = onClick,
-        colors = colors
-    ) {
-        when {
-            // Prefer child component reference (A2UI Button.child)
-            childId != null -> buildChild(childId)
-            // Fallback to label text
-            label != null -> Text(label)
-            // Default fallback
-            else -> Text("Button")
-        }
+    when (variant?.lowercase()) {
+        "borderless" -> TextButton(
+            onClick = onClick,
+            enabled = enabled
+        ) { renderButtonChild(childId, buildChild, a11yLabel, labelText) }
+        "primary" -> Button(
+            onClick = onClick,
+            enabled = enabled,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        ) { renderButtonChild(childId, buildChild, a11yLabel, labelText) }
+        else -> Button(
+            onClick = onClick,
+            enabled = enabled
+        ) { renderButtonChild(childId, buildChild, a11yLabel, labelText) }
     }
 }
 
-/**
- * Resolves action context by evaluating path bindings against the DataContext.
- *
- * A2UI Button.action.context is resolved at event time:
- * - v0.8: Array of {key, value} pairs where value contains path/literal bindings
- * - v0.9: Standard JSON object with path bindings
- *
- * @param contextArray The action.context JsonArray from the button definition
- * @param dataContext The current DataContext for resolving path bindings
- * @return JsonObject with resolved key-value pairs, or null if no context
- */
-private fun resolveContext(contextArray: JsonArray?, dataContext: DataContext): JsonObject? {
-    if (contextArray == null || contextArray.isEmpty()) return null
+@Composable
+private fun renderButtonChild(
+    childId: String?,
+    buildChild: ChildBuilder,
+    accessibilityLabel: String?,
+    labelText: String?
+) {
+    when {
+        childId != null -> buildChild(childId)
+        labelText != null -> Text(labelText)
+        accessibilityLabel != null -> Text(accessibilityLabel)
+        else -> Text("Button")
+    }
+}
+
+private fun resolveContext(contextObject: JsonObject?, dataContext: DataContext): JsonObject? {
+    if (contextObject == null || contextObject.isEmpty()) return null
 
     val resolved = mutableMapOf<String, JsonElement>()
-
-    for (entry in contextArray) {
-        val entryObj = entry as? JsonObject ?: continue
-        val key = entryObj["key"]?.jsonPrimitive?.content ?: continue
-        val value = entryObj["value"]?.jsonObject ?: continue
-
+    for ((key, value) in contextObject) {
         val resolvedValue: JsonElement? = when {
-            // Path binding - resolve from DataContext
-            value.containsKey("path") -> {
+            value is JsonObject && value.containsKey("path") -> {
                 val path = value["path"]?.jsonPrimitive?.content ?: ""
-                // Try to get value from data context
                 dataContext.getString(path)?.let { JsonPrimitive(it) }
                     ?: dataContext.getNumber(path)?.let { JsonPrimitive(it) }
                     ?: dataContext.getBoolean(path)?.let { JsonPrimitive(it) }
             }
-            // Literal string
-            value.containsKey("literalString") -> {
-                value["literalString"]?.jsonPrimitive?.content?.let { JsonPrimitive(it) }
+            value is JsonObject && value.containsKey("call") -> {
+                val call = value["call"]?.jsonPrimitive?.content
+                val args = value["args"] as? JsonObject
+                if (call != null) FunctionEvaluator.evaluate(call, args, dataContext) else null
             }
-            // Literal number
-            value.containsKey("literalNumber") -> {
-                value["literalNumber"]?.jsonPrimitive?.doubleOrNull?.let { JsonPrimitive(it) }
-            }
-            // Literal boolean
-            value.containsKey("literalBoolean") -> {
-                value["literalBoolean"]?.jsonPrimitive?.booleanOrNull?.let { JsonPrimitive(it) }
-            }
+            value is JsonPrimitive -> value
             else -> null
         }
-
         if (resolvedValue != null) {
             resolved[key] = resolvedValue
         }
     }
-
     return if (resolved.isNotEmpty()) JsonObject(resolved) else null
 }
 
-/**
- * Gets the current timestamp in ISO8601 format.
- * Example: "2025-12-17T02:00:23.936Z"
- */
 @OptIn(kotlin.time.ExperimentalTime::class)
-private fun getCurrentIso8601Timestamp(): String {
-    val now = Clock.System.now()
-    return now.toString() // Instant.toString() produces ISO8601 format
-}
+private fun getCurrentIso8601Timestamp(): String = Clock.System.now().toString()

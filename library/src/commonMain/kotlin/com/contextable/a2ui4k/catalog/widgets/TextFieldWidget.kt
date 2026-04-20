@@ -16,9 +16,11 @@
 
 package com.contextable.a2ui4k.catalog.widgets
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,6 +34,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.contextable.a2ui4k.model.CatalogItem
+import com.contextable.a2ui4k.model.CheckRule
 import com.contextable.a2ui4k.model.DataChangeEvent
 import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
@@ -45,19 +48,19 @@ import kotlinx.serialization.json.JsonObject
 /**
  * TextField widget for user text input.
  *
- * A2UI Protocol Properties (v0.8):
+ * A2UI Protocol Properties (v0.9):
  * - label (required): Display label for the text field
- * - text (optional): Current text value, supports path binding for two-way data binding
- * - textFieldType (optional): date, longText, number, shortText, obscured
+ * - value (optional): Current text value, supports path binding for two-way data binding
+ * - variant (optional): longText, number, shortText, obscured
  * - validationRegexp (optional): Regex pattern for input validation
  *
- * JSON Schema:
+ * JSON Schema (v0.9):
  * ```json
  * {
- *   "label": {"literalString": "Name"} | {"path": "/labels/name"},
- *   "text": {"path": "/form/name"} | {"literalString": "initial value"},
- *   "textFieldType": {"literalString": "shortText"},
- *   "validationRegexp": {"literalString": "^[a-zA-Z]+$"}
+ *   "label": "Name" | {"path": "/labels/name"},
+ *   "value": {"path": "/form/name"} | "initial value",
+ *   "variant": "shortText",
+ *   "validationRegexp": "^[a-zA-Z]+$"
  * }
  * ```
  */
@@ -72,7 +75,11 @@ val TextFieldWidget = CatalogItem(
     )
 }
 
-private val EXPECTED_PROPERTIES = setOf("label", "text", "textFieldType", "validationRegexp")
+// v0.8 used `text`/`textFieldType`; accepted as aliases for v0.9 `value`/`variant`.
+private val EXPECTED_PROPERTIES = setOf(
+    "label", "value", "variant", "validationRegexp", "checks", "accessibility",
+    "text", "textFieldType"
+)
 
 @Composable
 private fun TextFieldWidgetContent(
@@ -84,8 +91,10 @@ private fun TextFieldWidgetContent(
     PropertyValidation.warnUnexpectedProperties("TextField", data, EXPECTED_PROPERTIES)
 
     val labelRef = DataReferenceParser.parseString(data["label"])
-    val textRef = DataReferenceParser.parseString(data["text"])
-    val textFieldTypeRef = DataReferenceParser.parseString(data["textFieldType"])
+    val valueRef = DataReferenceParser.parseString(data["value"])
+        ?: DataReferenceParser.parseString(data["text"])
+    val variantRef = DataReferenceParser.parseString(data["variant"])
+        ?: DataReferenceParser.parseString(data["textFieldType"])
     val validationRegexpRef = DataReferenceParser.parseString(data["validationRegexp"])
 
     val label = when (labelRef) {
@@ -94,9 +103,9 @@ private fun TextFieldWidgetContent(
         else -> ""
     }
 
-    val textFieldType = when (textFieldTypeRef) {
-        is LiteralString -> textFieldTypeRef.value
-        is PathString -> dataContext.getString(textFieldTypeRef.path)
+    val variant = when (variantRef) {
+        is LiteralString -> variantRef.value
+        is PathString -> dataContext.getString(variantRef.path)
         else -> null
     }
 
@@ -107,9 +116,9 @@ private fun TextFieldWidgetContent(
     }
 
     // Get initial value from data context if bound
-    val initialValue = when (textRef) {
-        is PathString -> dataContext.getString(textRef.path) ?: ""
-        is LiteralString -> textRef.value
+    val initialValue = when (valueRef) {
+        is PathString -> dataContext.getString(valueRef.path) ?: ""
+        is LiteralString -> valueRef.value
         else -> ""
     }
 
@@ -120,19 +129,22 @@ private fun TextFieldWidgetContent(
     var textValue by remember(initialValue) { mutableStateOf(initialValue) }
     var isError by remember { mutableStateOf(false) }
 
-    // Determine keyboard type, visual transformation, and layout based on textFieldType
+    // Determine keyboard type, visual transformation, and layout based on variant
     val keyboardType: KeyboardType
     val visualTransformation: VisualTransformation
     val singleLine: Boolean
     val modifier: Modifier
 
-    when (textFieldType?.lowercase()) {
+    when (variant?.lowercase()) {
         "number" -> {
             keyboardType = KeyboardType.Number
             visualTransformation = VisualTransformation.None
             singleLine = true
             modifier = Modifier.fillMaxWidth()
         }
+        // v0.8 `date` variant: no v0.9 equivalent (spec uses DateTimeInput).
+        // Render as single-line text; callers concerned about date pickers should
+        // migrate to DateTimeInput.
         "date" -> {
             keyboardType = KeyboardType.Text
             visualTransformation = VisualTransformation.None
@@ -159,37 +171,49 @@ private fun TextFieldWidgetContent(
         }
     }
 
-    OutlinedTextField(
-        value = textValue,
-        onValueChange = { newValue ->
-            textValue = newValue
+    val rules = CheckRule.fromJsonArray(data["checks"])
+    val checkFailures = CheckRule.evaluateAll(rules, dataContext)
 
-            // Validate against regex if provided
-            isError = if (validationRegexp != null && newValue.isNotEmpty()) {
-                !Regex(validationRegexp).matches(newValue)
-            } else {
-                false
-            }
+    Column {
+        OutlinedTextField(
+            value = textValue,
+            onValueChange = { newValue ->
+                textValue = newValue
 
-            // Update data context and fire event if bound
-            if (textRef is PathString) {
-                dataContext.update(textRef.path, newValue)
-                onEvent(
-                    DataChangeEvent(
-                        surfaceId = surfaceId,
-                        path = textRef.path,
-                        value = newValue
+                // Validate against regex if provided
+                isError = if (validationRegexp != null && newValue.isNotEmpty()) {
+                    !Regex(validationRegexp).matches(newValue)
+                } else {
+                    false
+                }
+
+                // Update data context and fire event if bound
+                if (valueRef is PathString) {
+                    dataContext.update(valueRef.path, newValue)
+                    onEvent(
+                        DataChangeEvent(
+                            surfaceId = surfaceId,
+                            path = valueRef.path,
+                            value = newValue
+                        )
                     )
-                )
-            }
-        },
-        label = if (label.isNotEmpty()) {
-            { Text(label) }
-        } else null,
-        modifier = modifier,
-        singleLine = singleLine,
-        isError = isError,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        visualTransformation = visualTransformation
-    )
+                }
+            },
+            label = if (label.isNotEmpty()) {
+                { Text(label) }
+            } else null,
+            modifier = modifier,
+            singleLine = singleLine,
+            isError = isError || checkFailures.isNotEmpty(),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            visualTransformation = visualTransformation
+        )
+        checkFailures.firstOrNull()?.let { failure ->
+            Text(
+                text = failure,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+    }
 }

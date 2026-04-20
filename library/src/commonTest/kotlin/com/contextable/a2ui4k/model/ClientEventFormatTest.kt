@@ -27,24 +27,27 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * Tests for A2UI ClientEvent format.
+ * Tests for A2UI v0.9 ClientEvent format.
  *
- * Per the A2UI protocol, ClientEvents sent to the agent must have this structure:
+ * Per the A2UI v0.9 protocol, ClientEvents sent to the agent must have this structure:
  * ```json
  * {
- *   "name": "action_name",
- *   "surfaceId": "default",
- *   "sourceComponentId": "component-id:item1",
- *   "timestamp": "2025-12-17T02:00:23.936Z",
- *   "context": { "key": "value", ... }
+ *   "version": "v0.9",
+ *   "action": {
+ *     "name": "action_name",
+ *     "surfaceId": "default",
+ *     "sourceComponentId": "component-id:item1",
+ *     "timestamp": "2025-12-17T02:00:23.936Z",
+ *     "context": { "key": "value", ... }
+ *   }
  * }
  * ```
  */
 class ClientEventFormatTest {
 
     @Test
-    fun `UserActionEvent has name at root level`() {
-        val event = UserActionEvent(
+    fun `ActionEvent has name at root level`() {
+        val event = ActionEvent(
             name = "book_restaurant",
             surfaceId = "default",
             sourceComponentId = "template-book-button:item1",
@@ -56,8 +59,8 @@ class ClientEventFormatTest {
     }
 
     @Test
-    fun `UserActionEvent has sourceComponentId with item suffix`() {
-        val event = UserActionEvent(
+    fun `ActionEvent has sourceComponentId with item suffix`() {
+        val event = ActionEvent(
             name = "book_restaurant",
             surfaceId = "default",
             sourceComponentId = "template-book-button:item1",
@@ -70,8 +73,8 @@ class ClientEventFormatTest {
     }
 
     @Test
-    fun `UserActionEvent has timestamp in ISO8601 format`() {
-        val event = UserActionEvent(
+    fun `ActionEvent has timestamp in ISO8601 format`() {
+        val event = ActionEvent(
             name = "submit_form",
             surfaceId = "default",
             sourceComponentId = "submit-button",
@@ -83,14 +86,14 @@ class ClientEventFormatTest {
     }
 
     @Test
-    fun `UserActionEvent context contains resolved data`() {
+    fun `ActionEvent context contains resolved data`() {
         val context = buildJsonObject {
             put("restaurantName", "Xi'an Famous Foods")
             put("imageUrl", "http://localhost:10002/static/food.jpeg")
             put("address", "81 St Marks Pl, New York, NY 10003")
         }
 
-        val event = UserActionEvent(
+        val event = ActionEvent(
             name = "book_restaurant",
             surfaceId = "default",
             sourceComponentId = "template-book-button:item1",
@@ -103,8 +106,8 @@ class ClientEventFormatTest {
     }
 
     @Test
-    fun `UserActionEvent surfaceId should not be empty`() {
-        val event = UserActionEvent(
+    fun `ActionEvent surfaceId should not be empty`() {
+        val event = ActionEvent(
             name = "click",
             surfaceId = "default",
             sourceComponentId = "my-button",

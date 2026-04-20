@@ -2,9 +2,9 @@
 
 Renders a visual separator line.
 
-> **A2UI Spec:** See `Divider` in the [Standard Component Catalog v0.8](https://github.com/google/A2UI/blob/main/specification/0.8/json/standard_catalog_definition.json).
+> **A2UI Spec:** See `Divider` in the [A2UI v0.9 Standard Component Catalog](https://github.com/google/A2UI/tree/main/specification/0.9).
 >
-> *a2ui-4k currently implements the v0.8 specification. The A2UI protocol is under active development.*
+> *a2ui-4k implements A2UI **v0.9** with backwards-compatible support for v0.8 (see [Deprecated Protocol Versions](../protocol/deprecated-versions.md)).*
 
 ## Properties
 
@@ -67,6 +67,6 @@ In a Column:
 
 ## See Also
 
-- [A2UI Standard Catalog](https://github.com/google/A2UI/blob/main/specification/0.8/json/standard_catalog_definition.json) - `Divider` component
+- [A2UI v0.9 Standard Catalog](https://github.com/google/A2UI/tree/main/specification/0.9) - `Divider` component
 - [Column](column.md) - Common parent for horizontal dividers
 - [Row](row.md) - Common parent for vertical dividers

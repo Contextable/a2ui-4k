@@ -1,8 +1,13 @@
 # Widget Reference
 
-a2ui-4k implements all 18 widgets from the [A2UI v0.8 Standard Component Catalog](https://github.com/google/A2UI/blob/main/specification/0.8/json/standard_catalog_definition.json).
+a2ui-4k implements all 18 widgets from the
+[A2UI v0.9 Standard Component Catalog](https://github.com/google/A2UI/tree/main/specification/0.9).
 
-> *For complete property definitions and behavior specifications, refer to the canonical A2UI specification. This reference focuses on a2ui-4k implementation details.*
+> *For complete property definitions and behavior specifications, refer to the
+> canonical A2UI specification. This reference focuses on a2ui-4k
+> implementation details. Legacy v0.8 surfaces are transcoded into the v0.9
+> shape before reaching widgets — see
+> [Deprecated Protocol Versions](../protocol/deprecated-versions.md).*
 
 ## Basic Content
 
@@ -36,73 +41,88 @@ Capture user input and trigger actions.
 
 | Widget | Description |
 |--------|-------------|
-| [Button](button.md) | Clickable action trigger with context resolution |
-| [TextField](text-field.md) | Text input with label and data binding |
+| [Button](button.md) | Clickable action trigger with `default` / `primary` / `borderless` variants |
+| [TextField](text-field.md) | Text input with label, validation, and data binding |
 | [CheckBox](checkbox.md) | Boolean toggle with label |
 | [Slider](slider.md) | Numeric range input |
-| [MultipleChoice](multiple-choice.md) | Single or multi-select options |
+| [MultipleChoice](multiple-choice.md) | `ChoicePicker` (variants `multipleSelection` / `mutuallyExclusive`) |
 | [DateTimeInput](date-time-input.md) | Date and/or time picker |
 
-## Common Patterns
+## Common Patterns (v0.9)
 
-### Property Types
+### Data references
 
-All widgets use consistent property patterns:
+A2UI v0.9 simplified data references — primitives are literals, and
+non-literal values use a single-key object discriminator:
 
 ```json
-// Literal string value
-{ "literalString": "Hello" }
+// Literal values — JSON primitives are the values themselves
+"text": "Hello"
+"count": 42
+"enabled": true
 
-// Data-bound string (resolves from DataModel)
-{ "path": "/user/name" }
+// Path binding — resolves from the surface's DataModel
+"text": { "path": "/user/name" }
 
-// Literal number
-{ "literalNumber": 42 }
-
-// Literal boolean
-{ "literalBoolean": true }
+// Function call — evaluated by FunctionEvaluator
+"text": {
+  "call": "formatCurrency",
+  "args": {
+    "value": { "path": "/total" },
+    "spec": { "currency": "USD" }
+  }
+}
 ```
 
-### Child References
+### Children
 
-Container widgets reference children by ID:
+Container widgets accept a flat array of component IDs (v0.9), an
+`explicitList`, or a `template`:
 
 ```json
-// Single child
-{ "componentId": "my-child" }
+// Plain id list (preferred in v0.9)
+"children": ["row-1", "row-2", "row-3"]
 
-// Explicit list of children
-{
+// Explicit list with weights
+"children": {
   "explicitList": [
-    { "componentId": "child-1" },
-    { "componentId": "child-2" }
+    { "componentId": "sidebar", "weight": 1 },
+    { "componentId": "main",    "weight": 3 }
   ]
 }
 
-// Template-based (for data-driven lists)
-{
+// Template — bind one component over an array path
+"children": {
   "template": {
-    "dataPath": "/items",
+    "path": "/items",
     "componentId": "item-template"
   }
 }
 ```
 
-### Weights
+### Validation
 
-Children can specify weights for flex-like layouts:
+Input widgets accept a `checks` array of `CheckRule`s. When any check fails
+the widget reports a `ValidationError` (and disables itself, where relevant):
 
 ```json
-{
-  "explicitList": [
-    { "componentId": "sidebar", "weight": 1 },
-    { "componentId": "main", "weight": 3 }
-  ]
-}
+"checks": [
+  {
+    "condition": { "call": "required" },
+    "message": "This field is required"
+  }
+]
 ```
+
+### Accessibility
+
+Input widgets accept an `accessibility` object with optional
+`label` / `description` `DataReference<String>` fields, exposed to the
+platform's screen-reader APIs.
 
 ## See Also
 
-- [A2UI Standard Catalog Spec](https://github.com/google/A2UI/blob/main/specification/0.8/json/standard_catalog_definition.json)
-- [Catalogs](../core-concepts/catalogs.md) - Creating custom widgets
-- [Data Binding](../core-concepts/data-binding.md) - Path-based property binding
+- [A2UI v0.9 specification](https://github.com/google/A2UI/tree/main/specification/0.9)
+- [Catalogs](../core-concepts/catalogs.md) — Creating custom widgets
+- [Data Binding](../core-concepts/data-binding.md) — Path-based property binding
+- [Events](../core-concepts/events.md) — `ActionEvent`, `ValidationError`, `ClientError`

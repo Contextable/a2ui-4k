@@ -1,12 +1,15 @@
 # Catalogs
 
-Catalogs define the available widgets that a2ui-4k can render. The library provides a standard catalog implementing all A2UI v0.8 widgets, and supports custom widget development.
+Catalogs define the available widgets that a2ui-4k can render. The library
+provides a standard catalog implementing the A2UI **v0.9** widget set, and
+supports custom widget development. Legacy v0.8 surfaces are transcoded into
+the v0.9 shape before reaching widgets, so the same catalog handles both.
 
 > *For complete catalog specification, see [A2UI Component Model and Catalogs](https://deepwiki.com/google/A2UI#3.2).*
 
 ## CoreCatalog
 
-a2ui-4k provides `CoreCatalog` with all 18 standard A2UI v0.8 widgets:
+a2ui-4k provides `CoreCatalog` with all 18 standard A2UI v0.9 widgets:
 
 ```kotlin
 import com.contextable.a2ui4k.catalog.CoreCatalog

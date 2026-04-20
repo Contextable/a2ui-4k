@@ -17,11 +17,17 @@
 package com.contextable.a2ui4k.example.widgets
 
 /**
- * Sample definitions for each widget type (v0.8 format).
+ * Sample definitions for each widget type (v0.9 format).
  *
  * Each sample properly separates:
  * - components: Layout definitions with path bindings to data
  * - data: Actual content values
+ *
+ * v0.9 format uses flat component definitions:
+ * - `{"id":"x", "component":"Text", "text": {"path":"/msg"}, "variant":"h1"}`
+ * - Children are plain arrays: `["c1","c2"]`
+ * - Literal values are plain: `"foo"`, `42`, `true`
+ * - Path bindings remain: `{"path":"/x"}`
  */
 data class WidgetSample(
     val components: String,
@@ -55,11 +61,11 @@ object WidgetSamples {
     private val TEXT_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Column": {"children": {"explicitList": ["h1", "h2", "body", "caption"]}}}},
-  {"id": "h1", "component": {"Text": {"text": {"path": "/heading1"}, "usageHint": "h1"}}},
-  {"id": "h2", "component": {"Text": {"text": {"path": "/heading2"}, "usageHint": "h2"}}},
-  {"id": "body", "component": {"Text": {"text": {"path": "/bodyText"}}}},
-  {"id": "caption", "component": {"Text": {"text": {"path": "/captionText"}, "usageHint": "caption"}}}
+  {"id": "root", "component": "Column", "children": ["h1", "h2", "body", "caption"]},
+  {"id": "h1", "component": "Text", "text": {"path": "/heading1"}, "variant": "h1"},
+  {"id": "h2", "component": "Text", "text": {"path": "/heading2"}, "variant": "h2"},
+  {"id": "body", "component": "Text", "text": {"path": "/bodyText"}},
+  {"id": "caption", "component": "Text", "text": {"path": "/captionText"}, "variant": "caption"}
 ]
         """.trimIndent(),
         data = """{
@@ -73,8 +79,8 @@ object WidgetSamples {
     private val TEXT_FIELD_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Column": {"children": {"explicitList": ["input"]}}}},
-  {"id": "input", "component": {"TextField": {"label": {"path": "/inputLabel"}, "text": {"path": "/name"}}}}
+  {"id": "root", "component": "Column", "children": ["input"]},
+  {"id": "input", "component": "TextField", "label": {"path": "/inputLabel"}, "value": {"path": "/name"}}
 ]
         """.trimIndent(),
         data = """{
@@ -86,12 +92,12 @@ object WidgetSamples {
     private val BUTTON_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Column": {"children": {"explicitList": ["primary-btn", "secondary-btn", "feedback"]}}}},
-  {"id": "primary-btn", "component": {"Button": {"child": "primary-text", "primary": true, "action": {"name": "submit", "dataUpdates": [{"path": "/lastClicked", "value": "Primary Button clicked!"}]}}}},
-  {"id": "primary-text", "component": {"Text": {"text": {"path": "/primaryLabel"}}}},
-  {"id": "secondary-btn", "component": {"Button": {"child": "secondary-text", "primary": false, "action": {"name": "cancel", "dataUpdates": [{"path": "/lastClicked", "value": "Secondary Button clicked!"}]}}}},
-  {"id": "secondary-text", "component": {"Text": {"text": {"path": "/secondaryLabel"}}}},
-  {"id": "feedback", "component": {"Text": {"text": {"path": "/lastClicked"}, "usageHint": "caption"}}}
+  {"id": "root", "component": "Column", "children": ["primary-btn", "secondary-btn", "feedback"]},
+  {"id": "primary-btn", "component": "Button", "child": "primary-text", "variant": "filled", "action": {"event": {"name": "submit", "context": {"source": "primary"}}, "dataUpdates": [{"path": "/lastClicked", "value": "Primary Button clicked!"}]}},
+  {"id": "primary-text", "component": "Text", "text": {"path": "/primaryLabel"}},
+  {"id": "secondary-btn", "component": "Button", "child": "secondary-text", "variant": "outlined", "action": {"event": {"name": "cancel", "context": {"source": "secondary"}}, "dataUpdates": [{"path": "/lastClicked", "value": "Secondary Button clicked!"}]}},
+  {"id": "secondary-text", "component": "Text", "text": {"path": "/secondaryLabel"}},
+  {"id": "feedback", "component": "Text", "text": {"path": "/lastClicked"}, "variant": "caption"}
 ]
         """.trimIndent(),
         data = """{
@@ -104,9 +110,9 @@ object WidgetSamples {
     private val IMAGE_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Column": {"children": {"explicitList": ["label", "image"]}}}},
-  {"id": "label", "component": {"Text": {"text": {"path": "/label"}, "usageHint": "body"}}},
-  {"id": "image", "component": {"Image": {"url": {"path": "/imageUrl"}, "fit": "cover", "usageHint": "mediumFeature"}}}
+  {"id": "root", "component": "Column", "children": ["label", "image"]},
+  {"id": "label", "component": "Text", "text": {"path": "/label"}, "variant": "body"},
+  {"id": "image", "component": "Image", "url": {"path": "/imageUrl"}, "fit": "cover", "variant": "mediumFeature"}
 ]
         """.trimIndent(),
         data = """{
@@ -118,12 +124,12 @@ object WidgetSamples {
     private val ICON_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Row": {"children": {"explicitList": ["home", "settings", "search", "star", "favorite"]}}}},
-  {"id": "home", "component": {"Icon": {"name": {"path": "/icons/0"}}}},
-  {"id": "settings", "component": {"Icon": {"name": {"path": "/icons/1"}}}},
-  {"id": "search", "component": {"Icon": {"name": {"path": "/icons/2"}}}},
-  {"id": "star", "component": {"Icon": {"name": {"path": "/icons/3"}}}},
-  {"id": "favorite", "component": {"Icon": {"name": {"path": "/icons/4"}}}}
+  {"id": "root", "component": "Row", "children": ["home", "settings", "search", "star", "favorite"]},
+  {"id": "home", "component": "Icon", "name": {"path": "/icons/0"}},
+  {"id": "settings", "component": "Icon", "name": {"path": "/icons/1"}},
+  {"id": "search", "component": "Icon", "name": {"path": "/icons/2"}},
+  {"id": "star", "component": "Icon", "name": {"path": "/icons/3"}},
+  {"id": "favorite", "component": "Icon", "name": {"path": "/icons/4"}}
 ]
         """.trimIndent(),
         data = """{
@@ -134,10 +140,10 @@ object WidgetSamples {
     private val COLUMN_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Column": {"distribution": "spaceEvenly", "children": {"explicitList": ["item1", "item2", "item3"]}}}},
-  {"id": "item1", "component": {"Text": {"text": {"path": "/items/0"}}}},
-  {"id": "item2", "component": {"Text": {"text": {"path": "/items/1"}}}},
-  {"id": "item3", "component": {"Text": {"text": {"path": "/items/2"}}}}
+  {"id": "root", "component": "Column", "justify": "spaceEvenly", "children": ["item1", "item2", "item3"]},
+  {"id": "item1", "component": "Text", "text": {"path": "/items/0"}},
+  {"id": "item2", "component": "Text", "text": {"path": "/items/1"}},
+  {"id": "item3", "component": "Text", "text": {"path": "/items/2"}}
 ]
         """.trimIndent(),
         data = """{
@@ -148,10 +154,10 @@ object WidgetSamples {
     private val ROW_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Row": {"distribution": "spaceBetween", "children": {"explicitList": ["left", "center", "right"]}}}},
-  {"id": "left", "component": {"Text": {"text": {"path": "/positions/left"}}}},
-  {"id": "center", "component": {"Text": {"text": {"path": "/positions/center"}}}},
-  {"id": "right", "component": {"Text": {"text": {"path": "/positions/right"}}}}
+  {"id": "root", "component": "Row", "justify": "spaceBetween", "children": ["left", "center", "right"]},
+  {"id": "left", "component": "Text", "text": {"path": "/positions/left"}},
+  {"id": "center", "component": "Text", "text": {"path": "/positions/center"}},
+  {"id": "right", "component": "Text", "text": {"path": "/positions/right"}}
 ]
         """.trimIndent(),
         data = """{
@@ -166,9 +172,9 @@ object WidgetSamples {
     private val LIST_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"List": {"direction": "vertical", "children": {"template": {"dataBinding": "/items", "componentId": "item-template"}}}}},
-  {"id": "item-template", "component": {"Card": {"child": "item-text"}}},
-  {"id": "item-text", "component": {"Text": {"text": {"path": "/title"}}}}
+  {"id": "root", "component": "List", "direction": "vertical", "children": {"componentId": "item-template", "path": "/items"}},
+  {"id": "item-template", "component": "Card", "child": "item-text"},
+  {"id": "item-text", "component": "Text", "text": {"path": "/title"}}
 ]
         """.trimIndent(),
         data = """{
@@ -184,13 +190,13 @@ object WidgetSamples {
     private val CARD_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Column": {"children": {"explicitList": ["card1", "card2"]}}}},
-  {"id": "card1", "component": {"Card": {"child": "card1-content"}}},
-  {"id": "card1-content", "component": {"Column": {"children": {"explicitList": ["card1-title", "card1-body"]}}}},
-  {"id": "card1-title", "component": {"Text": {"text": {"path": "/cards/0/title"}, "usageHint": "h3"}}},
-  {"id": "card1-body", "component": {"Text": {"text": {"path": "/cards/0/body"}}}},
-  {"id": "card2", "component": {"Card": {"child": "card2-text"}}},
-  {"id": "card2-text", "component": {"Text": {"text": {"path": "/cards/1/body"}}}}
+  {"id": "root", "component": "Column", "children": ["card1", "card2"]},
+  {"id": "card1", "component": "Card", "child": "card1-content"},
+  {"id": "card1-content", "component": "Column", "children": ["card1-title", "card1-body"]},
+  {"id": "card1-title", "component": "Text", "text": {"path": "/cards/0/title"}, "variant": "h3"},
+  {"id": "card1-body", "component": "Text", "text": {"path": "/cards/0/body"}},
+  {"id": "card2", "component": "Card", "child": "card2-text"},
+  {"id": "card2-text", "component": "Text", "text": {"path": "/cards/1/body"}}
 ]
         """.trimIndent(),
         data = """{
@@ -204,10 +210,10 @@ object WidgetSamples {
     private val DIVIDER_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Column": {"children": {"explicitList": ["above", "divider", "below"]}}}},
-  {"id": "above", "component": {"Text": {"text": {"path": "/above"}}}},
-  {"id": "divider", "component": {"Divider": {}}},
-  {"id": "below", "component": {"Text": {"text": {"path": "/below"}}}}
+  {"id": "root", "component": "Column", "children": ["above", "divider", "below"]},
+  {"id": "above", "component": "Text", "text": {"path": "/above"}},
+  {"id": "divider", "component": "Divider"},
+  {"id": "below", "component": "Text", "text": {"path": "/below"}}
 ]
         """.trimIndent(),
         data = """{
@@ -219,10 +225,10 @@ object WidgetSamples {
     private val CHECKBOX_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Column": {"children": {"explicitList": ["check1", "check2", "check3"]}}}},
-  {"id": "check1", "component": {"CheckBox": {"label": {"literalString": "Accept terms and conditions"}, "value": {"path": "/acceptTerms"}}}},
-  {"id": "check2", "component": {"CheckBox": {"label": {"literalString": "Subscribe to newsletter"}, "value": {"path": "/newsletter"}}}},
-  {"id": "check3", "component": {"CheckBox": {"label": {"literalString": "Enable notifications"}, "value": {"path": "/notifications"}}}}
+  {"id": "root", "component": "Column", "children": ["check1", "check2", "check3"]},
+  {"id": "check1", "component": "CheckBox", "label": "Accept terms and conditions", "value": {"path": "/acceptTerms"}},
+  {"id": "check2", "component": "CheckBox", "label": "Subscribe to newsletter", "value": {"path": "/newsletter"}},
+  {"id": "check3", "component": "CheckBox", "label": "Enable notifications", "value": {"path": "/notifications"}}
 ]
         """.trimIndent(),
         data = """{
@@ -235,10 +241,10 @@ object WidgetSamples {
     private val SLIDER_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Column": {"children": {"explicitList": ["label", "slider", "value-text"]}}}},
-  {"id": "label", "component": {"Text": {"text": {"path": "/label"}, "usageHint": "body"}}},
-  {"id": "slider", "component": {"Slider": {"value": {"path": "/volume"}, "minValue": 0, "maxValue": 100}}},
-  {"id": "value-text", "component": {"Text": {"text": {"path": "/volume"}}}}
+  {"id": "root", "component": "Column", "children": ["label", "slider", "value-text"]},
+  {"id": "label", "component": "Text", "text": {"path": "/label"}, "variant": "body"},
+  {"id": "slider", "component": "Slider", "value": {"path": "/volume"}, "min": 0, "max": 100},
+  {"id": "value-text", "component": "Text", "text": {"path": "/volume"}}
 ]
         """.trimIndent(),
         data = """{
@@ -250,9 +256,9 @@ object WidgetSamples {
     private val DATE_TIME_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Column": {"children": {"explicitList": ["label", "datetime"]}}}},
-  {"id": "label", "component": {"Text": {"text": {"path": "/label"}, "usageHint": "body"}}},
-  {"id": "datetime", "component": {"DateTimeInput": {"value": {"path": "/appointment"}, "enableDate": true, "enableTime": true}}}
+  {"id": "root", "component": "Column", "children": ["label", "datetime"]},
+  {"id": "label", "component": "Text", "text": {"path": "/label"}, "variant": "body"},
+  {"id": "datetime", "component": "DateTimeInput", "value": {"path": "/appointment"}, "enableDate": true, "enableTime": true}
 ]
         """.trimIndent(),
         data = """{
@@ -264,10 +270,10 @@ object WidgetSamples {
     private val TABS_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Tabs": {"tabItems": [{"title": {"path": "/tabs/0/title"}, "child": "tab1-content"}, {"title": {"path": "/tabs/1/title"}, "child": "tab2-content"}, {"title": {"path": "/tabs/2/title"}, "child": "tab3-content"}]}}},
-  {"id": "tab1-content", "component": {"Text": {"text": {"path": "/tabs/0/content"}}}},
-  {"id": "tab2-content", "component": {"Text": {"text": {"path": "/tabs/1/content"}}}},
-  {"id": "tab3-content", "component": {"Text": {"text": {"path": "/tabs/2/content"}}}}
+  {"id": "root", "component": "Tabs", "tabs": [{"title": {"path": "/tabs/0/title"}, "child": "tab1-content"}, {"title": {"path": "/tabs/1/title"}, "child": "tab2-content"}, {"title": {"path": "/tabs/2/title"}, "child": "tab3-content"}]},
+  {"id": "tab1-content", "component": "Text", "text": {"path": "/tabs/0/content"}},
+  {"id": "tab2-content", "component": "Text", "text": {"path": "/tabs/1/content"}},
+  {"id": "tab3-content", "component": "Text", "text": {"path": "/tabs/2/content"}}
 ]
         """.trimIndent(),
         data = """{
@@ -282,12 +288,12 @@ object WidgetSamples {
     private val MODAL_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Modal": {"entryPointChild": "trigger", "contentChild": "modal-content"}}},
-  {"id": "trigger", "component": {"Card": {"child": "trigger-text"}}},
-  {"id": "trigger-text", "component": {"Text": {"text": {"path": "/triggerLabel"}}}},
-  {"id": "modal-content", "component": {"Column": {"children": {"explicitList": ["modal-title", "modal-body"]}}}},
-  {"id": "modal-title", "component": {"Text": {"text": {"path": "/modal/title"}, "usageHint": "h3"}}},
-  {"id": "modal-body", "component": {"Text": {"text": {"path": "/modal/body"}}}}
+  {"id": "root", "component": "Modal", "trigger": "trigger", "content": "modal-content"},
+  {"id": "trigger", "component": "Card", "child": "trigger-text"},
+  {"id": "trigger-text", "component": "Text", "text": {"path": "/triggerLabel"}},
+  {"id": "modal-content", "component": "Column", "children": ["modal-title", "modal-body"]},
+  {"id": "modal-title", "component": "Text", "text": {"path": "/modal/title"}, "variant": "h3"},
+  {"id": "modal-body", "component": "Text", "text": {"path": "/modal/body"}}
 ]
         """.trimIndent(),
         data = """{
@@ -302,9 +308,9 @@ object WidgetSamples {
     private val VIDEO_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Column": {"children": {"explicitList": ["label", "video"]}}}},
-  {"id": "label", "component": {"Text": {"text": {"path": "/label"}, "usageHint": "h2"}}},
-  {"id": "video", "component": {"Video": {"url": {"path": "/videoUrl"}}}}
+  {"id": "root", "component": "Column", "children": ["label", "video"]},
+  {"id": "label", "component": "Text", "text": {"path": "/label"}, "variant": "h2"},
+  {"id": "video", "component": "Video", "url": {"path": "/videoUrl"}}
 ]
         """.trimIndent(),
         data = """{
@@ -316,9 +322,9 @@ object WidgetSamples {
     private val AUDIO_PLAYER_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Column": {"children": {"explicitList": ["label", "audio"]}}}},
-  {"id": "label", "component": {"Text": {"text": {"path": "/label"}, "usageHint": "h2"}}},
-  {"id": "audio", "component": {"AudioPlayer": {"url": {"path": "/audioUrl"}}}}
+  {"id": "root", "component": "Column", "children": ["label", "audio"]},
+  {"id": "label", "component": "Text", "text": {"path": "/label"}, "variant": "h2"},
+  {"id": "audio", "component": "AudioPlayer", "url": {"path": "/audioUrl"}}
 ]
         """.trimIndent(),
         data = """{
@@ -330,7 +336,7 @@ object WidgetSamples {
     private val MINIMAL_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Text": {"text": {"path": "/message"}}}}
+  {"id": "root", "component": "Text", "text": {"path": "/message"}}
 ]
         """.trimIndent(),
         data = """{"message": "Hello, A2UI!"}"""
@@ -339,7 +345,7 @@ object WidgetSamples {
     private val CUSTOM_SAMPLE = WidgetSample(
         components = """
 [
-  {"id": "root", "component": {"Text": {"text": {"path": "/message"}}}}
+  {"id": "root", "component": "Text", "text": {"path": "/message"}}
 ]
         """.trimIndent(),
         data = """{"message": "Edit this sample!"}"""

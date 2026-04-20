@@ -2,14 +2,20 @@
 
 A Kotlin Multiplatform rendering engine for the [A2UI protocol](https://github.com/google/A2UI), enabling AI agents to generate dynamic user interfaces that render natively across platforms.
 
-> *a2ui-4k currently implements the A2UI v0.8 specification. The A2UI protocol is under active development.*
+> *a2ui-4k implements the A2UI v0.9 specification natively, with transparent
+> backwards-compatible support for v0.8 surfaces (transcoded internally to the
+> v0.9 shape — see [Deprecated Protocol Versions](docs/protocol/deprecated-versions.md)).
+> The A2UI protocol is under active development.*
 
 ## Features
 
-- **Multiplatform** - Android, iOS, and JVM/Desktop support via Compose Multiplatform
-- **Standard Catalog** - All 18 A2UI v0.8 standard widgets implemented
+- **Multiplatform** - Android, iOS, and JVM/Desktop via Compose Multiplatform
+- **Standard Catalog** - Full A2UI v0.9 standard widget set, plus legacy aliases for v0.8 properties
+- **Bidirectional Protocol** - Server→client UI streaming and client→server `action` / `error` events with the v0.9 wire envelope (`{"version":"v0.9", …}`)
 - **Reactive Data Binding** - JSON Pointer path-based data binding with automatic UI updates
-- **Event Handling** - Full support for user actions and data change events
+- **Validation** - First-class `CheckRule` evaluation backed by the function evaluator
+- **Accessibility** - Common `Accessibility` props (label, description) honored across input widgets
+- **Backwards-Compatible** - v0.8 `ACTIVITY_SNAPSHOT` / `ACTIVITY_DELTA` envelopes accepted on the same code path; per-surface protocol version drives outbound serialization
 
 ## Quick Start
 
@@ -37,6 +43,16 @@ fun MyScreen(uiDefinition: UiDefinition) {
 ## A2UI Protocol
 
 a2ui-4k implements the [A2UI specification](https://github.com/google/A2UI) from Google. For protocol details including message formats, component properties, and data binding, refer to the canonical specification.
+
+## Transport Integration
+
+a2ui-4k is a **rendering engine, not an A2A SDK**. It is transport-agnostic and expects callers to plug it into an A2A (Agent-to-Agent) transport of their choice. Concretely, callers are responsible for:
+
+1. **Receiving** — extract A2UI protocol JSON from inbound A2A message Parts (MIME `application/json+a2ui`) and pass it to `SurfaceStateManager.processMessage(...)`.
+2. **Advertising capabilities** — attach `A2UIClientCapabilities` (built via `a2uiBothVersionsClientCapabilities()` or a sibling helper) under the `"a2uiClientCapabilities"` key in outbound A2A message metadata.
+3. **Sending events back** — convert `UiEvent` instances via `toClientMessage(version)` and wrap the returned `JsonObject` as an A2A message Part. For v0.9 surfaces with `sendDataModel == true`, also attach `SurfaceStateManager.buildClientDataModel()` under `"a2uiClientDataModel"` in metadata.
+
+For the A2A protocol layer itself (`AgentExtension` data structure, `X-A2A-Extensions` header, `Message`/`Task`/`Part` models, HTTP transport), use an A2A SDK such as the Google A2A Python SDK or your framework's agent library. See [docs/api-reference/agent-extension.md](docs/api-reference/agent-extension.md) for the full reference.
 
 ## Platform Support
 

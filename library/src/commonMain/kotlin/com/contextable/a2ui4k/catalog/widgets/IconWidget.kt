@@ -32,10 +32,13 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Icon widget that displays a Material icon from the predefined set.
  *
+ * A2UI Protocol Properties (v0.9):
+ * - name (required): Icon name from the predefined set
+ *
  * JSON Schema:
  * ```json
  * {
- *   "name": {"literalString": "home"} | {"path": "/icon/name"}
+ *   "name": "home" | {"path": "/icon/name"}
  * }
  * ```
  *

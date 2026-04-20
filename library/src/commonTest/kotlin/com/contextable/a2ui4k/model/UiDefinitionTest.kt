@@ -25,6 +25,9 @@ import kotlin.test.assertTrue
 
 /**
  * Tests for UiDefinition - the complete state of a UI surface.
+ *
+ * In v0.9, root is identified by convention (component with id "root")
+ * rather than an explicit root property.
  */
 class UiDefinitionTest {
 
@@ -34,12 +37,11 @@ class UiDefinitionTest {
 
         assertEquals("test-surface", def.surfaceId)
         assertTrue(def.components.isEmpty())
-        assertNull(def.root)
         assertNull(def.catalogId)
     }
 
     @Test
-    fun `rootComponent returns null when root not set`() {
+    fun `rootComponent returns null when no root component exists`() {
         val def = UiDefinition(surfaceId = "test")
 
         assertNull(def.rootComponent)
@@ -47,21 +49,21 @@ class UiDefinitionTest {
 
     @Test
     fun `rootComponent returns null when root ID not in components`() {
+        val comp = Component.create("not-root", "Text", JsonObject(emptyMap()))
         val def = UiDefinition(
             surfaceId = "test",
-            root = "missing-root"
+            components = mapOf("not-root" to comp)
         )
 
         assertNull(def.rootComponent)
     }
 
     @Test
-    fun `rootComponent returns component when found`() {
+    fun `rootComponent returns component with id root`() {
         val component = Component.create("root", "Column", JsonObject(emptyMap()))
         val def = UiDefinition(
             surfaceId = "test",
-            components = mapOf("root" to component),
-            root = "root"
+            components = mapOf("root" to component)
         )
 
         assertNotNull(def.rootComponent)
@@ -114,50 +116,17 @@ class UiDefinitionTest {
     }
 
     @Test
-    fun `withRoot sets root ID`() {
-        val initial = UiDefinition(surfaceId = "test")
-
-        val updated = initial.withRoot("my-root")
-
-        assertEquals("my-root", updated.root)
-    }
-
-    @Test
-    fun `withRoot sets catalogId when provided`() {
-        val initial = UiDefinition(surfaceId = "test")
-
-        val updated = initial.withRoot("root", "custom-catalog")
-
-        assertEquals("root", updated.root)
-        assertEquals("custom-catalog", updated.catalogId)
-    }
-
-    @Test
-    fun `withRoot preserves existing catalogId when not provided`() {
-        val initial = UiDefinition(
-            surfaceId = "test",
-            catalogId = "existing-catalog"
-        )
-
-        val updated = initial.withRoot("root")
-
-        assertEquals("root", updated.root)
-        assertEquals("existing-catalog", updated.catalogId)
-    }
-
-    @Test
     fun `UiDefinition preserves all properties`() {
-        val comp = Component.create("text", "Text", JsonObject(emptyMap()))
+        val comp = Component.create("root", "Text", JsonObject(emptyMap()))
         val def = UiDefinition(
             surfaceId = "main-surface",
-            components = mapOf("text" to comp),
-            root = "text",
+            components = mapOf("root" to comp),
             catalogId = "my-catalog"
         )
 
         assertEquals("main-surface", def.surfaceId)
         assertEquals(1, def.components.size)
-        assertEquals("text", def.root)
+        assertNotNull(def.rootComponent)
         assertEquals("my-catalog", def.catalogId)
     }
 }
