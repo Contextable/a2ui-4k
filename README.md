@@ -44,6 +44,16 @@ fun MyScreen(uiDefinition: UiDefinition) {
 
 a2ui-4k implements the [A2UI specification](https://github.com/google/A2UI) from Google. For protocol details including message formats, component properties, and data binding, refer to the canonical specification.
 
+## Transport Integration
+
+a2ui-4k is a **rendering engine, not an A2A SDK**. It is transport-agnostic and expects callers to plug it into an A2A (Agent-to-Agent) transport of their choice. Concretely, callers are responsible for:
+
+1. **Receiving** — extract A2UI protocol JSON from inbound A2A message Parts (MIME `application/json+a2ui`) and pass it to `SurfaceStateManager.processMessage(...)`.
+2. **Advertising capabilities** — attach `A2UIClientCapabilities` (built via `a2uiBothVersionsClientCapabilities()` or a sibling helper) under the `"a2uiClientCapabilities"` key in outbound A2A message metadata.
+3. **Sending events back** — convert `UiEvent` instances via `toClientMessage(version)` and wrap the returned `JsonObject` as an A2A message Part. For v0.9 surfaces with `sendDataModel == true`, also attach `SurfaceStateManager.buildClientDataModel()` under `"a2uiClientDataModel"` in metadata.
+
+For the A2A protocol layer itself (`AgentExtension` data structure, `X-A2A-Extensions` header, `Message`/`Task`/`Part` models, HTTP transport), use an A2A SDK such as the Google A2A Python SDK or your framework's agent library. See [docs/api-reference/agent-extension.md](docs/api-reference/agent-extension.md) for the full reference.
+
 ## Platform Support
 
 | Platform | Status |

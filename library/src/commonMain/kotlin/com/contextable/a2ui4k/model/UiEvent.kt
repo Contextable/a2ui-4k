@@ -137,6 +137,10 @@ data class ClientError(
  * Returns the wire-ready envelope for this event in the given protocol
  * [version], or `null` if this event doesn't emit under that version.
  *
+ * The returned [JsonObject] is the payload for a new A2A message Part of
+ * MIME type `application/json+a2ui`; the library does not construct the Part
+ * envelope itself.
+ *
  * ## v0.9
  *
  * - [ActionEvent] → `{"version":"v0.9","action":{…}}`
