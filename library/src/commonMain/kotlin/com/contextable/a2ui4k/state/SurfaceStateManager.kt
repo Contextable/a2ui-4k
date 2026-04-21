@@ -167,7 +167,8 @@ class SurfaceStateManager {
         // version — but normally they agree.
         val version = when (catalogId) {
             A2UIExtension.STANDARD_CATALOG_URI_V08 -> ProtocolVersion.V0_8
-            A2UIExtension.STANDARD_CATALOG_URI -> ProtocolVersion.V0_9
+            A2UIExtension.STANDARD_CATALOG_URI,
+            A2UIExtension.BASIC_CATALOG_URI_V09 -> ProtocolVersion.V0_9
             else -> sourceVersion
         }
 

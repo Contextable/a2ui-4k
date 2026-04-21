@@ -16,6 +16,7 @@
 
 package com.contextable.a2ui4k.state
 
+import com.contextable.a2ui4k.extension.A2UIExtension
 import com.contextable.a2ui4k.model.ProtocolVersion
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
@@ -121,6 +122,18 @@ class SurfaceStateManagerTest {
         assertTrue(surface.sendDataModel)
         assertNotNull(surface.theme)
         assertEquals("#FF0000", (surface.theme!!["primaryColor"] as? JsonPrimitive)?.content)
+    }
+
+    @Test
+    fun `createSurface with BASIC_CATALOG_URI_V09 resolves to ProtocolVersion V0_9`() {
+        val manager = SurfaceStateManager()
+        manager.processMessage(
+            envelope(
+                "createSurface",
+                """{"surfaceId":"s","catalogId":"${A2UIExtension.BASIC_CATALOG_URI_V09}"}"""
+            )
+        )
+        assertEquals(ProtocolVersion.V0_9, manager.getSurfaceProtocolVersion("s"))
     }
 
     @Test
