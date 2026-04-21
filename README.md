@@ -44,6 +44,41 @@ fun MyScreen(uiDefinition: UiDefinition) {
 
 a2ui-4k implements the [A2UI specification](https://github.com/google/A2UI) from Google. For protocol details including message formats, component properties, and data binding, refer to the canonical specification.
 
+## Exposing rendering to an agent
+
+If your agent can call client-side tools (AG-UI `ToolExecutor`, OpenAI
+functions, Gemini tools, Anthropic `tool_use`), the library ships
+`A2UiRenderTool` — a canonical, SDK-agnostic helper that maps one `render_a2ui`
+tool call to `createSurface` + `updateComponents` + optional `updateDataModel`
+on your `SurfaceStateManager`. No new dependencies; the library stays
+transport-free.
+
+```kotlin
+import com.contextable.a2ui4k.agent.A2UiRenderTool
+import com.contextable.a2ui4k.agent.A2UiRenderException
+import com.contextable.a2ui4k.state.SurfaceStateManager
+
+val manager = SurfaceStateManager()
+val renderTool = A2UiRenderTool(manager)
+
+// AG-UI Kotlin SDK adapter (~4 lines):
+class RenderA2UiToolExecutor(private val tool: A2UiRenderTool) : ToolExecutor {
+    override val name = tool.name
+    override val description = tool.description
+    override val parameters = tool.parameters
+    override suspend fun execute(arguments: JsonObject) = try {
+        ToolExecutionResult.success(tool.render(arguments).toString())
+    } catch (e: A2UiRenderException) {
+        ToolExecutionResult.failure(e.message ?: "render_a2ui failed")
+    }
+}
+
+toolRegistry.registerTool(RenderA2UiToolExecutor(renderTool))
+```
+
+See [skills/expose-a2ui-as-agent-tool.md](skills/expose-a2ui-as-agent-tool.md)
+for the full integration walkthrough and adapter snippets for other SDKs.
+
 ## Transport Integration
 
 a2ui-4k is a **rendering engine, not an A2A SDK**. It is transport-agnostic and expects callers to plug it into an A2A (Agent-to-Agent) transport of their choice. Concretely, callers are responsible for:

@@ -43,6 +43,15 @@ object A2UIExtension {
     const val STANDARD_CATALOG_URI = "https://github.com/google/A2UI/blob/main/specification/v0_9/json/standard_catalog.json"
 
     /**
+     * Alternate v0.9 catalog URI emitted by parts of the ecosystem (notably
+     * `@copilotkit/a2ui-middleware` and `google/A2UI` sample agents). Wire-
+     * compatible with [STANDARD_CATALOG_URI] — [com.contextable.a2ui4k.state.SurfaceStateManager]
+     * treats either as a v0.9 signal when resolving a surface's protocol
+     * version.
+     */
+    const val BASIC_CATALOG_URI_V09 = "https://a2ui.org/specification/v0_9/basic_catalog.json"
+
+    /**
      * The URI of the standard A2UI v0.8 component catalog definition. Clients
      * that want to negotiate down to v0.8 when talking to legacy agents should
      * include this in `a2uiClientCapabilities.supportedCatalogIds`.

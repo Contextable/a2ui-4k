@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-04-21
+
+### Added
+- **`A2UiRenderTool`** in new `com.contextable.a2ui4k.agent` package — a
+  transport-agnostic, SDK-agnostic helper that packages the canonical
+  `createSurface` + `updateComponents` + optional `updateDataModel` flow
+  behind a single `render(JsonObject): JsonObject` call. Ships tool
+  `name`, `description`, and JSON-Schema `parameters` ready to plug into
+  any agent tool-calling SDK (AG-UI Kotlin, Gemini, OpenAI, Anthropic)
+  via a ~4-line consumer adapter. Replaces bespoke `ACTIVITY_SNAPSHOT`
+  handlers that call `SurfaceStateManager.processMessage` directly,
+  closing the tool-result round-trip so ag_ui_adk's HITL loop resumes
+  cleanly. No new dependencies; the library remains transport-agnostic.
+  ([library/src/commonMain/kotlin/com/contextable/a2ui4k/agent/A2UiRenderTool.kt](library/src/commonMain/kotlin/com/contextable/a2ui4k/agent/A2UiRenderTool.kt))
+- **`A2UiRenderException`** (same package) — public typed exception with
+  a structured `ValidationCode` enum and `field` name, thrown by
+  `A2UiRenderTool.render` on malformed tool-call arguments. Consumer
+  adapters catch it and map to their SDK's native failure result.
+- **`A2UIExtension.BASIC_CATALOG_URI_V09`** constant
+  (`https://a2ui.org/specification/v0_9/basic_catalog.json`) and
+  corresponding `SurfaceStateManager.processMessage` branch-match.
+  Agents that emit the `a2ui.org` URI now resolve cleanly to
+  `ProtocolVersion.V0_9`, alongside the existing `STANDARD_CATALOG_URI`.
+  ([library/src/commonMain/kotlin/com/contextable/a2ui4k/extension/A2UIExtension.kt](library/src/commonMain/kotlin/com/contextable/a2ui4k/extension/A2UIExtension.kt))
+
 ## [0.9.2] - 2026-04-19
 
 ### Fixed
@@ -266,7 +291,8 @@ Initial implementation of the A2UI v0.8 rendering engine.
 - Event system: UserActionEvent, DataChangeEvent
 - Kotlin Multiplatform support: Android, iOS, JVM/Desktop
 
-[Unreleased]: https://github.com/Contextable/a2ui-4k/compare/v0.9.2...HEAD
+[Unreleased]: https://github.com/Contextable/a2ui-4k/compare/v0.9.3...HEAD
+[0.9.3]: https://github.com/Contextable/a2ui-4k/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/Contextable/a2ui-4k/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/Contextable/a2ui-4k/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/Contextable/a2ui-4k/compare/v0.8.2...v0.9.0
