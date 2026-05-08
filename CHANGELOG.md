@@ -9,7 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.9.3] - 2026-04-21
 
+Stable-readiness release: bundles the canonical client-side
+`render_a2ui` tool helper that closes the agent ↔ surface round-trip
+for AG-UI / OpenAI / Gemini / Anthropic tool-calling stacks, plus a
+new client-app skill for adopting the v0.9 protocol alongside v0.8,
+plus public-doc clarification of the (zero-dependency) A2A
+integration story. No new runtime dependencies. No breaking changes.
+
 ### Added
+
 - **`A2UiRenderTool`** in new `com.contextable.a2ui4k.agent` package — a
   transport-agnostic, SDK-agnostic helper that packages the canonical
   `createSurface` + `updateComponents` + optional `updateDataModel` flow
@@ -22,7 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cleanly. No new dependencies; the library remains transport-agnostic.
   ([library/src/commonMain/kotlin/com/contextable/a2ui4k/agent/A2UiRenderTool.kt](library/src/commonMain/kotlin/com/contextable/a2ui4k/agent/A2UiRenderTool.kt))
 - **`A2UiRenderException`** (same package) — public typed exception with
-  a structured `ValidationCode` enum and `field` name, thrown by
+  a structured `ValidationCode` enum (`MISSING_REQUIRED_FIELD`,
+  `WRONG_TYPE`, `EMPTY_VALUE`) and `field` name, thrown by
   `A2UiRenderTool.render` on malformed tool-call arguments. Consumer
   adapters catch it and map to their SDK's native failure result.
 - **`A2UIExtension.BASIC_CATALOG_URI_V09`** constant
@@ -31,6 +40,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Agents that emit the `a2ui.org` URI now resolve cleanly to
   `ProtocolVersion.V0_9`, alongside the existing `STANDARD_CATALOG_URI`.
   ([library/src/commonMain/kotlin/com/contextable/a2ui4k/extension/A2UIExtension.kt](library/src/commonMain/kotlin/com/contextable/a2ui4k/extension/A2UIExtension.kt))
+- **New skill: [`skills/expose-a2ui-as-agent-tool.md`](skills/expose-a2ui-as-agent-tool.md)** —
+  agent-agnostic walkthrough for client apps wiring `render_a2ui` into
+  their tool-calling SDK. Covers the `A2UiRenderTool` adapter pattern
+  (~4 lines) for AG-UI Kotlin, Gemini Kotlin, OpenAI, and Anthropic,
+  registry plumbing pitfalls, and removal of legacy
+  `ACTIVITY_SNAPSHOT` handlers. Detect/Before/After/Check quartets per
+  the established skill format.
+- **New skill: [`skills/adopt-v0.9-protocol.md`](skills/adopt-v0.9-protocol.md)** —
+  focused 5-step companion to `migrate-0.8-to-0.9.md`. Walks client
+  apps already on the 0.9.x library through advertising v0.9
+  alongside v0.8 and negotiating per surface. Covers capability
+  helpers, both-URI metadata advertisement, `getSurfaceProtocolVersion`
+  use at outbound serialization sites, `a2uiClientDataModel`
+  attachment, and `ValidationError` / `ClientError` handling. Includes
+  a wire-level v0.8 → v0.9 reference table grounded in both the
+  codebase and the upstream A2UI spec.
+- **README "Exposing rendering to an agent" section** — short
+  copy-paste recipe showing the canonical `A2UiRenderTool` + adapter
+  pattern, with a pointer to the full skill. Sits before the
+  "Transport Integration" section.
+
+### Changed
+
+- **A2A coupling clarified across public KDoc and README.** The
+  library has zero A2A SDK dependency (no imports, no Maven artifacts,
+  no SDK type refs) but is semantically shaped for A2A integration at
+  three specific surfaces. That contract was previously documented
+  only in skills and the agent-extension reference doc; it is now
+  surfaced in the KDoc of the very functions that produce or consume
+  A2A-shaped JSON:
+  - `SurfaceStateManager.processMessage` — notes that inputs are A2UI
+    JSON typically extracted by the caller from an A2A message Part of
+    MIME type `application/json+a2ui`. The library does not perform
+    A2A Part decoding itself.
+  - `SurfaceStateManager.buildClientDataModel` — notes that the
+    returned envelope is intended to be attached under the
+    `"a2uiClientDataModel"` key in outbound A2A message metadata.
+  - `UiEvent.toClientMessage` — notes that the returned `JsonObject`
+    is the payload for a new A2A message Part.
+- **README gains a "Transport Integration" section** mirroring the
+  positively-framed content from
+  [docs/api-reference/agent-extension.md](docs/api-reference/agent-extension.md):
+  three caller responsibilities (receiving, advertising capabilities,
+  sending events back) with explicit pointers into the relevant APIs.
+  KDoc and Markdown only; no behavior change.
+
+### Fixed
+
+- **Removed broken `@see` tags on `A2UIExtensionParams`** that
+  referenced symbols not present in the codebase: `AgentExtension` is
+  an A2A SDK type the library does not import, and `a2uiAgentExtension`
+  does not exist anywhere. Replaced with prose pointing at
+  [docs/api-reference/agent-extension.md](docs/api-reference/agent-extension.md).
+  ([library/src/commonMain/kotlin/com/contextable/a2ui4k/extension/A2UIExtensionParams.kt](library/src/commonMain/kotlin/com/contextable/a2ui4k/extension/A2UIExtensionParams.kt))
 
 ## [0.9.2] - 2026-04-19
 
