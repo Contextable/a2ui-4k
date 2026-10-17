@@ -199,7 +199,7 @@ private fun renderButtonChild(
     }
 }
 
-private fun resolveContext(contextObject: JsonObject?, dataContext: DataContext): JsonObject? {
+internal fun resolveContext(contextObject: JsonObject?, dataContext: DataContext): JsonObject? {
     if (contextObject == null || contextObject.isEmpty()) return null
 
     val resolved = mutableMapOf<String, JsonElement>()

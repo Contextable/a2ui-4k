@@ -136,23 +136,26 @@ class DataModel(
 
     /**
      * Gets a string value at the specified path.
+     * Returns null if the path is absent or holds an array or object.
      */
     fun getString(path: String): String? {
-        return get(path)?.jsonPrimitive?.contentOrNull
+        return (get(path) as? JsonPrimitive)?.contentOrNull
     }
 
     /**
      * Gets a number value at the specified path.
+     * Returns null if the path is absent or holds an array or object.
      */
     fun getNumber(path: String): Double? {
-        return get(path)?.jsonPrimitive?.doubleOrNull
+        return (get(path) as? JsonPrimitive)?.doubleOrNull
     }
 
     /**
      * Gets a boolean value at the specified path.
+     * Returns null if the path is absent or holds an array or object.
      */
     fun getBoolean(path: String): Boolean? {
-        return get(path)?.jsonPrimitive?.booleanOrNull
+        return (get(path) as? JsonPrimitive)?.booleanOrNull
     }
 
     /**
@@ -300,18 +303,21 @@ internal class DataModelContext(
             is Number -> model.updateNumber(resolvedPath, value.toDouble())
             is Boolean -> model.updateBoolean(resolvedPath, value)
             is List<*> -> model.update(resolvedPath, serializeList(value))
+            is JsonElement -> model.update(resolvedPath, value)
             null -> model.update(resolvedPath, JsonNull)
             else -> model.updateString(resolvedPath, value.toString())
         }
     }
 
-    private fun serializeList(list: List<*>): JsonArray = JsonArray(list.mapNotNull { element ->
+    // Mirrors the scalar branches of update() for each list element.
+    private fun serializeList(list: List<*>): JsonArray = JsonArray(list.map { element ->
         when (element) {
-            is String      -> JsonPrimitive(element)
-            is Boolean     -> JsonPrimitive(element)
-            is Number      -> JsonPrimitive(element.toDouble())
+            is String -> JsonPrimitive(element)
+            is Number -> JsonPrimitive(element.toDouble())
+            is Boolean -> JsonPrimitive(element)
             is JsonElement -> element
-            else           -> null
+            null -> JsonNull
+            else -> JsonPrimitive(element.toString())
         }
     })
 
