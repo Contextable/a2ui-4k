@@ -47,6 +47,7 @@ import com.contextable.a2ui4k.render.LocalUiDefinition
 import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -169,7 +170,8 @@ private fun ChoicePickerWidgetContent(
                                 DataChangeEvent(
                                     surfaceId = surfaceId,
                                     path = valuePath,
-                                    value = selectedValues.joinToString(",")
+                                    value = selectedValues.joinToString(","),
+                                    jsonValue = JsonArray(selectedValues.map { JsonPrimitive(it) })
                                 )
                             )
                         }

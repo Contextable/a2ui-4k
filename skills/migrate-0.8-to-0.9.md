@@ -347,12 +347,13 @@ import com.contextable.a2ui4k.model.ActionEvent
 
 when (event) {
     is ActionEvent -> handleAction(event.name, event.context)
-    is DataChangeEvent -> handleDataChange(event.path, event.value)
+    is DataChangeEvent -> handleDataChange(event.path, event.jsonValue)
 }
 ```
 
 The property set is identical: `name`, `surfaceId`, `sourceComponentId`,
-`timestamp`, `context: JsonObject?`.
+`timestamp`, `context: JsonObject?`. On `DataChangeEvent`, read `jsonValue`
+(the value with its JSON type) instead of the deprecated string `value`.
 
 **Check:** `grep -n UserActionEvent` returns no results.
 

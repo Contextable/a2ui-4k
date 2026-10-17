@@ -17,6 +17,7 @@
 package com.contextable.a2ui4k.model
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -72,12 +73,21 @@ data class ActionEvent(
 /**
  * Client-side data change. **Not** a wire message — input widgets emit this
  * so the application can mirror changes into the local [com.contextable.a2ui4k.data.DataModel].
+ *
+ * @property value The new value as a string. Multi-select selections are
+ *   comma-joined, and numbers and booleans are stringified. Kept for
+ *   backward compatibility; prefer [jsonValue].
+ * @property jsonValue The new value with its JSON type, matching what was
+ *   written to the data model: an array for multi-select `ChoicePicker`, a
+ *   boolean for `CheckBox`, a number for `Slider`, and a string otherwise.
  */
 @Serializable
 data class DataChangeEvent(
     override val surfaceId: String,
     val path: String,
-    val value: String
+    @Deprecated("Stringified value; multi-select selections are comma-joined. Use jsonValue, which keeps the JSON type.")
+    val value: String,
+    val jsonValue: JsonElement = JsonPrimitive(value)
 ) : UiEvent()
 
 /**
@@ -209,7 +219,7 @@ private fun UiEvent.toClientMessageV08(): JsonObject? = when (this) {
         put("dataChange", buildJsonObject {
             put("surfaceId", JsonPrimitive(surfaceId))
             put("path", JsonPrimitive(path))
-            put("value", JsonPrimitive(value))
+            put("value", jsonValue)
         })
     }
     // v0.8 has no formal error-reporting wire shape. Swallow and log locally

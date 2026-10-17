@@ -58,7 +58,8 @@ When moved, emits:
 DataChangeEvent(
     surfaceId = "default",
     path = "/settings/volume",
-    value = "75"  // String representation of number
+    value = "75.0",  // Deprecated: stringified
+    jsonValue = JsonPrimitive(75.0)
 )
 ```
 

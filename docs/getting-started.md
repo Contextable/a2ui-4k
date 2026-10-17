@@ -129,7 +129,7 @@ A2UISurface(
             is DataChangeEvent -> {
                 // Text field changes, slider moves, etc.
                 // (Local-only event; v0.9 has no upstream data-change wire message.)
-                println("Data changed: ${event.path} = ${event.value}")
+                println("Data changed: ${event.path} = ${event.jsonValue}")
             }
             is ValidationError -> {
                 // Client-side validation failure (CheckRule or schema)

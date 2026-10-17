@@ -25,6 +25,7 @@ import com.contextable.a2ui4k.model.UiEvent
 import com.contextable.a2ui4k.model.ValidationError
 import com.contextable.a2ui4k.model.toClientMessage
 import com.contextable.a2ui4k.state.SurfaceStateManager
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -115,7 +116,7 @@ class GettingStartedExamplesTest {
         val matched = when (event) {
             is DataChangeEvent -> {
                 assertEquals("/user/name", event.path)
-                assertEquals("Alice", event.value)
+                assertEquals(JsonPrimitive("Alice"), event.jsonValue)
                 true
             }
             is ActionEvent, is ValidationError, is ClientError -> false

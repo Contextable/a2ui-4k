@@ -70,10 +70,17 @@ into the local `DataModel`. (If your `createSurface` set
 ```kotlin
 data class DataChangeEvent(
     val surfaceId: String,
-    val path: String,    // JSON Pointer that changed
-    val value: String    // New value, stringified
+    val path: String,            // JSON Pointer that changed
+    @Deprecated("Use jsonValue")
+    val value: String,           // New value, stringified (multi-select is comma-joined)
+    val jsonValue: JsonElement   // New value with its JSON type
 )
 ```
+
+`jsonValue` matches what the widget wrote to the data model: an array for a
+multi-select `ChoicePicker`, a boolean for `CheckBox`, a number for `Slider`,
+and a string for `TextField` and `DateTimeInput`. `value` is kept for
+backward compatibility and will be removed in a future release.
 
 ## Handling Events
 
