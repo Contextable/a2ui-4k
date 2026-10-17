@@ -18,6 +18,7 @@ package com.contextable.a2ui4k.model
 
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -127,6 +128,7 @@ class UiEventTest {
 
     // ========== DataChangeEvent tests ==========
 
+    @Suppress("DEPRECATION")
     @Test
     fun `DataChangeEvent has correct properties`() {
         val event = DataChangeEvent(
@@ -138,6 +140,36 @@ class UiEventTest {
         assertEquals("form", event.surfaceId)
         assertEquals("/user/email", event.path)
         assertEquals("test@example.com", event.value)
+        assertEquals(JsonPrimitive("test@example.com"), event.jsonValue)
+    }
+
+    @Suppress("DEPRECATION")
+    @Test
+    fun `DataChangeEvent keeps legacy value alongside typed jsonValue`() {
+        val event = DataChangeEvent(
+            surfaceId = "form",
+            path = "/answer",
+            value = "a,b",
+            jsonValue = JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b")))
+        )
+
+        assertEquals("a,b", event.value)
+        assertEquals(JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b"))), event.jsonValue)
+    }
+
+    @Test
+    fun `DataChangeEvent with typed jsonValue round-trips through JSON`() {
+        val event = DataChangeEvent(
+            surfaceId = "form",
+            path = "/answer",
+            value = "a,b",
+            jsonValue = JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b")))
+        )
+
+        val jsonStr = json.encodeToString(event)
+
+        assertTrue(jsonStr.contains("\"jsonValue\":[\"a\",\"b\"]"))
+        assertEquals(event, json.decodeFromString<DataChangeEvent>(jsonStr))
     }
 
     @Test
@@ -155,6 +187,7 @@ class UiEventTest {
         assertTrue(jsonStr.contains("\"value\":\"dark\""))
     }
 
+    @Suppress("DEPRECATION")
     @Test
     fun `DataChangeEvent deserializes from JSON`() {
         val jsonStr = """
@@ -170,6 +203,8 @@ class UiEventTest {
         assertEquals("editor", event.surfaceId)
         assertEquals("/content/title", event.path)
         assertEquals("New Title", event.value)
+        // JSON written before jsonValue existed still decodes, with jsonValue derived from value.
+        assertEquals(JsonPrimitive("New Title"), event.jsonValue)
     }
 
     @Test
@@ -285,6 +320,20 @@ class UiEventTest {
         assertEquals("s", (dc["surfaceId"] as JsonPrimitive).content)
         assertEquals("/x", (dc["path"] as JsonPrimitive).content)
         assertEquals("new", (dc["value"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `DataChangeEvent V0_8 dataChange preserves JSON type`() {
+        val cases = listOf(
+            JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b"))),
+            JsonPrimitive(true),
+            JsonPrimitive(42.0)
+        )
+        for (typed in cases) {
+            val event = DataChangeEvent(surfaceId = "s", path = "/x", value = typed.toString(), jsonValue = typed)
+            val dc = event.toClientMessage(ProtocolVersion.V0_8)!!["dataChange"] as JsonObject
+            assertEquals(typed, dc["value"])
+        }
     }
 
     @Test

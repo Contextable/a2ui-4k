@@ -55,7 +55,8 @@ When toggled, emits:
 DataChangeEvent(
     surfaceId = "default",
     path = "/form/termsAccepted",
-    value = "true"  // or "false"
+    value = "true",  // Deprecated: stringified
+    jsonValue = JsonPrimitive(true)
 )
 ```
 

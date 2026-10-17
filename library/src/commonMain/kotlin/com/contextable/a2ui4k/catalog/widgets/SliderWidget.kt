@@ -40,6 +40,7 @@ import com.contextable.a2ui4k.model.PathString
 import com.contextable.a2ui4k.render.LocalUiDefinition
 import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * Slider widget for numeric range input.
@@ -134,7 +135,8 @@ private fun SliderWidgetContent(
                         DataChangeEvent(
                             surfaceId = surfaceId,
                             path = valueRef.path,
-                            value = sliderValue.toString()
+                            value = sliderValue.toString(),
+                            jsonValue = JsonPrimitive(sliderValue.toDouble())
                         )
                     )
                 }

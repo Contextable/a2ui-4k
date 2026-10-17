@@ -44,6 +44,7 @@ import com.contextable.a2ui4k.model.PathString
 import com.contextable.a2ui4k.render.LocalUiDefinition
 import com.contextable.a2ui4k.util.PropertyValidation
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * CheckBox widget for boolean input.
@@ -117,7 +118,8 @@ private fun CheckBoxWidgetContent(
                             DataChangeEvent(
                                 surfaceId = surfaceId,
                                 path = valueRef.path,
-                                value = newValue.toString()
+                                value = newValue.toString(),
+                                jsonValue = JsonPrimitive(newValue)
                             )
                         )
                     }

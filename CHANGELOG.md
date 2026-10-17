@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `DataChangeEvent.jsonValue` carries the new value with its JSON type: an
+  array for multi-select `ChoicePicker`, a boolean for `CheckBox`, a number
+  for `Slider`. It defaults from `value`, so existing code that constructs
+  `DataChangeEvent` keeps compiling (#26).
 - `DataContext.get(path)` returns the raw `JsonElement` at a path. It has a
   default implementation built on the typed getters, so existing
   `DataContext` implementations keep compiling.
@@ -29,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The v0.8 `dataChange` message sends `value` with its JSON type instead of
+  a string. For example, multi-select sends `["a","b"]` instead of `"a,b"`,
+  and a checkbox sends `true` instead of `"true"` (#26).
 - Function arguments and `Button` action `context` values bound to a path
   now resolve with their JSON type. Arrays and objects are passed through,
   and numbers and booleans in action context are sent as JSON numbers and
@@ -36,6 +43,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Because `regex` now matches anywhere in the value, an unanchored pattern
   such as `"[0-9]{5}"` accepts `"abc12345xyz"`. Add `^` and `$` to patterns
   that must match the whole value.
+
+### Deprecated
+
+- `DataChangeEvent.value`: use `jsonValue`. `value` still holds the same
+  stringified form as before (#26).
 
 ## [0.9.3] - 2026-04-21
 
