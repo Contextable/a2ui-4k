@@ -30,13 +30,12 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # The action defaults to installing the obsolete "tools" package, which
+      # no longer exists in the SDK repository, so list packages explicitly.
       - name: Install Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK 36 components
-        run: |
-          sdkmanager --install "platforms;android-36"
-          sdkmanager --install "build-tools;36.0.0"
+        with:
+          packages: "platform-tools platforms;android-36 build-tools;36.0.0"
 
       - name: Run JVM and Android unit tests
         run: ./gradlew :a2ui-4k:jvmTest :a2ui-4k:testDebugUnitTest --stacktrace
