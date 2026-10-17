@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-17
+
+Fixes for multi-select `ChoicePicker` and the `regex` function, and typed
+values in `DataChangeEvent`. No source-breaking API changes, but several
+behavior changes (see **Changed**): `regex` now matches anywhere in the
+value, path values in function arguments and `Button` action context keep
+their JSON type, and the v0.8 `dataChange` message sends typed values.
+`DataChangeEvent.value` is deprecated in favor of `jsonValue`.
+
 ### Added
 
 - `DataChangeEvent.jsonValue` carries the new value with its JSON type: an
@@ -396,7 +405,8 @@ Initial implementation of the A2UI v0.8 rendering engine.
 - Event system: UserActionEvent, DataChangeEvent
 - Kotlin Multiplatform support: Android, iOS, JVM/Desktop
 
-[Unreleased]: https://github.com/Contextable/a2ui-4k/compare/v0.9.3...HEAD
+[Unreleased]: https://github.com/Contextable/a2ui-4k/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/Contextable/a2ui-4k/compare/v0.9.3...v0.10.0
 [0.9.3]: https://github.com/Contextable/a2ui-4k/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/Contextable/a2ui-4k/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/Contextable/a2ui-4k/compare/v0.9.0...v0.9.1
