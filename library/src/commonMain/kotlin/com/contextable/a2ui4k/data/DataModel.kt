@@ -136,23 +136,26 @@ class DataModel(
 
     /**
      * Gets a string value at the specified path.
+     * Returns null if the path is absent or holds an array or object.
      */
     fun getString(path: String): String? {
-        return get(path)?.jsonPrimitive?.contentOrNull
+        return (get(path) as? JsonPrimitive)?.contentOrNull
     }
 
     /**
      * Gets a number value at the specified path.
+     * Returns null if the path is absent or holds an array or object.
      */
     fun getNumber(path: String): Double? {
-        return get(path)?.jsonPrimitive?.doubleOrNull
+        return (get(path) as? JsonPrimitive)?.doubleOrNull
     }
 
     /**
      * Gets a boolean value at the specified path.
+     * Returns null if the path is absent or holds an array or object.
      */
     fun getBoolean(path: String): Boolean? {
-        return get(path)?.jsonPrimitive?.booleanOrNull
+        return (get(path) as? JsonPrimitive)?.booleanOrNull
     }
 
     /**
@@ -279,6 +282,8 @@ internal class DataModelContext(
         else "$basePath/$path"
     }
 
+    override fun get(path: String): JsonElement? = model.get(resolvePath(path))
+
     override fun getString(path: String): String? = model.getString(resolvePath(path))
 
     override fun getNumber(path: String): Double? = model.getNumber(resolvePath(path))
@@ -297,10 +302,24 @@ internal class DataModelContext(
             is String -> model.updateString(resolvedPath, value)
             is Number -> model.updateNumber(resolvedPath, value.toDouble())
             is Boolean -> model.updateBoolean(resolvedPath, value)
+            is List<*> -> model.update(resolvedPath, serializeList(value))
+            is JsonElement -> model.update(resolvedPath, value)
             null -> model.update(resolvedPath, JsonNull)
             else -> model.updateString(resolvedPath, value.toString())
         }
     }
+
+    // Mirrors the scalar branches of update() for each list element.
+    private fun serializeList(list: List<*>): JsonArray = JsonArray(list.map { element ->
+        when (element) {
+            is String -> JsonPrimitive(element)
+            is Number -> JsonPrimitive(element.toDouble())
+            is Boolean -> JsonPrimitive(element)
+            is JsonElement -> element
+            null -> JsonNull
+            else -> JsonPrimitive(element.toString())
+        }
+    })
 
     override fun withBasePath(basePath: String): DataContext {
         val newBase = if (this.basePath.isEmpty()) basePath

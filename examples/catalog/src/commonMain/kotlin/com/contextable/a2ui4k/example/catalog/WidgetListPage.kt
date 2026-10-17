@@ -104,6 +104,7 @@ val allWidgets = listOf(
     WidgetInfo("CheckBox", "Input", "Boolean toggle", Icons.Default.CheckBox),
     WidgetInfo("Slider", "Input", "Numeric range slider", Icons.Default.Tune),
     WidgetInfo("DateTimeInput", "Input", "Date/time picker", Icons.Default.CalendarToday),
+    WidgetInfo("ChoicePickerMulti", "Input", "Multi-select picker", Icons.Default.CheckBox),
     WidgetInfo("RegexCheck", "Input", "TextField with regex validation", Icons.Default.ShortText)
 )
 

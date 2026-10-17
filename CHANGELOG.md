@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `DataContext.get(path)` returns the raw `JsonElement` at a path. It has a
+  default implementation built on the typed getters, so existing
+  `DataContext` implementations keep compiling.
+
+### Fixed
+
+- Multi-select `ChoicePicker` selections are written to the data model as a
+  JSON array instead of the string `"[a, b]"`. `DataContext.update` now
+  accepts `List` and `JsonElement` values.
+- `DataModel.getString` / `getNumber` / `getBoolean` return `null` for array
+  and object values instead of throwing. This fixes crashes when a
+  `required` check, `formatString`, or other binding points at a
+  multi-select value (#23).
+
+### Changed
+
+- Function arguments and `Button` action `context` values bound to a path
+  now resolve with their JSON type. Arrays and objects are passed through,
+  and numbers and booleans in action context are sent as JSON numbers and
+  booleans rather than strings.
+
 ## [0.9.3] - 2026-04-21
 
 Stable-readiness release: bundles the canonical client-side

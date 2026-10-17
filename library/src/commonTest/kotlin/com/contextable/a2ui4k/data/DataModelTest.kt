@@ -404,6 +404,57 @@ class DataModelTest {
         assertEquals(JsonNull, model.get("/null"))
     }
 
+    @Test
+    fun `DataContext update with List writes JsonArray`() {
+        val model = DataModel()
+        val context = model.createContext()
+
+        context.update("/strings", listOf("a", "b"))
+        context.update("/mixed", listOf("x", 1, true, null))
+
+        assertEquals(
+            JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b"))),
+            model.get("/strings")
+        )
+        assertEquals(
+            JsonArray(listOf(JsonPrimitive("x"), JsonPrimitive(1.0), JsonPrimitive(true), JsonNull)),
+            model.get("/mixed")
+        )
+        assertEquals(listOf("a", "b"), model.getStringList("/strings"))
+    }
+
+    @Test
+    fun `DataContext update with JsonElement stores it unchanged`() {
+        val model = DataModel()
+        val value = JsonObject(mapOf("k" to JsonPrimitive("v")))
+
+        model.createContext().update("/obj", value)
+
+        assertEquals(value, model.get("/obj"))
+    }
+
+    @Test
+    fun `DataContext get returns raw element`() {
+        val array = JsonArray(listOf(JsonPrimitive("a")))
+        val model = DataModel(JsonObject(mapOf("user" to JsonObject(mapOf("tags" to array)))))
+
+        assertEquals(array, model.createContext("/user").get("/tags"))
+    }
+
+    @Test
+    fun `typed getters return null for arrays and objects`() {
+        val model = DataModel(JsonObject(mapOf(
+            "list" to JsonArray(listOf(JsonPrimitive("a"))),
+            "obj" to JsonObject(mapOf("k" to JsonPrimitive("v")))
+        )))
+
+        for (path in listOf("/list", "/obj")) {
+            assertNull(model.getString(path))
+            assertNull(model.getNumber(path))
+            assertNull(model.getBoolean(path))
+        }
+    }
+
     // ========== Edge cases ==========
 
     @Test

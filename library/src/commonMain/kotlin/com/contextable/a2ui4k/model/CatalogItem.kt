@@ -17,7 +17,9 @@
 package com.contextable.a2ui4k.model
 
 import androidx.compose.runtime.Composable
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * Type alias for a function that builds a child component by ID.
@@ -148,6 +150,18 @@ interface DataContext {
      * Returns null if the path doesn't point to an object.
      */
     fun getObjectKeys(path: String): List<String>?
+
+    /**
+     * Gets the raw JSON element at the given path, preserving its type (array, object, primitive).
+     * Prefer this over getString/getNumber/getBoolean when the type is unknown or may be an array.
+     *
+     * The default implementation falls back to [getString], [getNumber] and [getBoolean], so it
+     * only resolves primitives. Implementations backed by a JSON tree should override it.
+     */
+    fun get(path: String): JsonElement? =
+        getString(path)?.let { JsonPrimitive(it) }
+            ?: getNumber(path)?.let { JsonPrimitive(it) }
+            ?: getBoolean(path)?.let { JsonPrimitive(it) }
 
     /**
      * Updates a value at the given path.

@@ -16,6 +16,7 @@
 
 package com.contextable.a2ui4k.function
 
+import com.contextable.a2ui4k.data.DataModel
 import com.contextable.a2ui4k.model.DataContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -213,6 +214,49 @@ class FunctionEvaluatorTest {
     fun required_numberIsTrue() {
         val args = JsonObject(mapOf("value" to JsonPrimitive(42)))
         assertEquals(true, FunctionEvaluator.evaluateBoolean("required", args, emptyContext))
+    }
+
+    @Test
+    fun required_emptyArrayIsFalse() {
+        // Spec: required over an empty array must return false (multi-select with nothing chosen).
+        val args = JsonObject(mapOf("value" to JsonArray(emptyList())))
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("required", args, emptyContext))
+    }
+
+    @Test
+    fun required_nonEmptyArrayIsTrue() {
+        val args = JsonObject(mapOf("value" to JsonArray(listOf(JsonPrimitive("a")))))
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("required", args, emptyContext))
+    }
+
+    @Test
+    fun required_arrayPathResolvesRawElement() {
+        // Path resolution must return the raw JsonElement, not coerce through getString.
+        // A context where /selections holds ["x"] — required must see the array, not null.
+        val context = object : DataContext by emptyContext {
+            override fun get(path: String) = if (path == "/selections")
+                JsonArray(listOf(JsonPrimitive("x"))) else null
+        }
+        val args = JsonObject(mapOf("value" to JsonObject(mapOf("path" to JsonPrimitive("/selections")))))
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("required", args, context))
+    }
+
+    @Test
+    fun required_dataModelArrayPath() {
+        // Regression: a DataModel path holding an array used to throw instead of resolving.
+        val model = DataModel(JsonObject(mapOf("answer" to JsonArray(emptyList()))))
+        val args = JsonObject(mapOf("value" to JsonObject(mapOf("path" to JsonPrimitive("/answer")))))
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("required", args, model.createContext()))
+
+        model.update("/answer", JsonArray(listOf(JsonPrimitive("a"))))
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("required", args, model.createContext()))
+    }
+
+    @Test
+    fun formatString_arrayPathDoesNotThrow() {
+        val model = DataModel(JsonObject(mapOf("answer" to JsonArray(listOf(JsonPrimitive("a"))))))
+        val args = JsonObject(mapOf("value" to JsonPrimitive("Picked: \${/answer}")))
+        assertEquals("Picked: ", FunctionEvaluator.evaluateString("formatString", args, model.createContext()))
     }
 
     // --- email ---
