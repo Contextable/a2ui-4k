@@ -40,14 +40,12 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v3
 
+      # The action defaults to installing the obsolete "tools" package, which
+      # no longer exists in the SDK repository, so list packages explicitly.
       - name: Install Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK 36 components
-        run: |
-          echo "Installing Android SDK 36 components..."
-          sdkmanager --install "platforms;android-36"
-          sdkmanager --install "build-tools;36.0.0"
+        with:
+          packages: "platform-tools platforms;android-36 build-tools;36.0.0"
 
       - name: Accept Android licenses
         run: yes | sdkmanager --licenses || true
