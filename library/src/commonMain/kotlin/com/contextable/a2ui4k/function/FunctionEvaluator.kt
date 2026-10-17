@@ -214,7 +214,7 @@ object FunctionEvaluator {
      * Resolves an arg value as a raw [JsonElement]. Handles:
      *   * absent / `null` → `null`
      *   * primitive literal → itself
-     *   * `{"path":"…"}` → looked up via [dataContext] (string then number then boolean)
+     *   * `{"path":"…"}` → raw element from [DataContext.get] (arrays and objects included)
      *   * `{"call":"…","args":{…}}` → recursive function evaluation
      */
     private fun resolveArg(args: JsonObject?, name: String, dataContext: DataContext): JsonElement? {
@@ -245,9 +245,7 @@ object FunctionEvaluator {
             is JsonObject -> when {
                 element.containsKey("path") -> {
                     val path = element["path"]?.jsonPrimitive?.contentOrNull ?: return null
-                    dataContext.getString(path)?.let { JsonPrimitive(it) }
-                        ?: dataContext.getNumber(path)?.let { JsonPrimitive(it) }
-                        ?: dataContext.getBoolean(path)?.let { JsonPrimitive(it) }
+                    dataContext.get(path)
                 }
                 element.containsKey("call") -> {
                     val call = element["call"]?.jsonPrimitive?.contentOrNull ?: return null

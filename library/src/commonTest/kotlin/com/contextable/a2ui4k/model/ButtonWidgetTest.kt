@@ -16,6 +16,9 @@
 
 package com.contextable.a2ui4k.model
 
+import com.contextable.a2ui4k.catalog.widgets.resolveContext
+import com.contextable.a2ui4k.data.DataModel
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -175,5 +178,30 @@ class ButtonWidgetTest {
         val rules = CheckRule.fromJsonArray(data["checks"])
         assertEquals(1, rules.size)
         assertEquals("Email required", rules[0].message)
+    }
+
+    @Test
+    fun `resolveContext passes path values through with their JSON type`() {
+        val model = DataModel(json.decodeFromString<JsonObject>(
+            """{"answer": ["a", "b"], "count": 3, "ok": true, "name": "x"}"""
+        ))
+        val context = json.decodeFromString<JsonObject>(
+            """{
+                "answer": {"path": "/answer"},
+                "count": {"path": "/count"},
+                "ok": {"path": "/ok"},
+                "name": {"path": "/name"},
+                "missing": {"path": "/missing"}
+            }"""
+        )
+
+        val resolved = resolveContext(context, model.createContext())
+
+        assertNotNull(resolved)
+        assertEquals(JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b"))), resolved["answer"])
+        assertEquals(JsonPrimitive(3), resolved["count"])
+        assertEquals(JsonPrimitive(true), resolved["ok"])
+        assertEquals(JsonPrimitive("x"), resolved["name"])
+        assertNull(resolved["missing"])
     }
 }

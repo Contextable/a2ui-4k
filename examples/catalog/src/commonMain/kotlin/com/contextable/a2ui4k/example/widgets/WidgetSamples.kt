@@ -55,6 +55,7 @@ object WidgetSamples {
         "Modal" -> MODAL_SAMPLE
         "Video" -> VIDEO_SAMPLE
         "AudioPlayer" -> AUDIO_PLAYER_SAMPLE
+        "ChoicePickerMulti" -> CHOICE_PICKER_MULTI_SAMPLE
         else -> MINIMAL_SAMPLE
     }
 
@@ -331,6 +332,51 @@ object WidgetSamples {
   "label": "Audio Player (placeholder)",
   "audioUrl": "https://example.com/audio.mp3"
 }"""
+    )
+
+    private val CHOICE_PICKER_MULTI_SAMPLE = WidgetSample(
+        components = """
+[
+  {
+    "id": "root",
+    "component": "Column",
+    "children": ["picker", "submit"]
+  },
+  {
+    "id": "picker",
+    "component": "ChoicePicker",
+    "label": "Pick one or more",
+    "value": {"path": "/answer"},
+    "variant": "multipleSelection",
+    "options": [
+      {"value": "a", "label": "Option A"},
+      {"value": "b", "label": "Option B"}
+    ]
+  },
+  {
+    "id": "submit",
+    "component": "Button",
+    "child": "submit_label",
+    "checks": [
+      {
+        "condition": {"call": "required", "args": {"value": {"path": "/answer"}}},
+        "message": "Please select at least one option"
+      }
+    ],
+    "action": {"event": {"name": "submit", "context": {"answer": {"path": "/answer"}}}}
+  },
+  {
+    "id": "submit_label",
+    "component": "Text",
+    "text": "Submit"
+  }
+]
+        """.trimIndent(),
+        data = """
+{
+  "answer": []
+}
+        """.trimIndent()
     )
 
     private val MINIMAL_SAMPLE = WidgetSample(
