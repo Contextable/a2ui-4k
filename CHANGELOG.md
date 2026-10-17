@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and object values instead of throwing. This fixes crashes when a
   `required` check, `formatString`, or other binding points at a
   multi-select value (#23).
+- The `regex` function now matches anywhere in the value, matching the web
+  (`RegExp.test`) and Swift renderers. Before, it required the whole value to
+  match, so checks like `"\\S"` failed on any input longer than one
+  character (#25).
 
 ### Changed
 
@@ -29,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now resolve with their JSON type. Arrays and objects are passed through,
   and numbers and booleans in action context are sent as JSON numbers and
   booleans rather than strings.
+- Because `regex` now matches anywhere in the value, an unanchored pattern
+  such as `"[0-9]{5}"` accepts `"abc12345xyz"`. Add `^` and `$` to patterns
+  that must match the whole value.
 
 ## [0.9.3] - 2026-04-21
 
