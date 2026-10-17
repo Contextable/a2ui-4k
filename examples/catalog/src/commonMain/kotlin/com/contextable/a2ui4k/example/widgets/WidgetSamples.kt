@@ -56,6 +56,7 @@ object WidgetSamples {
         "Video" -> VIDEO_SAMPLE
         "AudioPlayer" -> AUDIO_PLAYER_SAMPLE
         "ChoicePickerMulti" -> CHOICE_PICKER_MULTI_SAMPLE
+        "RegexCheck" -> REGEX_CHECK_SAMPLE
         else -> MINIMAL_SAMPLE
     }
 
@@ -395,5 +396,33 @@ object WidgetSamples {
 ]
         """.trimIndent(),
         data = """{"message": "Edit this sample!"}"""
+    )
+
+    private val REGEX_CHECK_SAMPLE = WidgetSample(
+        components = """
+[
+  {"id": "root", "component": "Column", "children": ["field", "submit"]},
+  {
+    "id": "field",
+    "component": "TextField",
+    "label": "Type any text — Submit should enable",
+    "value": {"path": "/comment"}
+  },
+  {"id": "submit_label", "component": "Text", "text": "Submit"},
+  {
+    "id": "submit",
+    "component": "Button",
+    "child": "submit_label",
+    "checks": [
+      {
+        "condition": {"call": "regex", "args": {"value": {"path": "/comment"}, "pattern": "\\S"}},
+        "message": "Must contain non-whitespace"
+      }
+    ],
+    "action": {"event": {"name": "submit", "context": {"comment": {"path": "/comment"}}}}
+  }
+]
+        """.trimIndent(),
+        data = """{"comment": ""}"""
     )
 }

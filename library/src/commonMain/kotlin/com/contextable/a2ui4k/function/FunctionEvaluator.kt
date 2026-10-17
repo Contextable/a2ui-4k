@@ -105,7 +105,7 @@ object FunctionEvaluator {
         val value = resolveArgString(args, "value", dataContext) ?: return JsonPrimitive(false)
         val pattern = resolveArgString(args, "pattern", dataContext) ?: return JsonPrimitive(false)
         return try {
-            JsonPrimitive(Regex(pattern).matches(value))
+            JsonPrimitive(Regex(pattern).containsMatchIn(value))
         } catch (_: Throwable) {
             JsonPrimitive(false)
         }

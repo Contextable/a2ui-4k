@@ -294,6 +294,43 @@ class FunctionEvaluatorTest {
     }
 
     @Test
+    fun regex_matchesAnywhereInValue() {
+        // Partial-match semantics, as in the web (RegExp.test) and Swift (firstMatch) renderers.
+        val args = JsonObject(mapOf(
+            "value" to JsonPrimitive("hello world"),
+            "pattern" to JsonPrimitive("\\S")
+        ))
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("regex", args, emptyContext))
+    }
+
+    @Test
+    fun regex_unanchoredPatternMatchesSubstring() {
+        val args = JsonObject(mapOf(
+            "value" to JsonPrimitive("abc1"),
+            "pattern" to JsonPrimitive("[0-9]")
+        ))
+        assertEquals(true, FunctionEvaluator.evaluateBoolean("regex", args, emptyContext))
+    }
+
+    @Test
+    fun regex_noMatchAnywhereReturnsFalse() {
+        val args = JsonObject(mapOf(
+            "value" to JsonPrimitive("   "),
+            "pattern" to JsonPrimitive("\\S")
+        ))
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("regex", args, emptyContext))
+    }
+
+    @Test
+    fun regex_anchorsStillRequireFullMatch() {
+        val args = JsonObject(mapOf(
+            "value" to JsonPrimitive("abc12345xyz"),
+            "pattern" to JsonPrimitive("^[0-9]{5}$")
+        ))
+        assertEquals(false, FunctionEvaluator.evaluateBoolean("regex", args, emptyContext))
+    }
+
+    @Test
     fun regex_invalidPatternReturnsFalse() {
         val args = JsonObject(mapOf(
             "value" to JsonPrimitive("test"),
