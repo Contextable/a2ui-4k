@@ -240,12 +240,35 @@ class DataModel(
             JsonObject(obj.toMutableMap().apply { remove(key) })
         } else {
             val existing = obj[key]
-            if (existing is JsonObject) {
-                val child = deleteAtPath(existing, remaining)
-                JsonObject(obj.toMutableMap().apply { put(key, child) })
-            } else {
-                obj
+            val child = when (existing) {
+                is JsonObject -> deleteAtPath(existing, remaining)
+                is JsonArray -> deleteAtPathInArray(existing, remaining)
+                else -> return obj
             }
+            JsonObject(obj.toMutableMap().apply { put(key, child) })
+        }
+    }
+
+    // Deletes an element from an existing JsonArray at a path whose next segment is an integer index.
+    // Mirrors the array traversal in getAtPath and setAtPathInArray — integer index selects the
+    // element, non-numeric segment leaves the array unchanged (protocol error guard).
+    private fun deleteAtPathInArray(array: JsonArray, segments: List<String>): JsonArray {
+        if (segments.isEmpty()) return array
+        // Non-numeric segment on an array is a protocol error — leave the array unchanged.
+        val index = segments.first().toIntOrNull() ?: return array
+        // Remaining segments after the index; empty means this index is the delete target.
+        val remaining = segments.drop(1)
+        val items = array.toMutableList()
+        // Index out of bounds — nothing to delete, leave the array unchanged.
+        if (index !in items.indices) return array
+        return if (remaining.isEmpty()) {
+            items.removeAt(index)
+            JsonArray(items)
+        } else {
+            // Deeper path — recurse into the object at this index.
+            val existingObject = items[index] as? JsonObject ?: return array
+            items[index] = deleteAtPath(existingObject, remaining)
+            JsonArray(items)
         }
     }
 
@@ -261,10 +284,34 @@ class DataModel(
             val existing = obj[key]
             val child = when (existing) {
                 is JsonObject -> setAtPath(existing, remaining, value)
+                is JsonArray -> setAtPathInArray(existing, remaining, value)
                 else -> setAtPath(JsonObject(emptyMap()), remaining, value)
             }
             JsonObject(obj.toMutableMap().apply { put(key, child) })
         }
+    }
+
+    // Writes `value` into an existing JsonArray at a path whose next segment is an integer index.
+    // Mirrors getAtPath's array branch — both use integer index for traversal. Pads with JsonNull
+    // when the index exceeds the current array size, enabling writes at absolute indices beyond
+    // the current bounds (e.g. appending at index 5 into a 3-element array).
+    private fun setAtPathInArray(array: JsonArray, segments: List<String>, value: JsonElement): JsonArray {
+        if (segments.isEmpty()) return array
+        // Non-numeric segment on an array is a protocol error — leave the array unchanged.
+        val index = segments.first().toIntOrNull() ?: return array
+        // Remaining segments after the index; empty means this index is the write target.
+        val remaining = segments.drop(1)
+        val items = array.toMutableList()
+        // Grow with nulls so the target index is always in bounds.
+        // Absolute index writes beyond current size are the normal append case.
+        while (items.size <= index) items.add(JsonNull)
+        items[index] = if (remaining.isEmpty()) {
+            value
+        } else {
+            val existingObject = items[index] as? JsonObject ?: JsonObject(emptyMap())
+            setAtPath(existingObject, remaining, value)
+        }
+        return JsonArray(items)
     }
 }
 
