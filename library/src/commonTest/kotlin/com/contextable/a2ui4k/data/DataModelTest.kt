@@ -489,4 +489,329 @@ class DataModelTest {
 
         assertNotNull(flow)
     }
+
+    // ========== Array indexed writes (setAtPath array branch) ==========
+    // RFC 6901 §4: integer token selects the array element at the zero-based index.
+    // These tests cover the setAtPathInArray helper added to fix the silent-clobber bug
+    // where any JsonArray at an intermediate path node was replaced with an empty JsonObject.
+
+    @Test
+    fun `index write into existing array appends at absolute index`() {
+        val model = DataModel()
+        val initial = JsonArray((0 until 3).map { JsonObject(mapOf("i" to JsonPrimitive(it))) })
+        model.update("/items", initial)
+
+        model.update("/items/3", JsonObject(mapOf("i" to JsonPrimitive(3))))
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals(4, result.size)
+        assertEquals(3, ((result[3] as JsonObject)["i"] as JsonPrimitive).content.toInt())
+    }
+
+    @Test
+    fun `index write preserves existing array elements`() {
+        val model = DataModel()
+        model.update("/items", JsonArray(listOf(
+            JsonObject(mapOf("name" to JsonPrimitive("Row 0"))),
+            JsonObject(mapOf("name" to JsonPrimitive("Row 1")))
+        )))
+
+        model.update("/items/2", JsonObject(mapOf("name" to JsonPrimitive("Row 2"))))
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals(3, result.size)
+        assertEquals("Row 0", ((result[0] as JsonObject)["name"] as JsonPrimitive).content)
+        assertEquals("Row 1", ((result[1] as JsonObject)["name"] as JsonPrimitive).content)
+        assertEquals("Row 2", ((result[2] as JsonObject)["name"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `index write beyond bounds pads with JsonNull`() {
+        val model = DataModel()
+        model.update("/items", JsonArray(listOf(JsonPrimitive("a"))))
+
+        // Write at index 3 — indices 1 and 2 must be padded
+        model.update("/items/3", JsonPrimitive("d"))
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals(4, result.size)
+        assertEquals("a", (result[0] as JsonPrimitive).content)
+        assertEquals(JsonNull, result[1])
+        assertEquals(JsonNull, result[2])
+        assertEquals("d", (result[3] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `index write overwrites existing element`() {
+        val model = DataModel()
+        model.update("/items", JsonArray(listOf(JsonPrimitive("original"), JsonPrimitive("keep"))))
+
+        model.update("/items/0", JsonPrimitive("replaced"))
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals("replaced", (result[0] as JsonPrimitive).content)
+        assertEquals("keep", (result[1] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `non-numeric segment on array leaves array unchanged`() {
+        val model = DataModel()
+        model.update("/items", JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b"))))
+
+        // Non-numeric key into an array — should not crash, array unchanged
+        model.update("/items/notAnIndex", JsonPrimitive("x"))
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals(2, result.size)
+    }
+
+    @Test
+    fun `sparse index gap pads missing indices with JsonNull`() {
+        val model = DataModel()
+        model.update("/items", JsonArray((0 until 3).map { JsonObject(mapOf("i" to JsonPrimitive(it))) }))
+
+        // Jump to index 5, skipping index 3 and 4
+        model.update("/items/5", JsonObject(mapOf("i" to JsonPrimitive(5))))
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals(6, result.size)
+        assertEquals(JsonNull, result[3])
+        assertEquals(JsonNull, result[4])
+        assertEquals(5, ((result[5] as JsonObject)["i"] as JsonPrimitive).content.toInt())
+        // Null slots resolve to null, not crash
+        assertNull(model.getString("/items/3/i"))
+        assertNull(model.getString("/items/4/i"))
+    }
+
+    @Test
+    fun `multiple sequential appends accumulate correctly`() {
+        val model = DataModel()
+        model.update("/rows", JsonArray((0 until 5).map { JsonObject(mapOf("i" to JsonPrimitive(it))) }))
+
+        for (i in 5 until 10) {
+            model.update("/rows/$i", JsonObject(mapOf("i" to JsonPrimitive(i))))
+        }
+
+        val result = model.get("/rows") as? JsonArray
+        assertNotNull(result)
+        assertEquals(10, result.size)
+        assertEquals(0, ((result[0] as JsonObject)["i"] as JsonPrimitive).content.toInt())
+        assertEquals(9, ((result[9] as JsonObject)["i"] as JsonPrimitive).content.toInt())
+    }
+
+    @Test
+    fun `full array replace after index appends resets the array`() {
+        val model = DataModel()
+        model.update("/items", JsonArray(listOf(JsonPrimitive("old"))))
+        model.update("/items/1", JsonPrimitive("appended"))
+
+        // Full replace
+        model.update("/items", JsonArray(listOf(JsonPrimitive("new"))))
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals(1, result.size)
+        assertEquals("new", (result[0] as JsonPrimitive).content)
+    }
+
+    // ========== Array indexed deletes (deleteAtPath array branch) ==========
+    // RFC 6901 §4: same integer-index traversal applies to delete operations.
+    // These tests cover deleteAtPathInArray — the mirror of setAtPathInArray for removal.
+
+    @Test
+    fun `delete by index removes correct element`() {
+        val model = DataModel()
+        model.update("/items", JsonArray(listOf(
+            JsonObject(mapOf("name" to JsonPrimitive("Row 0"))),
+            JsonObject(mapOf("name" to JsonPrimitive("Row 1"))),
+            JsonObject(mapOf("name" to JsonPrimitive("Row 2")))
+        )))
+
+        model.delete("/items/1")
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals(2, result.size)
+        assertEquals("Row 0", ((result[0] as JsonObject)["name"] as JsonPrimitive).content)
+        assertEquals("Row 2", ((result[1] as JsonObject)["name"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `delete first element shifts remaining elements`() {
+        val model = DataModel()
+        model.update("/items", JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b"), JsonPrimitive("c"))))
+
+        model.delete("/items/0")
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals(2, result.size)
+        assertEquals("b", (result[0] as JsonPrimitive).content)
+        assertEquals("c", (result[1] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `delete last element shrinks array`() {
+        val model = DataModel()
+        model.update("/items", JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b"), JsonPrimitive("c"))))
+
+        model.delete("/items/2")
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals(2, result.size)
+        assertEquals("a", (result[0] as JsonPrimitive).content)
+        assertEquals("b", (result[1] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `delete out of bounds index leaves array unchanged`() {
+        val model = DataModel()
+        model.update("/items", JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b"))))
+
+        model.delete("/items/5")
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals(2, result.size)
+    }
+
+    @Test
+    fun `delete with non-numeric segment on array leaves array unchanged`() {
+        val model = DataModel()
+        model.update("/items", JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b"))))
+
+        model.delete("/items/notAnIndex")
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals(2, result.size)
+    }
+
+    @Test
+    fun `delete nested field inside array element`() {
+        val model = DataModel()
+        model.update("/items", JsonArray(listOf(
+            JsonObject(mapOf("name" to JsonPrimitive("Row 0"), "temp" to JsonPrimitive("remove me"))),
+            JsonObject(mapOf("name" to JsonPrimitive("Row 1")))
+        )))
+
+        model.delete("/items/0/temp")
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        val first = result[0] as JsonObject
+        assertNull(first["temp"])
+        assertEquals("Row 0", (first["name"] as JsonPrimitive).content)
+        // Second element untouched
+        assertEquals("Row 1", ((result[1] as JsonObject)["name"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `delete all elements one by one empties array`() {
+        val model = DataModel()
+        model.update("/items", JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b"), JsonPrimitive("c"))))
+
+        // Delete index 0 three times — each delete shifts remaining elements
+        model.delete("/items/0")
+        model.delete("/items/0")
+        model.delete("/items/0")
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals(0, result.size)
+    }
+
+    @Test
+    fun `delete at path where intermediate node is a primitive leaves model unchanged`() {
+        val model = DataModel()
+        model.update("/user/name", JsonPrimitive("Alice"))
+
+        // "/user/name/first" — "name" is a primitive, not an object; deeper path is a no-op
+        model.delete("/user/name/first")
+
+        assertEquals("Alice", model.getString("/user/name"))
+    }
+
+    @Test
+    fun `delete nested path through object then array`() {
+        val model = DataModel()
+        model.update("/data/items", JsonArray(listOf(
+            JsonObject(mapOf("id" to JsonPrimitive(1))),
+            JsonObject(mapOf("id" to JsonPrimitive(2)))
+        )))
+
+        model.delete("/data/items/0")
+
+        val result = model.get("/data/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals(1, result.size)
+        assertEquals(2, ((result[0] as JsonObject)["id"] as JsonPrimitive).content.toInt())
+    }
+
+    @Test
+    fun `delete nested path where array element is not an object leaves array unchanged`() {
+        val model = DataModel()
+        // Array of primitives — element at index 0 is not a JsonObject, so deeper path is a no-op
+        model.update("/items", JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b"))))
+
+        model.delete("/items/0/name")
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals(2, result.size)
+        assertEquals("a", (result[0] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `index write nested path into existing array element`() {
+        val model = DataModel()
+        model.update("/items", JsonArray(listOf(
+            JsonObject(mapOf("name" to JsonPrimitive("Row 0"))),
+            JsonObject(mapOf("name" to JsonPrimitive("Row 1")))
+        )))
+
+        // Write a nested field inside an existing array element
+        model.update("/items/0/label", JsonPrimitive("updated"))
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        val first = result[0] as JsonObject
+        assertEquals("Row 0", (first["name"] as JsonPrimitive).content)
+        assertEquals("updated", (first["label"] as JsonPrimitive).content)
+        // Second element untouched
+        assertEquals("Row 1", ((result[1] as JsonObject)["name"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `index write at path where intermediate node is a primitive overwrites with object`() {
+        val model = DataModel()
+        model.update("/user/name", JsonPrimitive("Alice"))
+
+        // "name" is a primitive — setAtPath's else branch creates a fresh JsonObject and continues
+        model.update("/user/name/first", JsonPrimitive("Al"))
+
+        assertEquals("Al", model.getString("/user/name/first"))
+    }
+
+    @Test
+    fun `index write nested path where array element is null creates new object`() {
+        val model = DataModel()
+        // Pad with null first by writing beyond bounds
+        model.update("/items", JsonArray(listOf(JsonPrimitive("a"))))
+        model.update("/items/2", JsonNull)
+
+        // Now write a nested path into the null slot — should create a new JsonObject
+        model.update("/items/2/name", JsonPrimitive("created"))
+
+        val result = model.get("/items") as? JsonArray
+        assertNotNull(result)
+        assertEquals("created", model.getString("/items/2/name"))
+    }
 }
